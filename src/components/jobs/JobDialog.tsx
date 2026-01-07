@@ -210,10 +210,10 @@ export function JobDialog({ open, onOpenChange, job }: JobDialogProps) {
       };
 
       if (job) {
-        const { error } = await supabase.from('jobs').update(payload).eq('id', job.id);
+        const { error } = await (supabase.from('jobs') as any).update(payload).eq('id', job.id);
         if (error) throw error;
       } else {
-        const { error } = await supabase.from('jobs').insert(payload);
+        const { error } = await (supabase.from('jobs') as any).insert(payload);
         if (error) throw error;
       }
     },

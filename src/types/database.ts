@@ -188,6 +188,7 @@ export interface Database {
           contract_status: ContractStatus;
           contract_signed_date: string | null;
           is_gsa: boolean;
+          contractor: boolean;
           notes: string | null;
           created_at: string;
           updated_at: string;
@@ -220,6 +221,7 @@ export interface Database {
           contract_status?: ContractStatus;
           contract_signed_date?: string | null;
           is_gsa?: boolean;
+          contractor?: boolean;
           notes?: string | null;
           created_at?: string;
           updated_at?: string;
@@ -252,6 +254,7 @@ export interface Database {
           contract_status?: ContractStatus;
           contract_signed_date?: string | null;
           is_gsa?: boolean;
+          contractor?: boolean;
           notes?: string | null;
           created_at?: string;
           updated_at?: string;
@@ -300,6 +303,10 @@ export interface Database {
           reminder_sent_at: string | null;
           invoice_reminder_sent_at: string | null;
           finalized_at: string | null;
+          client_business_name: string | null;
+          client_contact_name: string | null;
+          client_contact_phone: string | null;
+          client_contact_email: string | null;
           created_at: string;
           updated_at: string;
         };
@@ -345,6 +352,10 @@ export interface Database {
           reminder_sent_at?: string | null;
           invoice_reminder_sent_at?: string | null;
           finalized_at?: string | null;
+          client_business_name?: string | null;
+          client_contact_name?: string | null;
+          client_contact_phone?: string | null;
+          client_contact_email?: string | null;
           created_at?: string;
           updated_at?: string;
         };
@@ -390,6 +401,10 @@ export interface Database {
           reminder_sent_at?: string | null;
           invoice_reminder_sent_at?: string | null;
           finalized_at?: string | null;
+          client_business_name?: string | null;
+          client_contact_name?: string | null;
+          client_contact_phone?: string | null;
+          client_contact_email?: string | null;
           created_at?: string;
           updated_at?: string;
         };

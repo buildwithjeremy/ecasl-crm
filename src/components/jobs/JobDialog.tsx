@@ -26,9 +26,8 @@ import { useToast } from '@/hooks/use-toast';
 import type { Database } from '@/types/database';
 
 type Job = Database['public']['Tables']['jobs']['Row'];
-type JobInsert = Database['public']['Tables']['jobs']['Insert'];
-type JobUpdate = Database['public']['Tables']['jobs']['Update'];
 type Facility = Database['public']['Tables']['facilities']['Row'];
+type FacilitySelect = Pick<Facility, 'id' | 'name' | 'physical_address' | 'physical_city' | 'physical_state' | 'physical_zip' | 'billing_address' | 'billing_city' | 'billing_state' | 'billing_zip' | 'contractor' | 'admin_contact_name' | 'admin_contact_phone' | 'admin_contact_email'>;
 
 const jobSchema = z.object({
   facility_id: z.string().min(1, 'Facility is required'),
@@ -45,6 +44,10 @@ const jobSchema = z.object({
   opportunity_source: z.enum(['direct', 'agency', 'gsa', 'referral', 'repeat', 'other']).nullable().optional(),
   billing_hours_type: z.enum(['business', 'after_hours', 'emergency']),
   internal_notes: z.string().optional(),
+  client_business_name: z.string().optional(),
+  client_contact_name: z.string().optional(),
+  client_contact_phone: z.string().optional(),
+  client_contact_email: z.string().optional(),
 });
 
 type FormData = z.infer<typeof jobSchema>;
@@ -64,11 +67,11 @@ export function JobDialog({ open, onOpenChange, job }: JobDialogProps) {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('facilities')
-        .select('id, name, physical_address, physical_city, physical_state, physical_zip, billing_address, billing_city, billing_state, billing_zip')
+        .select('id, name, physical_address, physical_city, physical_state, physical_zip, billing_address, billing_city, billing_state, billing_zip, contractor, admin_contact_name, admin_contact_phone, admin_contact_email')
         .eq('status', 'active')
         .order('name');
       if (error) throw error;
-      return data as Facility[];
+      return data as unknown as FacilitySelect[];
     },
   });
 
@@ -86,22 +89,44 @@ export function JobDialog({ open, onOpenChange, job }: JobDialogProps) {
 
   const watchedFacilityId = form.watch('facility_id');
   const watchedLocationType = form.watch('location_type');
+  
+  const selectedFacility = facilities?.find((f) => f.id === watchedFacilityId);
+  const isContractor = selectedFacility?.contractor ?? false;
 
-  // Auto-fill address when facility changes and location is in_person
+  // Auto-fill address and client info when facility changes (only for non-contractor facilities)
   useEffect(() => {
-    if (watchedLocationType === 'in_person' && watchedFacilityId && facilities) {
+    if (watchedFacilityId && facilities) {
       const facility = facilities.find((f) => f.id === watchedFacilityId);
       if (facility) {
-        // Prefer physical address, fallback to billing address
-        const address = facility.physical_address || facility.billing_address;
-        const city = facility.physical_city || facility.billing_city;
-        const state = facility.physical_state || facility.billing_state;
-        const zip = facility.physical_zip || facility.billing_zip;
-        
-        form.setValue('location_address', address || '');
-        form.setValue('location_city', city || '');
-        form.setValue('location_state', state || '');
-        form.setValue('location_zip', zip || '');
+        if (!facility.contractor) {
+          // Non-contractor: auto-fill from facility data
+          if (watchedLocationType === 'in_person') {
+            const address = facility.physical_address || facility.billing_address;
+            const city = facility.physical_city || facility.billing_city;
+            const state = facility.physical_state || facility.billing_state;
+            const zip = facility.physical_zip || facility.billing_zip;
+            
+            form.setValue('location_address', address || '');
+            form.setValue('location_city', city || '');
+            form.setValue('location_state', state || '');
+            form.setValue('location_zip', zip || '');
+          }
+          // Auto-fill client info from facility
+          form.setValue('client_business_name', facility.name || '');
+          form.setValue('client_contact_name', facility.admin_contact_name || '');
+          form.setValue('client_contact_phone', facility.admin_contact_phone || '');
+          form.setValue('client_contact_email', facility.admin_contact_email || '');
+        } else {
+          // Contractor: clear fields for manual entry
+          form.setValue('location_address', '');
+          form.setValue('location_city', '');
+          form.setValue('location_state', '');
+          form.setValue('location_zip', '');
+          form.setValue('client_business_name', '');
+          form.setValue('client_contact_name', '');
+          form.setValue('client_contact_phone', '');
+          form.setValue('client_contact_email', '');
+        }
       }
     }
   }, [watchedFacilityId, watchedLocationType, facilities, form]);
@@ -116,7 +141,6 @@ export function JobDialog({ open, onOpenChange, job }: JobDialogProps) {
       const dayOfWeek = date.getDay();
       const [hours] = watchedStartTime.split(':').map(Number);
       
-      // Business hours: 9am-5pm Monday-Friday
       const isWeekday = dayOfWeek >= 1 && dayOfWeek <= 5;
       const isBusinessHours = hours >= 9 && hours < 17;
       
@@ -136,15 +160,19 @@ export function JobDialog({ open, onOpenChange, job }: JobDialogProps) {
         job_date: job.job_date,
         start_time: job.start_time,
         end_time: job.end_time,
-        location_type: job.location_type,
+        location_type: job.location_type || 'in_person',
         location_address: job.location_address || '',
         location_city: job.location_city || '',
         location_state: job.location_state || '',
         location_zip: job.location_zip || '',
         video_call_link: job.video_call_link || '',
         opportunity_source: job.opportunity_source,
-        billing_hours_type: job.billing_hours_type,
+        billing_hours_type: job.billing_hours_type || 'business',
         internal_notes: job.internal_notes || '',
+        client_business_name: job.client_business_name || '',
+        client_contact_name: job.client_contact_name || '',
+        client_contact_phone: job.client_contact_phone || '',
+        client_contact_email: job.client_contact_email || '',
       });
     } else {
       form.reset({
@@ -175,17 +203,17 @@ export function JobDialog({ open, onOpenChange, job }: JobDialogProps) {
         opportunity_source: data.opportunity_source || null,
         billing_hours_type: data.billing_hours_type,
         internal_notes: data.internal_notes || null,
-      } satisfies JobInsert;
+        client_business_name: data.client_business_name || null,
+        client_contact_name: data.client_contact_name || null,
+        client_contact_phone: data.client_contact_phone || null,
+        client_contact_email: data.client_contact_email || null,
+      };
 
       if (job) {
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const { error } = await (supabase.from('jobs') as any)
-          .update(payload)
-          .eq('id', job.id);
+        const { error } = await supabase.from('jobs').update(payload).eq('id', job.id);
         if (error) throw error;
       } else {
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const { error } = await (supabase.from('jobs') as any).insert(payload);
+        const { error } = await supabase.from('jobs').insert(payload);
         if (error) throw error;
       }
     },
@@ -268,6 +296,56 @@ export function JobDialog({ open, onOpenChange, job }: JobDialogProps) {
             </div>
           </div>
 
+          {/* Client Information - Required for contractors, auto-filled for non-contractors */}
+          <div className="space-y-4">
+            <h3 className="font-semibold">
+              Client Information
+              {isContractor && <span className="text-destructive ml-1">*</span>}
+            </h3>
+            {isContractor && (
+              <p className="text-sm text-muted-foreground">
+                This is a contractor facility. Please enter the client details for this job.
+              </p>
+            )}
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="client_business_name">Business Name {isContractor && '*'}</Label>
+                <Input 
+                  id="client_business_name" 
+                  {...form.register('client_business_name')} 
+                  disabled={!isContractor}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="client_contact_name">Contact Name {isContractor && '*'}</Label>
+                <Input 
+                  id="client_contact_name" 
+                  {...form.register('client_contact_name')} 
+                  disabled={!isContractor}
+                />
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="client_contact_phone">Contact Phone {isContractor && '*'}</Label>
+                <Input 
+                  id="client_contact_phone" 
+                  {...form.register('client_contact_phone')} 
+                  disabled={!isContractor}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="client_contact_email">Contact Email {isContractor && '*'}</Label>
+                <Input 
+                  id="client_contact_email" 
+                  type="email"
+                  {...form.register('client_contact_email')} 
+                  disabled={!isContractor}
+                />
+              </div>
+            </div>
+          </div>
+
           {/* Schedule */}
           <div className="space-y-4">
             <h3 className="font-semibold">Schedule</h3>
@@ -321,7 +399,7 @@ export function JobDialog({ open, onOpenChange, job }: JobDialogProps) {
             {watchedLocationType === 'in_person' ? (
               <>
                 <div className="space-y-2">
-                  <Label htmlFor="location_address">Address</Label>
+                  <Label htmlFor="location_address">Address {isContractor && '*'}</Label>
                   <Input id="location_address" {...form.register('location_address')} />
                 </div>
                 <div className="grid grid-cols-3 gap-4">

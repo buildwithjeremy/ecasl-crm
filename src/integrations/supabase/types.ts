@@ -112,6 +112,7 @@ export type Database = {
           billing_zip: string | null
           contract_signed_date: string | null
           contract_status: Database["public"]["Enums"]["contract_status"] | null
+          contractor: boolean | null
           created_at: string | null
           emergency_fee: number | null
           holiday_fee: number | null
@@ -146,6 +147,7 @@ export type Database = {
           contract_status?:
             | Database["public"]["Enums"]["contract_status"]
             | null
+          contractor?: boolean | null
           created_at?: string | null
           emergency_fee?: number | null
           holiday_fee?: number | null
@@ -180,6 +182,7 @@ export type Database = {
           contract_status?:
             | Database["public"]["Enums"]["contract_status"]
             | null
+          contractor?: boolean | null
           created_at?: string | null
           emergency_fee?: number | null
           holiday_fee?: number | null
@@ -485,6 +488,10 @@ export type Database = {
             | Database["public"]["Enums"]["billing_hours_type"]
             | null
           business_hours_worked: number | null
+          client_business_name: string | null
+          client_contact_email: string | null
+          client_contact_name: string | null
+          client_contact_phone: string | null
           confirmation_sent_at: string | null
           created_at: string | null
           deaf_client_name: string | null
@@ -534,6 +541,10 @@ export type Database = {
             | Database["public"]["Enums"]["billing_hours_type"]
             | null
           business_hours_worked?: number | null
+          client_business_name?: string | null
+          client_contact_email?: string | null
+          client_contact_name?: string | null
+          client_contact_phone?: string | null
           confirmation_sent_at?: string | null
           created_at?: string | null
           deaf_client_name?: string | null
@@ -585,6 +596,10 @@ export type Database = {
             | Database["public"]["Enums"]["billing_hours_type"]
             | null
           business_hours_worked?: number | null
+          client_business_name?: string | null
+          client_contact_email?: string | null
+          client_contact_name?: string | null
+          client_contact_phone?: string | null
           confirmation_sent_at?: string | null
           created_at?: string | null
           deaf_client_name?: string | null

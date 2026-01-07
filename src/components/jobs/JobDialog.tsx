@@ -27,6 +27,7 @@ import type { Database } from '@/types/database';
 
 type Job = Database['public']['Tables']['jobs']['Row'];
 type JobInsert = Database['public']['Tables']['jobs']['Insert'];
+type JobUpdate = Database['public']['Tables']['jobs']['Update'];
 type Facility = Database['public']['Tables']['facilities']['Row'];
 
 const jobSchema = z.object({
@@ -174,16 +175,17 @@ export function JobDialog({ open, onOpenChange, job }: JobDialogProps) {
         opportunity_source: data.opportunity_source || null,
         billing_hours_type: data.billing_hours_type,
         internal_notes: data.internal_notes || null,
-      };
+      } satisfies JobInsert;
 
       if (job) {
-        const { error } = await supabase
-          .from('jobs')
-          .update(payload as any)
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const { error } = await (supabase.from('jobs') as any)
+          .update(payload)
           .eq('id', job.id);
         if (error) throw error;
       } else {
-        const { error } = await supabase.from('jobs').insert(payload as any);
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const { error } = await (supabase.from('jobs') as any).insert(payload);
         if (error) throw error;
       }
     },

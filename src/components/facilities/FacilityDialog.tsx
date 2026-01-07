@@ -55,6 +55,7 @@ const facilitySchema = z.object({
   net_terms: z.coerce.number().default(30),
   contract_status: z.enum(['not_sent', 'sent', 'signed']),
   is_gsa: z.boolean(),
+  contractor: z.boolean(),
   notes: z.string().optional(),
 });
 
@@ -79,6 +80,7 @@ export function FacilityDialog({ open, onOpenChange, facility }: FacilityDialogP
       net_terms: 30,
       contract_status: 'not_sent',
       is_gsa: false,
+      contractor: false,
     },
   });
 
@@ -110,6 +112,7 @@ export function FacilityDialog({ open, onOpenChange, facility }: FacilityDialogP
         net_terms: facility.net_terms,
         contract_status: facility.contract_status,
         is_gsa: facility.is_gsa,
+        contractor: facility.contractor ?? false,
         notes: facility.notes || '',
       });
     } else {
@@ -120,6 +123,7 @@ export function FacilityDialog({ open, onOpenChange, facility }: FacilityDialogP
         net_terms: 30,
         contract_status: 'not_sent',
         is_gsa: false,
+        contractor: false,
       });
     }
   }, [facility, form]);
@@ -152,6 +156,7 @@ export function FacilityDialog({ open, onOpenChange, facility }: FacilityDialogP
         net_terms: data.net_terms,
         contract_status: data.contract_status,
         is_gsa: data.is_gsa,
+        contractor: data.contractor,
         notes: data.notes || null,
       } satisfies FacilityInsert;
 
@@ -230,6 +235,14 @@ export function FacilityDialog({ open, onOpenChange, facility }: FacilityDialogP
                   onCheckedChange={(checked) => form.setValue('is_gsa', !!checked)}
                 />
                 <Label htmlFor="is_gsa">GSA Contract</Label>
+              </div>
+              <div className="flex items-center space-x-2 pt-6">
+                <Checkbox
+                  id="contractor"
+                  checked={form.watch('contractor')}
+                  onCheckedChange={(checked) => form.setValue('contractor', !!checked)}
+                />
+                <Label htmlFor="contractor">Contractor</Label>
               </div>
             </div>
           </div>

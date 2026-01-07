@@ -27,6 +27,7 @@ import type { Database } from '@/types/database';
 
 type Facility = Database['public']['Tables']['facilities']['Row'];
 type FacilityInsert = Database['public']['Tables']['facilities']['Insert'];
+type FacilityUpdate = Database['public']['Tables']['facilities']['Update'];
 
 const facilitySchema = z.object({
   name: z.string().min(1, 'Name is required'),
@@ -152,16 +153,17 @@ export function FacilityDialog({ open, onOpenChange, facility }: FacilityDialogP
         contract_status: data.contract_status,
         is_gsa: data.is_gsa,
         notes: data.notes || null,
-      };
+      } satisfies FacilityInsert;
 
       if (facility) {
-        const { error } = await supabase
-          .from('facilities')
-          .update(payload as any)
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const { error } = await (supabase.from('facilities') as any)
+          .update(payload)
           .eq('id', facility.id);
         if (error) throw error;
       } else {
-        const { error } = await supabase.from('facilities').insert(payload as any);
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const { error } = await (supabase.from('facilities') as any).insert(payload);
         if (error) throw error;
       }
     },

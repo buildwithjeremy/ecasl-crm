@@ -27,6 +27,7 @@ import type { Database } from '@/types/database';
 
 type Interpreter = Database['public']['Tables']['interpreters']['Row'];
 type InterpreterInsert = Database['public']['Tables']['interpreters']['Insert'];
+type InterpreterUpdate = Database['public']['Tables']['interpreters']['Update'];
 
 const interpreterSchema = z.object({
   first_name: z.string().min(1, 'First name is required'),
@@ -158,16 +159,17 @@ export function InterpreterDialog({ open, onOpenChange, interpreter }: Interpret
         contract_status: data.contract_status,
         w9_received: data.w9_received,
         notes: data.notes || null,
-      };
+      } satisfies InterpreterInsert;
 
       if (interpreter) {
-        const { error } = await supabase
-          .from('interpreters')
-          .update(payload as any)
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const { error } = await (supabase.from('interpreters') as any)
+          .update(payload)
           .eq('id', interpreter.id);
         if (error) throw error;
       } else {
-        const { error } = await supabase.from('interpreters').insert(payload as any);
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const { error } = await (supabase.from('interpreters') as any).insert(payload);
         if (error) throw error;
       }
     },

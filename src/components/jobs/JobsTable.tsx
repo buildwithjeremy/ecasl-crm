@@ -1,4 +1,5 @@
 import { format } from 'date-fns';
+import { useNavigate } from 'react-router-dom';
 import {
   Table,
   TableBody,
@@ -49,6 +50,8 @@ const statusLabels: Record<string, string> = {
 };
 
 export function JobsTable({ jobs, isLoading, onEdit, onDelete }: JobsTableProps) {
+  const navigate = useNavigate();
+
   if (isLoading) {
     return <div className="text-muted-foreground">Loading jobs...</div>;
   }
@@ -74,7 +77,11 @@ export function JobsTable({ jobs, isLoading, onEdit, onDelete }: JobsTableProps)
         </TableHeader>
         <TableBody>
           {jobs.map((job) => (
-            <TableRow key={job.id}>
+            <TableRow
+              key={job.id}
+              className="cursor-pointer hover:bg-muted/50"
+              onClick={() => navigate(`/jobs/${job.id}`)}
+            >
               <TableCell className="font-medium">{job.job_number}</TableCell>
               <TableCell>{format(new Date(job.job_date), 'MMM d, yyyy')}</TableCell>
               <TableCell>
@@ -99,10 +106,24 @@ export function JobsTable({ jobs, isLoading, onEdit, onDelete }: JobsTableProps)
               </TableCell>
               <TableCell>
                 <div className="flex gap-1">
-                  <Button variant="ghost" size="icon" onClick={() => onEdit(job)}>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onEdit(job);
+                    }}
+                  >
                     <Pencil className="h-4 w-4" />
                   </Button>
-                  <Button variant="ghost" size="icon" onClick={() => onDelete(job.id)}>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onDelete(job.id);
+                    }}
+                  >
                     <Trash2 className="h-4 w-4" />
                   </Button>
                 </div>

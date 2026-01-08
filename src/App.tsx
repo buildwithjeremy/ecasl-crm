@@ -8,6 +8,7 @@ import { AppLayout } from "@/components/layout/AppLayout";
 import Index from "./pages/Index";
 import Auth from "./pages/Auth";
 import Jobs from "./pages/Jobs";
+import JobDetail from "./pages/JobDetail";
 import Interpreters from "./pages/Interpreters";
 import InterpreterDetail from "./pages/InterpreterDetail";
 import Facilities from "./pages/Facilities";
@@ -32,6 +33,7 @@ const App = () => (
             <Route path="/auth" element={<Auth />} />
             <Route path="/" element={<AppLayout><Index /></AppLayout>} />
             <Route path="/jobs" element={<AppLayout><Jobs /></AppLayout>} />
+            <Route path="/jobs/:id" element={<AppLayout><JobDetail /></AppLayout>} />
             <Route path="/interpreters" element={<AppLayout><Interpreters /></AppLayout>} />
             <Route path="/interpreters/:id" element={<AppLayout><InterpreterDetail /></AppLayout>} />
             <Route path="/facilities" element={<AppLayout><Facilities /></AppLayout>} />

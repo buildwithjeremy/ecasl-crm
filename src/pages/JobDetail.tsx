@@ -335,8 +335,17 @@ export default function JobDetail() {
           form.setValue('client_contact_name', facility.admin_contact_name || '');
           form.setValue('client_contact_phone', facility.admin_contact_phone || '');
           form.setValue('client_contact_email', facility.admin_contact_email || '');
+        } else {
+          // Contractor: clear fields for manual entry
+          form.setValue('location_address', '');
+          form.setValue('location_city', '');
+          form.setValue('location_state', '');
+          form.setValue('location_zip', '');
+          form.setValue('client_business_name', '');
+          form.setValue('client_contact_name', '');
+          form.setValue('client_contact_phone', '');
+          form.setValue('client_contact_email', '');
         }
-        // For contractors, leave fields as-is for manual entry (don't clear existing data on edit)
       }
     }
   }, [watchedFacilityId, watchedLocationTypeForFacility, facilities, form]);

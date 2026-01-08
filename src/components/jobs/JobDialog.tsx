@@ -81,7 +81,7 @@ function calculateHoursSplit(startTime: string, endTime: string, minimumHours: n
 
 type Job = Database['public']['Tables']['jobs']['Row'];
 type Facility = Database['public']['Tables']['facilities']['Row'];
-type FacilitySelect = Pick<Facility, 'id' | 'name' | 'physical_address' | 'physical_city' | 'physical_state' | 'physical_zip' | 'billing_address' | 'billing_city' | 'billing_state' | 'billing_zip' | 'contractor' | 'admin_contact_name' | 'admin_contact_phone' | 'admin_contact_email' | 'rate_business_hours' | 'rate_after_hours' | 'minimum_billable_hours'>;
+type FacilitySelect = Pick<Facility, 'id' | 'name' | 'physical_address' | 'physical_city' | 'physical_state' | 'physical_zip' | 'billing_address' | 'billing_city' | 'billing_state' | 'billing_zip' | 'contractor' | 'admin_contact_name' | 'admin_contact_phone' | 'admin_contact_email' | 'rate_business_hours' | 'rate_after_hours' | 'rate_mileage' | 'minimum_billable_hours'>;
 
 const jobSchema = z.object({
   facility_id: z.string().min(1, 'Facility is required'),
@@ -102,6 +102,11 @@ const jobSchema = z.object({
   client_contact_name: z.string().optional(),
   client_contact_phone: z.string().optional(),
   client_contact_email: z.string().optional(),
+  mileage: z.coerce.number().optional(),
+  travel_time_hours: z.coerce.number().optional(),
+  parking: z.coerce.number().optional(),
+  tolls: z.coerce.number().optional(),
+  misc_fee: z.coerce.number().optional(),
 });
 
 type FormData = z.infer<typeof jobSchema>;
@@ -121,7 +126,7 @@ export function JobDialog({ open, onOpenChange, job }: JobDialogProps) {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('facilities')
-        .select('id, name, physical_address, physical_city, physical_state, physical_zip, billing_address, billing_city, billing_state, billing_zip, contractor, admin_contact_name, admin_contact_phone, admin_contact_email, rate_business_hours, rate_after_hours, minimum_billable_hours')
+        .select('id, name, physical_address, physical_city, physical_state, physical_zip, billing_address, billing_city, billing_state, billing_zip, contractor, admin_contact_name, admin_contact_phone, admin_contact_email, rate_business_hours, rate_after_hours, rate_mileage, minimum_billable_hours')
         .eq('status', 'active')
         .order('name');
       if (error) throw error;
@@ -197,21 +202,49 @@ export function JobDialog({ open, onOpenChange, job }: JobDialogProps) {
     return calculateHoursSplit(watchedStartTime, watchedEndTime, minimumHours);
   }, [watchedStartTime, watchedEndTime, selectedFacility?.minimum_billable_hours]);
 
-  // Calculate billable total
+  // Watch expense fields for calculation
+  const watchedMileage = form.watch('mileage') ?? 0;
+  const watchedTravelTime = form.watch('travel_time_hours') ?? 0;
+  const watchedParking = form.watch('parking') ?? 0;
+  const watchedTolls = form.watch('tolls') ?? 0;
+  const watchedMiscFee = form.watch('misc_fee') ?? 0;
+
+  // Calculate billable total including mileage, travel time, and fees
   const billableTotal = useMemo(() => {
     if (!hoursSplit || !selectedFacility) return null;
     const businessRate = selectedFacility.rate_business_hours ?? 0;
     const afterHoursRate = selectedFacility.rate_after_hours ?? 0;
+    const mileageRate = selectedFacility.rate_mileage ?? 0;
+    
+    // Determine travel time rate based on which hour type has more hours
+    const travelTimeRate = hoursSplit.businessHours >= hoursSplit.afterHours 
+      ? businessRate 
+      : afterHoursRate;
+    
     const businessTotal = hoursSplit.businessHours * businessRate;
     const afterHoursTotal = hoursSplit.afterHours * afterHoursRate;
+    const mileageTotal = watchedMileage * mileageRate;
+    const travelTimeTotal = watchedTravelTime * travelTimeRate;
+    const feesTotal = watchedParking + watchedTolls + watchedMiscFee;
+    
     return {
       businessTotal,
       afterHoursTotal,
-      total: businessTotal + afterHoursTotal,
+      mileageTotal,
+      mileageRate,
+      travelTimeTotal,
+      travelTimeRate,
+      feesTotal,
+      total: businessTotal + afterHoursTotal + mileageTotal + travelTimeTotal + feesTotal,
       businessRate,
       afterHoursRate,
+      mileage: watchedMileage,
+      travelTimeHours: watchedTravelTime,
+      parking: watchedParking,
+      tolls: watchedTolls,
+      miscFee: watchedMiscFee,
     };
-  }, [hoursSplit, selectedFacility]);
+  }, [hoursSplit, selectedFacility, watchedMileage, watchedTravelTime, watchedParking, watchedTolls, watchedMiscFee]);
 
   useEffect(() => {
     if (watchedStartTime && watchedJobDate) {
@@ -251,6 +284,11 @@ export function JobDialog({ open, onOpenChange, job }: JobDialogProps) {
         client_contact_name: job.client_contact_name || '',
         client_contact_phone: job.client_contact_phone || '',
         client_contact_email: job.client_contact_email || '',
+        mileage: job.mileage ?? 0,
+        travel_time_hours: job.travel_time_hours ?? 0,
+        parking: job.parking ?? 0,
+        tolls: job.tolls ?? 0,
+        misc_fee: job.misc_fee ?? 0,
       });
     } else {
       form.reset({
@@ -260,6 +298,11 @@ export function JobDialog({ open, onOpenChange, job }: JobDialogProps) {
         job_date: format(new Date(), 'yyyy-MM-dd'),
         start_time: '09:00',
         end_time: '10:00',
+        mileage: 0,
+        travel_time_hours: 0,
+        parking: 0,
+        tolls: 0,
+        misc_fee: 0,
       });
     }
   }, [job, form]);
@@ -285,6 +328,11 @@ export function JobDialog({ open, onOpenChange, job }: JobDialogProps) {
         client_contact_name: data.client_contact_name || null,
         client_contact_phone: data.client_contact_phone || null,
         client_contact_email: data.client_contact_email || null,
+        mileage: data.mileage || null,
+        travel_time_hours: data.travel_time_hours || null,
+        parking: data.parking || null,
+        tolls: data.tolls || null,
+        misc_fee: data.misc_fee || null,
       };
 
       if (job) {
@@ -503,6 +551,33 @@ export function JobDialog({ open, onOpenChange, job }: JobDialogProps) {
             )}
           </div>
 
+          {/* Expenses */}
+          <div className="space-y-4">
+            <h3 className="font-semibold">Expenses (Optional)</h3>
+            <div className="grid grid-cols-5 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="mileage">Mileage</Label>
+                <Input id="mileage" type="number" step="0.1" placeholder="0" {...form.register('mileage')} />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="travel_time_hours">Travel Time (hrs)</Label>
+                <Input id="travel_time_hours" type="number" step="0.25" placeholder="0" {...form.register('travel_time_hours')} />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="parking">Parking ($)</Label>
+                <Input id="parking" type="number" step="0.01" placeholder="0" {...form.register('parking')} />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="tolls">Tolls ($)</Label>
+                <Input id="tolls" type="number" step="0.01" placeholder="0" {...form.register('tolls')} />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="misc_fee">Misc Fee ($)</Label>
+                <Input id="misc_fee" type="number" step="0.01" placeholder="0" {...form.register('misc_fee')} />
+              </div>
+            </div>
+          </div>
+
           {/* Rates & Fees - Billable Calculation */}
           {hoursSplit && billableTotal && selectedFacility && (
             <div className="space-y-4">
@@ -537,6 +612,30 @@ export function JobDialog({ open, onOpenChange, job }: JobDialogProps) {
                       <span className="font-medium ml-1">${billableTotal.afterHoursTotal.toFixed(2)}</span>
                     </span>
                   </div>
+                  {billableTotal.mileage > 0 && (
+                    <div className="flex justify-between">
+                      <span>Mileage:</span>
+                      <span>
+                        {billableTotal.mileage.toFixed(1)} mi × ${billableTotal.mileageRate.toFixed(2)} = 
+                        <span className="font-medium ml-1">${billableTotal.mileageTotal.toFixed(2)}</span>
+                      </span>
+                    </div>
+                  )}
+                  {billableTotal.travelTimeHours > 0 && (
+                    <div className="flex justify-between">
+                      <span>Travel Time:</span>
+                      <span>
+                        {billableTotal.travelTimeHours.toFixed(2)} hrs × ${billableTotal.travelTimeRate.toFixed(2)} = 
+                        <span className="font-medium ml-1">${billableTotal.travelTimeTotal.toFixed(2)}</span>
+                      </span>
+                    </div>
+                  )}
+                  {billableTotal.feesTotal > 0 && (
+                    <div className="flex justify-between">
+                      <span>Fees (P/T/M):</span>
+                      <span className="font-medium">${billableTotal.feesTotal.toFixed(2)}</span>
+                    </div>
+                  )}
                 </div>
                 
                 <div className="border-t pt-3 flex justify-between font-semibold">

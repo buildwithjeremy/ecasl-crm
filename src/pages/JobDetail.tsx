@@ -534,26 +534,30 @@ export default function JobDetail() {
       if (!selectedJobId) throw new Error('No job selected');
       if (!selectedInterpreter) throw new Error('No interpreter selected');
       
-      const billableHours = selectedInterpreter.minimum_hours ?? 2;
+      const minimumHours = selectedInterpreter.minimum_hours ?? 2;
+      const currentBillableHours = form.getValues('billable_hours') ?? 0;
+      const newBillableHours = currentBillableHours < minimumHours ? minimumHours : currentBillableHours;
       
       // TODO: Implement confirmation email sending logic here
       const { error } = await supabase
         .from('jobs')
         .update({ 
           status: 'confirmed',
-          billable_hours: billableHours,
+          billable_hours: newBillableHours,
         } as never)
         .eq('id', selectedJobId);
       if (error) throw error;
+      
+      return newBillableHours;
     },
-    onSuccess: () => {
+    onSuccess: (newBillableHours) => {
       queryClient.invalidateQueries({ queryKey: ['job', selectedJobId] });
       queryClient.invalidateQueries({ queryKey: ['jobs'] });
       form.setValue('status', 'confirmed' as const);
-      form.setValue('billable_hours', selectedInterpreter?.minimum_hours ?? 2);
+      form.setValue('billable_hours', newBillableHours);
       toast({
         title: 'Interpreter Confirmed',
-        description: 'Status updated to Confirmed and billable hours set. Confirmation email functionality coming soon.',
+        description: 'Status updated to Confirmed. Confirmation email functionality coming soon.',
       });
     },
     onError: (error: any) => {

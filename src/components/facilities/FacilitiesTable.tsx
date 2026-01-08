@@ -1,3 +1,4 @@
+import { useNavigate } from 'react-router-dom';
 import {
   Table,
   TableBody,
@@ -27,6 +28,8 @@ const statusColors: Record<string, 'default' | 'secondary' | 'destructive'> = {
 };
 
 export function FacilitiesTable({ facilities, isLoading, onEdit, onDelete }: FacilitiesTableProps) {
+  const navigate = useNavigate();
+
   if (isLoading) {
     return <div className="text-muted-foreground">Loading facilities...</div>;
   }
@@ -34,6 +37,10 @@ export function FacilitiesTable({ facilities, isLoading, onEdit, onDelete }: Fac
   if (facilities.length === 0) {
     return <div className="text-muted-foreground">No facilities found.</div>;
   }
+
+  const handleRowClick = (facilityId: string) => {
+    navigate(`/facilities/${facilityId}`);
+  };
 
   return (
     <div className="rounded-md border">
@@ -51,7 +58,11 @@ export function FacilitiesTable({ facilities, isLoading, onEdit, onDelete }: Fac
         </TableHeader>
         <TableBody>
           {facilities.map((facility) => (
-            <TableRow key={facility.id}>
+            <TableRow 
+              key={facility.id} 
+              className="cursor-pointer hover:bg-muted/50"
+              onClick={() => handleRowClick(facility.id)}
+            >
               <TableCell className="font-medium">{facility.name}</TableCell>
               <TableCell>
                 <div className="text-sm">
@@ -73,10 +84,18 @@ export function FacilitiesTable({ facilities, isLoading, onEdit, onDelete }: Fac
               <TableCell>Net {facility.net_terms}</TableCell>
               <TableCell>
                 <div className="flex gap-1">
-                  <Button variant="ghost" size="icon" onClick={() => onEdit(facility)}>
+                  <Button 
+                    variant="ghost" 
+                    size="icon" 
+                    onClick={(e) => { e.stopPropagation(); onEdit(facility); }}
+                  >
                     <Pencil className="h-4 w-4" />
                   </Button>
-                  <Button variant="ghost" size="icon" onClick={() => onDelete(facility.id)}>
+                  <Button 
+                    variant="ghost" 
+                    size="icon" 
+                    onClick={(e) => { e.stopPropagation(); onDelete(facility.id); }}
+                  >
                     <Trash2 className="h-4 w-4" />
                   </Button>
                 </div>

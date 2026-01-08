@@ -5,6 +5,7 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { supabase } from '@/integrations/supabase/client';
+import type { JobStatus } from '@/types/database';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -38,7 +39,7 @@ import {
   CommandList,
 } from '@/components/ui/command';
 import { useToast } from '@/hooks/use-toast';
-import { Check, ChevronsUpDown, ArrowLeft } from 'lucide-react';
+import { Check, ChevronsUpDown, ArrowLeft, Mail } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Badge } from '@/components/ui/badge';
 import { format } from 'date-fns';
@@ -427,8 +428,39 @@ export default function JobDetail() {
   const selectedFacility = facilities?.find((f) => f.id === form.watch('facility_id'));
   const selectedInterpreter = interpreters?.find((i) => i.id === form.watch('interpreter_id'));
   const watchedLocationType = form.watch('location_type');
+  const watchedStatus = form.watch('status');
   const watchedPotentialInterpreterIds = form.watch('potential_interpreter_ids') || [];
   const selectedPotentialInterpreters = interpreters?.filter((i) => watchedPotentialInterpreterIds.includes(i.id)) || [];
+
+  const sendOutreachMutation = useMutation({
+    mutationFn: async () => {
+      if (!selectedJobId) throw new Error('No job selected');
+      // TODO: Implement email sending logic here
+      const { error } = await supabase
+        .from('jobs')
+        .update({ status: 'outreach_in_progress' } as never)
+        .eq('id', selectedJobId);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['job', selectedJobId] });
+      queryClient.invalidateQueries({ queryKey: ['jobs'] });
+      form.setValue('status', 'outreach_in_progress' as const);
+      toast({
+        title: 'Outreach Started',
+        description: 'Status updated to Outreach In Progress. Email functionality coming soon.',
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: 'Error',
+        description: error.message || 'Failed to update status',
+        variant: 'destructive',
+      });
+    },
+  });
+
+  const canSendOutreach = watchedStatus === 'new' && watchedPotentialInterpreterIds.length > 0;
 
   return (
     <div className="space-y-6">
@@ -744,6 +776,28 @@ export default function JobDetail() {
                       </FormItem>
                     )}
                   />
+
+                  <div className="md:col-span-2">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={() => sendOutreachMutation.mutate()}
+                      disabled={!canSendOutreach || sendOutreachMutation.isPending}
+                    >
+                      <Mail className="mr-2 h-4 w-4" />
+                      {sendOutreachMutation.isPending ? 'Sending...' : 'Send Potential Interpreters Email'}
+                    </Button>
+                    {!canSendOutreach && watchedStatus !== 'new' && (
+                      <p className="text-sm text-muted-foreground mt-1">
+                        Only available when status is "New"
+                      </p>
+                    )}
+                    {!canSendOutreach && watchedStatus === 'new' && watchedPotentialInterpreterIds.length === 0 && (
+                      <p className="text-sm text-muted-foreground mt-1">
+                        Select at least one potential interpreter
+                      </p>
+                    )}
+                  </div>
                 </div>
 
                 {/* Schedule */}

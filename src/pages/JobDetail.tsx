@@ -135,14 +135,32 @@ export default function JobDetail() {
 
   // Fetch facilities for select
   const { data: facilities } = useQuery({
-    queryKey: ['facilities-with-rates'],
+    queryKey: ['facilities-with-rates-and-address'],
     queryFn: async () => {
       const { data, error } = await supabase
         .from('facilities')
-        .select('id, name, rate_business_hours, rate_after_hours, rate_mileage')
+        .select('id, name, rate_business_hours, rate_after_hours, rate_mileage, contractor, physical_address, physical_city, physical_state, physical_zip, billing_address, billing_city, billing_state, billing_zip, admin_contact_name, admin_contact_phone, admin_contact_email')
         .order('name');
       if (error) throw error;
-      return data as { id: string; name: string; rate_business_hours: number | null; rate_after_hours: number | null; rate_mileage: number | null }[];
+      return data as { 
+        id: string; 
+        name: string; 
+        rate_business_hours: number | null; 
+        rate_after_hours: number | null; 
+        rate_mileage: number | null;
+        contractor: boolean | null;
+        physical_address: string | null;
+        physical_city: string | null;
+        physical_state: string | null;
+        physical_zip: string | null;
+        billing_address: string | null;
+        billing_city: string | null;
+        billing_state: string | null;
+        billing_zip: string | null;
+        admin_contact_name: string | null;
+        admin_contact_phone: string | null;
+        admin_contact_email: string | null;
+      }[];
     },
   });
 
@@ -286,18 +304,42 @@ export default function JobDetail() {
     }
   }, [watchedStartTime, watchedEndTime, form]);
 
-  // Auto-populate facility rates when facility changes
+  // Auto-populate facility rates and location when facility changes
   const watchedFacilityId = form.watch('facility_id');
+  const watchedLocationTypeForFacility = form.watch('location_type');
+  
   useEffect(() => {
     if (watchedFacilityId && facilities) {
       const facility = facilities.find((f) => f.id === watchedFacilityId);
       if (facility) {
+        // Always set rates
         form.setValue('facility_rate_business', facility.rate_business_hours || 0);
         form.setValue('facility_rate_after_hours', facility.rate_after_hours || 0);
         form.setValue('facility_rate_mileage', facility.rate_mileage || 0);
+        
+        if (!facility.contractor) {
+          // Non-contractor: auto-fill from facility data
+          if (watchedLocationTypeForFacility === 'in_person') {
+            const address = facility.physical_address || facility.billing_address;
+            const city = facility.physical_city || facility.billing_city;
+            const state = facility.physical_state || facility.billing_state;
+            const zip = facility.physical_zip || facility.billing_zip;
+            
+            form.setValue('location_address', address || '');
+            form.setValue('location_city', city || '');
+            form.setValue('location_state', state || '');
+            form.setValue('location_zip', zip || '');
+          }
+          // Auto-fill client info from facility
+          form.setValue('client_business_name', facility.name || '');
+          form.setValue('client_contact_name', facility.admin_contact_name || '');
+          form.setValue('client_contact_phone', facility.admin_contact_phone || '');
+          form.setValue('client_contact_email', facility.admin_contact_email || '');
+        }
+        // For contractors, leave fields as-is for manual entry (don't clear existing data on edit)
       }
     }
-  }, [watchedFacilityId, facilities, form]);
+  }, [watchedFacilityId, watchedLocationTypeForFacility, facilities, form]);
 
   // Auto-populate interpreter rates when interpreter changes
   const watchedInterpreterId = form.watch('interpreter_id');

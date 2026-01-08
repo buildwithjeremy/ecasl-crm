@@ -427,8 +427,10 @@ export type Database = {
           id: string
           invoice_number: string
           issued_date: string | null
+          job_id: string | null
           notes: string | null
           paid_date: string | null
+          pdf_url: string | null
           quickbooks_invoice_id: string | null
           status: Database["public"]["Enums"]["invoice_status"] | null
           subtotal: number | null
@@ -443,8 +445,10 @@ export type Database = {
           id?: string
           invoice_number: string
           issued_date?: string | null
+          job_id?: string | null
           notes?: string | null
           paid_date?: string | null
+          pdf_url?: string | null
           quickbooks_invoice_id?: string | null
           status?: Database["public"]["Enums"]["invoice_status"] | null
           subtotal?: number | null
@@ -459,8 +463,10 @@ export type Database = {
           id?: string
           invoice_number?: string
           issued_date?: string | null
+          job_id?: string | null
           notes?: string | null
           paid_date?: string | null
+          pdf_url?: string | null
           quickbooks_invoice_id?: string | null
           status?: Database["public"]["Enums"]["invoice_status"] | null
           subtotal?: number | null
@@ -474,6 +480,13 @@ export type Database = {
             columns: ["facility_id"]
             isOneToOne: false
             referencedRelation: "facilities"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "invoices_job_id_fkey"
+            columns: ["job_id"]
+            isOneToOne: false
+            referencedRelation: "jobs"
             referencedColumns: ["id"]
           },
         ]

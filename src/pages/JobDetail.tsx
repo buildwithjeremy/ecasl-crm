@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useForm } from 'react-hook-form';
@@ -54,6 +54,60 @@ import { Check, ChevronsUpDown, ArrowLeft, Mail } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Badge } from '@/components/ui/badge';
 import { format } from 'date-fns';
+
+// Helper to calculate hours split between business (8am-5pm) and after-hours
+function calculateHoursSplit(startTime: string, endTime: string, minimumHours: number = 2): {
+  businessHours: number;
+  afterHours: number;
+  totalHours: number;
+  billableHours: number;
+  minimumApplied: number;
+} {
+  const [startH, startM] = startTime.split(':').map(Number);
+  const [endH, endM] = endTime.split(':').map(Number);
+  
+  const startMinutes = startH * 60 + startM;
+  const endMinutes = endH * 60 + endM;
+  
+  // Handle overnight jobs
+  const totalMinutes = endMinutes >= startMinutes 
+    ? endMinutes - startMinutes 
+    : (24 * 60 - startMinutes) + endMinutes;
+  
+  const totalHours = totalMinutes / 60;
+  
+  // Business hours: 8am (480 min) to 5pm (1020 min)
+  const businessStart = 8 * 60; // 8:00 AM
+  const businessEnd = 17 * 60;  // 5:00 PM
+  
+  let businessMinutes = 0;
+  let afterMinutes = 0;
+  
+  // Iterate through each minute of the job
+  for (let i = 0; i < totalMinutes; i++) {
+    const currentMinute = (startMinutes + i) % (24 * 60);
+    if (currentMinute >= businessStart && currentMinute < businessEnd) {
+      businessMinutes++;
+    } else {
+      afterMinutes++;
+    }
+  }
+  
+  const businessHours = businessMinutes / 60;
+  const afterHours = afterMinutes / 60;
+  
+  // Apply minimum hours - any shortfall is added to business hours
+  const billableHours = Math.max(totalHours, minimumHours);
+  const minimumApplied = billableHours > totalHours ? billableHours - totalHours : 0;
+  
+  return {
+    businessHours: businessHours + minimumApplied,
+    afterHours,
+    totalHours,
+    billableHours,
+    minimumApplied,
+  };
+}
 
 const formSchema = z.object({
   facility_id: z.string().min(1, 'Facility is required'),
@@ -151,7 +205,7 @@ export default function JobDetail() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('facilities')
-        .select('id, name, rate_business_hours, rate_after_hours, rate_mileage, contractor, physical_address, physical_city, physical_state, physical_zip, billing_address, billing_city, billing_state, billing_zip, admin_contact_name, admin_contact_phone, admin_contact_email')
+        .select('id, name, rate_business_hours, rate_after_hours, rate_mileage, minimum_billable_hours, contractor, physical_address, physical_city, physical_state, physical_zip, billing_address, billing_city, billing_state, billing_zip, admin_contact_name, admin_contact_phone, admin_contact_email')
         .order('name');
       if (error) throw error;
       return data as { 
@@ -160,6 +214,7 @@ export default function JobDetail() {
         rate_business_hours: number | null; 
         rate_after_hours: number | null; 
         rate_mileage: number | null;
+        minimum_billable_hours: number | null;
         contractor: boolean | null;
         physical_address: string | null;
         physical_city: string | null;
@@ -442,6 +497,40 @@ export default function JobDetail() {
   const watchedStatus = form.watch('status');
   const watchedPotentialInterpreterIds = form.watch('potential_interpreter_ids') || [];
   const selectedPotentialInterpreters = interpreters?.filter((i) => watchedPotentialInterpreterIds.includes(i.id)) || [];
+
+  // Calculate billable hours split for display
+  const hoursSplit = useMemo(() => {
+    if (!watchedStartTime || !watchedEndTime) return null;
+    const minimumHours = selectedFacility?.minimum_billable_hours ?? 2;
+    return calculateHoursSplit(watchedStartTime, watchedEndTime, minimumHours);
+  }, [watchedStartTime, watchedEndTime, selectedFacility?.minimum_billable_hours]);
+
+  // Calculate billable totals
+  const billableTotal = useMemo(() => {
+    if (!hoursSplit) return null;
+    const facilityBusinessRate = form.getValues('facility_rate_business') ?? selectedFacility?.rate_business_hours ?? 0;
+    const facilityAfterHoursRate = form.getValues('facility_rate_after_hours') ?? selectedFacility?.rate_after_hours ?? 0;
+    const interpreterBusinessRate = form.getValues('interpreter_rate_business') ?? selectedInterpreter?.rate_business_hours ?? 0;
+    const interpreterAfterHoursRate = form.getValues('interpreter_rate_after_hours') ?? selectedInterpreter?.rate_after_hours ?? 0;
+    
+    const facilityBusinessTotal = hoursSplit.businessHours * facilityBusinessRate;
+    const facilityAfterHoursTotal = hoursSplit.afterHours * facilityAfterHoursRate;
+    const interpreterBusinessTotal = hoursSplit.businessHours * interpreterBusinessRate;
+    const interpreterAfterHoursTotal = hoursSplit.afterHours * interpreterAfterHoursRate;
+    
+    return {
+      facilityBusinessTotal,
+      facilityAfterHoursTotal,
+      facilityTotal: facilityBusinessTotal + facilityAfterHoursTotal,
+      facilityBusinessRate,
+      facilityAfterHoursRate,
+      interpreterBusinessTotal,
+      interpreterAfterHoursTotal,
+      interpreterTotal: interpreterBusinessTotal + interpreterAfterHoursTotal,
+      interpreterBusinessRate,
+      interpreterAfterHoursRate,
+    };
+  }, [hoursSplit, selectedFacility, selectedInterpreter, form]);
 
   const sendOutreachMutation = useMutation({
     mutationFn: async () => {
@@ -1307,6 +1396,76 @@ export default function JobDetail() {
                     />
                   </div>
                 </div>
+
+                {/* Billable Calculation */}
+                {hoursSplit && billableTotal && (
+                  <div>
+                    <h4 className="text-sm font-medium mb-3">Billable Calculation</h4>
+                    <div className="rounded-lg border bg-muted/50 p-4 space-y-4">
+                      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+                        <div>
+                          <span className="text-muted-foreground">Job Duration:</span>
+                          <span className="ml-2 font-medium">{hoursSplit.totalHours.toFixed(2)} hrs</span>
+                        </div>
+                        <div>
+                          <span className="text-muted-foreground">Billable Hours:</span>
+                          <span className="ml-2 font-medium">{hoursSplit.billableHours.toFixed(2)} hrs</span>
+                          {hoursSplit.minimumApplied > 0 && (
+                            <span className="ml-1 text-xs text-muted-foreground">(min applied)</span>
+                          )}
+                        </div>
+                        <div>
+                          <span className="text-muted-foreground">Business (8am-5pm):</span>
+                          <span className="ml-2 font-medium">{hoursSplit.businessHours.toFixed(2)} hrs</span>
+                        </div>
+                        <div>
+                          <span className="text-muted-foreground">After Hours:</span>
+                          <span className="ml-2 font-medium">{hoursSplit.afterHours.toFixed(2)} hrs</span>
+                        </div>
+                      </div>
+                      
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 border-t pt-4">
+                        {/* Facility Totals */}
+                        <div className="space-y-2">
+                          <h5 className="text-sm font-medium">Facility Charge</h5>
+                          <div className="text-sm space-y-1">
+                            <div className="flex justify-between">
+                              <span>Business Hours:</span>
+                              <span>{hoursSplit.businessHours.toFixed(2)} × ${billableTotal.facilityBusinessRate.toFixed(2)} = <span className="font-medium">${billableTotal.facilityBusinessTotal.toFixed(2)}</span></span>
+                            </div>
+                            <div className="flex justify-between">
+                              <span>After Hours:</span>
+                              <span>{hoursSplit.afterHours.toFixed(2)} × ${billableTotal.facilityAfterHoursRate.toFixed(2)} = <span className="font-medium">${billableTotal.facilityAfterHoursTotal.toFixed(2)}</span></span>
+                            </div>
+                            <div className="flex justify-between border-t pt-1 font-semibold">
+                              <span>Total:</span>
+                              <span>${billableTotal.facilityTotal.toFixed(2)}</span>
+                            </div>
+                          </div>
+                        </div>
+                        
+                        {/* Interpreter Totals */}
+                        <div className="space-y-2">
+                          <h5 className="text-sm font-medium">Interpreter Pay</h5>
+                          <div className="text-sm space-y-1">
+                            <div className="flex justify-between">
+                              <span>Business Hours:</span>
+                              <span>{hoursSplit.businessHours.toFixed(2)} × ${billableTotal.interpreterBusinessRate.toFixed(2)} = <span className="font-medium">${billableTotal.interpreterBusinessTotal.toFixed(2)}</span></span>
+                            </div>
+                            <div className="flex justify-between">
+                              <span>After Hours:</span>
+                              <span>{hoursSplit.afterHours.toFixed(2)} × ${billableTotal.interpreterAfterHoursRate.toFixed(2)} = <span className="font-medium">${billableTotal.interpreterAfterHoursTotal.toFixed(2)}</span></span>
+                            </div>
+                            <div className="flex justify-between border-t pt-1 font-semibold">
+                              <span>Total:</span>
+                              <span>${billableTotal.interpreterTotal.toFixed(2)}</span>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )}
               </CardContent>
             </Card>
 

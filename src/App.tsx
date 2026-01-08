@@ -9,6 +9,7 @@ import Index from "./pages/Index";
 import Auth from "./pages/Auth";
 import Jobs from "./pages/Jobs";
 import Interpreters from "./pages/Interpreters";
+import InterpreterDetail from "./pages/InterpreterDetail";
 import Facilities from "./pages/Facilities";
 import FacilityDetail from "./pages/FacilityDetail";
 import Invoices from "./pages/Invoices";
@@ -30,6 +31,7 @@ const App = () => (
             <Route path="/" element={<AppLayout><Index /></AppLayout>} />
             <Route path="/jobs" element={<AppLayout><Jobs /></AppLayout>} />
             <Route path="/interpreters" element={<AppLayout><Interpreters /></AppLayout>} />
+            <Route path="/interpreters/:id" element={<AppLayout><InterpreterDetail /></AppLayout>} />
             <Route path="/facilities" element={<AppLayout><Facilities /></AppLayout>} />
             <Route path="/facilities/:id" element={<AppLayout><FacilityDetail /></AppLayout>} />
             <Route path="/invoices" element={<AppLayout><Invoices /></AppLayout>} />

@@ -46,6 +46,7 @@ import { format } from 'date-fns';
 const formSchema = z.object({
   facility_id: z.string().min(1, 'Facility is required'),
   interpreter_id: z.string().optional(),
+  potential_interpreter_ids: z.array(z.string()).optional(),
   deaf_client_name: z.string().optional(),
   job_date: z.string().min(1, 'Date is required'),
   start_time: z.string().min(1, 'Start time is required'),
@@ -99,6 +100,7 @@ export default function JobDetail() {
   const [searchOpen, setSearchOpen] = useState(false);
   const [facilityOpen, setFacilityOpen] = useState(false);
   const [interpreterOpen, setInterpreterOpen] = useState(false);
+  const [potentialInterpretersOpen, setPotentialInterpretersOpen] = useState(false);
   const [selectedJobId, setSelectedJobId] = useState<string | null>(id || null);
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -108,6 +110,7 @@ export default function JobDetail() {
     defaultValues: {
       facility_id: '',
       interpreter_id: '',
+      potential_interpreter_ids: [],
       location_type: 'in_person',
       status: 'new',
       billing_hours_type: 'business',
@@ -204,6 +207,7 @@ export default function JobDetail() {
         client_contact_name: string | null;
         client_contact_phone: string | null;
         client_contact_email: string | null;
+        potential_interpreter_ids: string[] | null;
       } | null;
     },
     enabled: !!selectedJobId,
@@ -222,6 +226,7 @@ export default function JobDetail() {
       form.reset({
         facility_id: job.facility_id,
         interpreter_id: job.interpreter_id || '',
+        potential_interpreter_ids: job.potential_interpreter_ids || [],
         deaf_client_name: job.deaf_client_name || '',
         job_date: job.job_date,
         start_time: job.start_time,
@@ -319,6 +324,7 @@ export default function JobDetail() {
         client_contact_name: data.client_contact_name || null,
         client_contact_phone: data.client_contact_phone || null,
         client_contact_email: data.client_contact_email || null,
+        potential_interpreter_ids: data.potential_interpreter_ids || [],
       };
       const { error } = await supabase
         .from('jobs')
@@ -344,6 +350,8 @@ export default function JobDetail() {
   const selectedFacility = facilities?.find((f) => f.id === form.watch('facility_id'));
   const selectedInterpreter = interpreters?.find((i) => i.id === form.watch('interpreter_id'));
   const watchedLocationType = form.watch('location_type');
+  const watchedPotentialInterpreterIds = form.watch('potential_interpreter_ids') || [];
+  const selectedPotentialInterpreters = interpreters?.filter((i) => watchedPotentialInterpreterIds.includes(i.id)) || [];
 
   return (
     <div className="space-y-6">
@@ -577,6 +585,73 @@ export default function JobDetail() {
                                       {interpreter.first_name} {interpreter.last_name}
                                     </CommandItem>
                                   ))}
+                                </CommandGroup>
+                              </CommandList>
+                            </Command>
+                          </PopoverContent>
+                        </Popover>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <FormField
+                    control={form.control}
+                    name="potential_interpreter_ids"
+                    render={({ field }) => (
+                      <FormItem className="flex flex-col md:col-span-2">
+                        <FormLabel>Potential Interpreters</FormLabel>
+                        <Popover open={potentialInterpretersOpen} onOpenChange={setPotentialInterpretersOpen}>
+                          <PopoverTrigger asChild>
+                            <FormControl>
+                              <Button
+                                variant="outline"
+                                role="combobox"
+                                className={cn('justify-between h-auto min-h-10', selectedPotentialInterpreters.length === 0 && 'text-muted-foreground')}
+                              >
+                                <div className="flex flex-wrap gap-1">
+                                  {selectedPotentialInterpreters.length > 0 ? (
+                                    selectedPotentialInterpreters.map((interpreter) => (
+                                      <Badge key={interpreter.id} variant="secondary" className="mr-1">
+                                        {interpreter.first_name} {interpreter.last_name}
+                                      </Badge>
+                                    ))
+                                  ) : (
+                                    'Select potential interpreters...'
+                                  )}
+                                </div>
+                                <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                              </Button>
+                            </FormControl>
+                          </PopoverTrigger>
+                          <PopoverContent className="w-[400px] p-0">
+                            <Command>
+                              <CommandInput placeholder="Search interpreters..." />
+                              <CommandList>
+                                <CommandEmpty>No interpreter found.</CommandEmpty>
+                                <CommandGroup>
+                                  {interpreters?.map((interpreter) => {
+                                    const isSelected = field.value?.includes(interpreter.id);
+                                    return (
+                                      <CommandItem
+                                        key={interpreter.id}
+                                        value={`${interpreter.first_name} ${interpreter.last_name}`}
+                                        onSelect={() => {
+                                          const currentIds = field.value || [];
+                                          if (isSelected) {
+                                            field.onChange(currentIds.filter((id) => id !== interpreter.id));
+                                          } else {
+                                            field.onChange([...currentIds, interpreter.id]);
+                                          }
+                                        }}
+                                      >
+                                        <Check
+                                          className={cn('mr-2 h-4 w-4', isSelected ? 'opacity-100' : 'opacity-0')}
+                                        />
+                                        {interpreter.first_name} {interpreter.last_name}
+                                      </CommandItem>
+                                    );
+                                  })}
                                 </CommandGroup>
                               </CommandList>
                             </Command>

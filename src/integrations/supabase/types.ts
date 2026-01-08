@@ -516,6 +516,8 @@ export type Database = {
           deaf_client_name: string | null
           emergency_fee_applied: boolean | null
           end_time: string
+          facility_billable_total: number | null
+          facility_hourly_total: number | null
           facility_id: string
           facility_rate_after_hours: number | null
           facility_rate_business: number | null
@@ -524,6 +526,8 @@ export type Database = {
           holiday_fee_applied: boolean | null
           id: string
           internal_notes: string | null
+          interpreter_billable_total: number | null
+          interpreter_hourly_total: number | null
           interpreter_id: string | null
           interpreter_rate_after_hours: number | null
           interpreter_rate_business: number | null
@@ -573,6 +577,8 @@ export type Database = {
           deaf_client_name?: string | null
           emergency_fee_applied?: boolean | null
           end_time: string
+          facility_billable_total?: number | null
+          facility_hourly_total?: number | null
           facility_id: string
           facility_rate_after_hours?: number | null
           facility_rate_business?: number | null
@@ -581,6 +587,8 @@ export type Database = {
           holiday_fee_applied?: boolean | null
           id?: string
           internal_notes?: string | null
+          interpreter_billable_total?: number | null
+          interpreter_hourly_total?: number | null
           interpreter_id?: string | null
           interpreter_rate_after_hours?: number | null
           interpreter_rate_business?: number | null
@@ -632,6 +640,8 @@ export type Database = {
           deaf_client_name?: string | null
           emergency_fee_applied?: boolean | null
           end_time?: string
+          facility_billable_total?: number | null
+          facility_hourly_total?: number | null
           facility_id?: string
           facility_rate_after_hours?: number | null
           facility_rate_business?: number | null
@@ -640,6 +650,8 @@ export type Database = {
           holiday_fee_applied?: boolean | null
           id?: string
           internal_notes?: string | null
+          interpreter_billable_total?: number | null
+          interpreter_hourly_total?: number | null
           interpreter_id?: string | null
           interpreter_rate_after_hours?: number | null
           interpreter_rate_business?: number | null

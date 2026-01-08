@@ -433,6 +433,48 @@ export default function JobDetail() {
   const mutation = useMutation({
     mutationFn: async (data: FormData) => {
       if (!selectedJobId) return;
+      
+      // Calculate hourly and billable totals
+      let facilityHourlyTotal: number | null = null;
+      let facilityBillableTotal: number | null = null;
+      let interpreterHourlyTotal: number | null = null;
+      let interpreterBillableTotal: number | null = null;
+      
+      if (hoursSplit) {
+        const facilityBusinessRate = data.facility_rate_business ?? selectedFacility?.rate_business_hours ?? 0;
+        const facilityAfterHoursRate = data.facility_rate_after_hours ?? selectedFacility?.rate_after_hours ?? 0;
+        const facilityMileageRate = data.facility_rate_mileage ?? selectedFacility?.rate_mileage ?? 0;
+        const interpreterBusinessRate = data.interpreter_rate_business ?? selectedInterpreter?.rate_business_hours ?? 0;
+        const interpreterAfterHoursRate = data.interpreter_rate_after_hours ?? selectedInterpreter?.rate_after_hours ?? 0;
+        const interpreterMileageRate = data.interpreter_rate_mileage ?? selectedInterpreter?.rate_mileage ?? 0;
+        
+        const mileage = data.mileage ?? 0;
+        const travelTimeHours = data.travel_time_hours ?? 0;
+        const parking = data.parking ?? 0;
+        const tolls = data.tolls ?? 0;
+        const miscFee = data.misc_fee ?? 0;
+        
+        // Facility calculations
+        const facilityBusinessTotal = hoursSplit.businessHours * facilityBusinessRate;
+        const facilityAfterHoursTotal = hoursSplit.afterHours * facilityAfterHoursRate;
+        facilityHourlyTotal = facilityBusinessTotal + facilityAfterHoursTotal;
+        const facilityMileageTotal = mileage * facilityMileageRate;
+        const facilityFeesTotal = parking + tolls + miscFee;
+        facilityBillableTotal = facilityHourlyTotal + facilityMileageTotal + facilityFeesTotal;
+        
+        // Interpreter calculations
+        const interpreterBusinessTotal = hoursSplit.businessHours * interpreterBusinessRate;
+        const interpreterAfterHoursTotal = hoursSplit.afterHours * interpreterAfterHoursRate;
+        interpreterHourlyTotal = interpreterBusinessTotal + interpreterAfterHoursTotal;
+        const interpreterMileageTotal = mileage * interpreterMileageRate;
+        const interpreterTravelTimeRate = hoursSplit.businessHours >= hoursSplit.afterHours 
+          ? interpreterBusinessRate 
+          : interpreterAfterHoursRate;
+        const interpreterTravelTimeTotal = travelTimeHours * interpreterTravelTimeRate;
+        const interpreterFeesTotal = parking + tolls + miscFee;
+        interpreterBillableTotal = interpreterHourlyTotal + interpreterMileageTotal + interpreterTravelTimeTotal + interpreterFeesTotal;
+      }
+      
       const payload: Record<string, unknown> = {
         facility_id: data.facility_id,
         interpreter_id: data.interpreter_id || null,
@@ -469,6 +511,10 @@ export default function JobDetail() {
         client_contact_phone: data.client_contact_phone || null,
         client_contact_email: data.client_contact_email || null,
         potential_interpreter_ids: data.potential_interpreter_ids || [],
+        facility_hourly_total: facilityHourlyTotal,
+        facility_billable_total: facilityBillableTotal,
+        interpreter_hourly_total: interpreterHourlyTotal,
+        interpreter_billable_total: interpreterBillableTotal,
       };
       const { error } = await supabase
         .from('jobs')

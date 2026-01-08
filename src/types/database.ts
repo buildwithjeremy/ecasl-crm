@@ -299,6 +299,11 @@ export interface Database {
           emergency_fee_applied: boolean;
           holiday_fee_applied: boolean;
           billable_hours: number | null;
+          facility_hourly_total: number | null;
+          facility_billable_total: number | null;
+          interpreter_hourly_total: number | null;
+          interpreter_billable_total: number | null;
+          total_facility_charge: number | null;
           total_interpreter_pay: number | null;
           internal_notes: string | null;
           confirmation_sent_at: string | null;
@@ -350,6 +355,11 @@ export interface Database {
           emergency_fee_applied?: boolean;
           holiday_fee_applied?: boolean;
           billable_hours?: number | null;
+          facility_hourly_total?: number | null;
+          facility_billable_total?: number | null;
+          interpreter_hourly_total?: number | null;
+          interpreter_billable_total?: number | null;
+          total_facility_charge?: number | null;
           total_interpreter_pay?: number | null;
           internal_notes?: string | null;
           confirmation_sent_at?: string | null;
@@ -401,6 +411,11 @@ export interface Database {
           emergency_fee_applied?: boolean;
           holiday_fee_applied?: boolean;
           billable_hours?: number | null;
+          facility_hourly_total?: number | null;
+          facility_billable_total?: number | null;
+          interpreter_hourly_total?: number | null;
+          interpreter_billable_total?: number | null;
+          total_facility_charge?: number | null;
           total_interpreter_pay?: number | null;
           internal_notes?: string | null;
           confirmation_sent_at?: string | null;

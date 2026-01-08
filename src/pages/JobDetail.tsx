@@ -182,10 +182,10 @@ export default function JobDetail() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('interpreters')
-        .select('id, first_name, last_name, rate_business_hours, rate_after_hours, rate_mileage')
+        .select('id, first_name, last_name, rate_business_hours, rate_after_hours, rate_mileage, minimum_hours')
         .order('last_name');
       if (error) throw error;
-      return data as { id: string; first_name: string; last_name: string; rate_business_hours: number | null; rate_after_hours: number | null; rate_mileage: number | null }[];
+      return data as { id: string; first_name: string; last_name: string; rate_business_hours: number | null; rate_after_hours: number | null; rate_mileage: number | null; minimum_hours: number | null }[];
     },
   });
 
@@ -532,10 +532,17 @@ export default function JobDetail() {
   const confirmInterpreterMutation = useMutation({
     mutationFn: async () => {
       if (!selectedJobId) throw new Error('No job selected');
+      if (!selectedInterpreter) throw new Error('No interpreter selected');
+      
+      const billableHours = selectedInterpreter.minimum_hours ?? 2;
+      
       // TODO: Implement confirmation email sending logic here
       const { error } = await supabase
         .from('jobs')
-        .update({ status: 'confirmed' } as never)
+        .update({ 
+          status: 'confirmed',
+          billable_hours: billableHours,
+        } as never)
         .eq('id', selectedJobId);
       if (error) throw error;
     },
@@ -543,9 +550,10 @@ export default function JobDetail() {
       queryClient.invalidateQueries({ queryKey: ['job', selectedJobId] });
       queryClient.invalidateQueries({ queryKey: ['jobs'] });
       form.setValue('status', 'confirmed' as const);
+      form.setValue('billable_hours', selectedInterpreter?.minimum_hours ?? 2);
       toast({
         title: 'Interpreter Confirmed',
-        description: 'Status updated to Confirmed. Confirmation email functionality coming soon.',
+        description: 'Status updated to Confirmed and billable hours set. Confirmation email functionality coming soon.',
       });
     },
     onError: (error: any) => {

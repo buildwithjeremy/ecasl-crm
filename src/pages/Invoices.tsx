@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
@@ -52,6 +53,7 @@ export default function Invoices() {
   const [selectedInvoice, setSelectedInvoice] = useState<Invoice | null>(null);
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const navigate = useNavigate();
 
   const { data: invoices, isLoading } = useQuery({
     queryKey: ['invoices', searchQuery],
@@ -157,7 +159,7 @@ export default function Invoices() {
                   <TableRow
                     key={invoice.id}
                     className="cursor-pointer hover:bg-muted/50"
-                    onClick={() => handleEdit(invoice)}
+                    onClick={() => navigate(`/invoices/${invoice.id}`)}
                   >
                     <TableCell className="font-medium">{invoice.invoice_number}</TableCell>
                     <TableCell>{invoice.job?.job_number || '-'}</TableCell>

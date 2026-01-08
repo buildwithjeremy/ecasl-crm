@@ -542,6 +542,7 @@ export type Database = {
             | Database["public"]["Enums"]["opportunity_source"]
             | null
           parking: number | null
+          potential_interpreter_ids: string[] | null
           reminder_sent_at: string | null
           start_time: string
           status: Database["public"]["Enums"]["job_status"] | null
@@ -600,6 +601,7 @@ export type Database = {
             | Database["public"]["Enums"]["opportunity_source"]
             | null
           parking?: number | null
+          potential_interpreter_ids?: string[] | null
           reminder_sent_at?: string | null
           start_time: string
           status?: Database["public"]["Enums"]["job_status"] | null
@@ -658,6 +660,7 @@ export type Database = {
             | Database["public"]["Enums"]["opportunity_source"]
             | null
           parking?: number | null
+          potential_interpreter_ids?: string[] | null
           reminder_sent_at?: string | null
           start_time?: string
           status?: Database["public"]["Enums"]["job_status"] | null

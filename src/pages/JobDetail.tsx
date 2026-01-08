@@ -7,6 +7,17 @@ import * as z from 'zod';
 import { supabase } from '@/integrations/supabase/client';
 import type { JobStatus } from '@/types/database';
 import { Button } from '@/components/ui/button';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from '@/components/ui/alert-dialog';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -778,15 +789,32 @@ export default function JobDetail() {
                   />
 
                   <div className="md:col-span-2">
-                    <Button
-                      type="button"
-                      variant="outline"
-                      onClick={() => sendOutreachMutation.mutate()}
-                      disabled={!canSendOutreach || sendOutreachMutation.isPending}
-                    >
-                      <Mail className="mr-2 h-4 w-4" />
-                      {sendOutreachMutation.isPending ? 'Sending...' : 'Send Potential Interpreters Email'}
-                    </Button>
+                    <AlertDialog>
+                      <AlertDialogTrigger asChild>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          disabled={!canSendOutreach || sendOutreachMutation.isPending}
+                        >
+                          <Mail className="mr-2 h-4 w-4" />
+                          {sendOutreachMutation.isPending ? 'Sending...' : 'Send Potential Interpreters Email'}
+                        </Button>
+                      </AlertDialogTrigger>
+                      <AlertDialogContent>
+                        <AlertDialogHeader>
+                          <AlertDialogTitle>Send Outreach Email?</AlertDialogTitle>
+                          <AlertDialogDescription>
+                            This will send an email to {watchedPotentialInterpreterIds.length} potential interpreter{watchedPotentialInterpreterIds.length !== 1 ? 's' : ''} and change the job status to "Outreach In Progress".
+                          </AlertDialogDescription>
+                        </AlertDialogHeader>
+                        <AlertDialogFooter>
+                          <AlertDialogCancel>Cancel</AlertDialogCancel>
+                          <AlertDialogAction onClick={() => sendOutreachMutation.mutate()}>
+                            Send Email
+                          </AlertDialogAction>
+                        </AlertDialogFooter>
+                      </AlertDialogContent>
+                    </AlertDialog>
                     {!canSendOutreach && watchedStatus !== 'new' && (
                       <p className="text-sm text-muted-foreground mt-1">
                         Only available when status is "New"

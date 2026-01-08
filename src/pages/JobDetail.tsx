@@ -135,27 +135,27 @@ export default function JobDetail() {
 
   // Fetch facilities for select
   const { data: facilities } = useQuery({
-    queryKey: ['facilities'],
+    queryKey: ['facilities-with-rates'],
     queryFn: async () => {
       const { data, error } = await supabase
         .from('facilities')
-        .select('id, name')
+        .select('id, name, rate_business_hours, rate_after_hours, rate_mileage')
         .order('name');
       if (error) throw error;
-      return data as { id: string; name: string }[];
+      return data as { id: string; name: string; rate_business_hours: number | null; rate_after_hours: number | null; rate_mileage: number | null }[];
     },
   });
 
   // Fetch interpreters for select
   const { data: interpreters } = useQuery({
-    queryKey: ['interpreters'],
+    queryKey: ['interpreters-with-rates'],
     queryFn: async () => {
       const { data, error } = await supabase
         .from('interpreters')
-        .select('id, first_name, last_name')
+        .select('id, first_name, last_name, rate_business_hours, rate_after_hours, rate_mileage')
         .order('last_name');
       if (error) throw error;
-      return data as { id: string; first_name: string; last_name: string }[];
+      return data as { id: string; first_name: string; last_name: string; rate_business_hours: number | null; rate_after_hours: number | null; rate_mileage: number | null }[];
     },
   });
 
@@ -285,6 +285,32 @@ export default function JobDetail() {
       form.setValue('billable_hours', hours);
     }
   }, [watchedStartTime, watchedEndTime, form]);
+
+  // Auto-populate facility rates when facility changes
+  const watchedFacilityId = form.watch('facility_id');
+  useEffect(() => {
+    if (watchedFacilityId && facilities) {
+      const facility = facilities.find((f) => f.id === watchedFacilityId);
+      if (facility) {
+        form.setValue('facility_rate_business', facility.rate_business_hours || 0);
+        form.setValue('facility_rate_after_hours', facility.rate_after_hours || 0);
+        form.setValue('facility_rate_mileage', facility.rate_mileage || 0);
+      }
+    }
+  }, [watchedFacilityId, facilities, form]);
+
+  // Auto-populate interpreter rates when interpreter changes
+  const watchedInterpreterId = form.watch('interpreter_id');
+  useEffect(() => {
+    if (watchedInterpreterId && interpreters) {
+      const interpreter = interpreters.find((i) => i.id === watchedInterpreterId);
+      if (interpreter) {
+        form.setValue('interpreter_rate_business', interpreter.rate_business_hours || 0);
+        form.setValue('interpreter_rate_after_hours', interpreter.rate_after_hours || 0);
+        form.setValue('interpreter_rate_mileage', interpreter.rate_mileage || 0);
+      }
+    }
+  }, [watchedInterpreterId, interpreters, form]);
 
   const mutation = useMutation({
     mutationFn: async (data: FormData) => {

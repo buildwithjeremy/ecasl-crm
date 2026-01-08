@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useMemo } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -25,9 +25,63 @@ import {
 import { useToast } from '@/hooks/use-toast';
 import type { Database } from '@/types/database';
 
+// Helper to calculate hours split between business (8am-5pm) and after-hours
+function calculateHoursSplit(startTime: string, endTime: string, minimumHours: number = 2): {
+  businessHours: number;
+  afterHours: number;
+  totalHours: number;
+  billableHours: number;
+  minimumApplied: number;
+} {
+  const [startH, startM] = startTime.split(':').map(Number);
+  const [endH, endM] = endTime.split(':').map(Number);
+  
+  const startMinutes = startH * 60 + startM;
+  const endMinutes = endH * 60 + endM;
+  
+  // Handle overnight jobs
+  const totalMinutes = endMinutes >= startMinutes 
+    ? endMinutes - startMinutes 
+    : (24 * 60 - startMinutes) + endMinutes;
+  
+  const totalHours = totalMinutes / 60;
+  
+  // Business hours: 8am (480 min) to 5pm (1020 min)
+  const businessStart = 8 * 60; // 8:00 AM
+  const businessEnd = 17 * 60;  // 5:00 PM
+  
+  let businessMinutes = 0;
+  let afterMinutes = 0;
+  
+  // Iterate through each minute of the job
+  for (let i = 0; i < totalMinutes; i++) {
+    const currentMinute = (startMinutes + i) % (24 * 60);
+    if (currentMinute >= businessStart && currentMinute < businessEnd) {
+      businessMinutes++;
+    } else {
+      afterMinutes++;
+    }
+  }
+  
+  const businessHours = businessMinutes / 60;
+  const afterHours = afterMinutes / 60;
+  
+  // Apply minimum hours - any shortfall is added to business hours
+  const billableHours = Math.max(totalHours, minimumHours);
+  const minimumApplied = billableHours > totalHours ? billableHours - totalHours : 0;
+  
+  return {
+    businessHours: businessHours + minimumApplied,
+    afterHours,
+    totalHours,
+    billableHours,
+    minimumApplied,
+  };
+}
+
 type Job = Database['public']['Tables']['jobs']['Row'];
 type Facility = Database['public']['Tables']['facilities']['Row'];
-type FacilitySelect = Pick<Facility, 'id' | 'name' | 'physical_address' | 'physical_city' | 'physical_state' | 'physical_zip' | 'billing_address' | 'billing_city' | 'billing_state' | 'billing_zip' | 'contractor' | 'admin_contact_name' | 'admin_contact_phone' | 'admin_contact_email'>;
+type FacilitySelect = Pick<Facility, 'id' | 'name' | 'physical_address' | 'physical_city' | 'physical_state' | 'physical_zip' | 'billing_address' | 'billing_city' | 'billing_state' | 'billing_zip' | 'contractor' | 'admin_contact_name' | 'admin_contact_phone' | 'admin_contact_email' | 'rate_business_hours' | 'rate_after_hours' | 'minimum_billable_hours'>;
 
 const jobSchema = z.object({
   facility_id: z.string().min(1, 'Facility is required'),
@@ -67,7 +121,7 @@ export function JobDialog({ open, onOpenChange, job }: JobDialogProps) {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('facilities')
-        .select('id, name, physical_address, physical_city, physical_state, physical_zip, billing_address, billing_city, billing_state, billing_zip, contractor, admin_contact_name, admin_contact_phone, admin_contact_email')
+        .select('id, name, physical_address, physical_city, physical_state, physical_zip, billing_address, billing_city, billing_state, billing_zip, contractor, admin_contact_name, admin_contact_phone, admin_contact_email, rate_business_hours, rate_after_hours, minimum_billable_hours')
         .eq('status', 'active')
         .order('name');
       if (error) throw error;
@@ -133,7 +187,31 @@ export function JobDialog({ open, onOpenChange, job }: JobDialogProps) {
 
   // Auto-detect billing hours type based on time
   const watchedStartTime = form.watch('start_time');
+  const watchedEndTime = form.watch('end_time');
   const watchedJobDate = form.watch('job_date');
+
+  // Calculate billable hours split
+  const hoursSplit = useMemo(() => {
+    if (!watchedStartTime || !watchedEndTime) return null;
+    const minimumHours = selectedFacility?.minimum_billable_hours ?? 2;
+    return calculateHoursSplit(watchedStartTime, watchedEndTime, minimumHours);
+  }, [watchedStartTime, watchedEndTime, selectedFacility?.minimum_billable_hours]);
+
+  // Calculate billable total
+  const billableTotal = useMemo(() => {
+    if (!hoursSplit || !selectedFacility) return null;
+    const businessRate = selectedFacility.rate_business_hours ?? 0;
+    const afterHoursRate = selectedFacility.rate_after_hours ?? 0;
+    const businessTotal = hoursSplit.businessHours * businessRate;
+    const afterHoursTotal = hoursSplit.afterHours * afterHoursRate;
+    return {
+      businessTotal,
+      afterHoursTotal,
+      total: businessTotal + afterHoursTotal,
+      businessRate,
+      afterHoursRate,
+    };
+  }, [hoursSplit, selectedFacility]);
 
   useEffect(() => {
     if (watchedStartTime && watchedJobDate) {
@@ -424,6 +502,50 @@ export function JobDialog({ open, onOpenChange, job }: JobDialogProps) {
               </div>
             )}
           </div>
+
+          {/* Rates & Fees - Billable Calculation */}
+          {hoursSplit && billableTotal && selectedFacility && (
+            <div className="space-y-4">
+              <h3 className="font-semibold">Rates & Fees</h3>
+              <div className="rounded-lg border bg-muted/50 p-4 space-y-3">
+                <div className="grid grid-cols-2 gap-4 text-sm">
+                  <div>
+                    <span className="text-muted-foreground">Job Duration:</span>
+                    <span className="ml-2 font-medium">{hoursSplit.totalHours.toFixed(2)} hrs</span>
+                  </div>
+                  <div>
+                    <span className="text-muted-foreground">Billable Hours:</span>
+                    <span className="ml-2 font-medium">{hoursSplit.billableHours.toFixed(2)} hrs</span>
+                    {hoursSplit.minimumApplied > 0 && (
+                      <span className="ml-1 text-xs text-muted-foreground">(min applied)</span>
+                    )}
+                  </div>
+                </div>
+                
+                <div className="border-t pt-3 space-y-2 text-sm">
+                  <div className="flex justify-between">
+                    <span>Business Hours (8am-5pm):</span>
+                    <span>
+                      {hoursSplit.businessHours.toFixed(2)} hrs × ${billableTotal.businessRate.toFixed(2)} = 
+                      <span className="font-medium ml-1">${billableTotal.businessTotal.toFixed(2)}</span>
+                    </span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span>After Hours:</span>
+                    <span>
+                      {hoursSplit.afterHours.toFixed(2)} hrs × ${billableTotal.afterHoursRate.toFixed(2)} = 
+                      <span className="font-medium ml-1">${billableTotal.afterHoursTotal.toFixed(2)}</span>
+                    </span>
+                  </div>
+                </div>
+                
+                <div className="border-t pt-3 flex justify-between font-semibold">
+                  <span>Estimated Total:</span>
+                  <span>${billableTotal.total.toFixed(2)}</span>
+                </div>
+              </div>
+            </div>
+          )}
 
           {/* Notes */}
           <div className="space-y-2">

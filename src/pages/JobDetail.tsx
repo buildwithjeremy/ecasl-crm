@@ -258,6 +258,29 @@ export default function JobDetail() {
     }
   }, [job, form]);
 
+  // Auto-calculate billable hours from start/end time
+  const watchedStartTime = form.watch('start_time');
+  const watchedEndTime = form.watch('end_time');
+
+  useEffect(() => {
+    if (watchedStartTime && watchedEndTime) {
+      const [startHours, startMinutes] = watchedStartTime.split(':').map(Number);
+      const [endHours, endMinutes] = watchedEndTime.split(':').map(Number);
+      
+      const startTotalMinutes = startHours * 60 + startMinutes;
+      const endTotalMinutes = endHours * 60 + endMinutes;
+      
+      let diffMinutes = endTotalMinutes - startTotalMinutes;
+      // Handle overnight jobs
+      if (diffMinutes < 0) {
+        diffMinutes += 24 * 60;
+      }
+      
+      const hours = Math.round((diffMinutes / 60) * 4) / 4; // Round to nearest 0.25
+      form.setValue('billable_hours', hours);
+    }
+  }, [watchedStartTime, watchedEndTime, form]);
+
   const mutation = useMutation({
     mutationFn: async (data: FormData) => {
       if (!selectedJobId) return;

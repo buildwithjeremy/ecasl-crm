@@ -505,21 +505,28 @@ export default function JobDetail() {
     return calculateHoursSplit(watchedStartTime, watchedEndTime, minimumHours);
   }, [watchedStartTime, watchedEndTime, selectedFacility?.minimum_billable_hours]);
 
+  // Watch expense fields for calculation reactivity
+  const watchedMileage = form.watch('mileage') ?? 0;
+  const watchedTravelTime = form.watch('travel_time_hours') ?? 0;
+  const watchedParking = form.watch('parking') ?? 0;
+  const watchedTolls = form.watch('tolls') ?? 0;
+  const watchedMiscFee = form.watch('misc_fee') ?? 0;
+  const watchedFacilityRateBusiness = form.watch('facility_rate_business');
+  const watchedFacilityRateAfterHours = form.watch('facility_rate_after_hours');
+  const watchedFacilityRateMileage = form.watch('facility_rate_mileage');
+  const watchedInterpreterRateBusiness = form.watch('interpreter_rate_business');
+  const watchedInterpreterRateAfterHours = form.watch('interpreter_rate_after_hours');
+  const watchedInterpreterRateMileage = form.watch('interpreter_rate_mileage');
+
   // Calculate billable totals
   const billableTotal = useMemo(() => {
     if (!hoursSplit) return null;
-    const facilityBusinessRate = form.getValues('facility_rate_business') ?? selectedFacility?.rate_business_hours ?? 0;
-    const facilityAfterHoursRate = form.getValues('facility_rate_after_hours') ?? selectedFacility?.rate_after_hours ?? 0;
-    const facilityMileageRate = form.getValues('facility_rate_mileage') ?? selectedFacility?.rate_mileage ?? 0;
-    const interpreterBusinessRate = form.getValues('interpreter_rate_business') ?? selectedInterpreter?.rate_business_hours ?? 0;
-    const interpreterAfterHoursRate = form.getValues('interpreter_rate_after_hours') ?? selectedInterpreter?.rate_after_hours ?? 0;
-    const interpreterMileageRate = form.getValues('interpreter_rate_mileage') ?? selectedInterpreter?.rate_mileage ?? 0;
-    
-    const mileage = form.getValues('mileage') ?? 0;
-    const travelTimeHours = form.getValues('travel_time_hours') ?? 0;
-    const parking = form.getValues('parking') ?? 0;
-    const tolls = form.getValues('tolls') ?? 0;
-    const miscFee = form.getValues('misc_fee') ?? 0;
+    const facilityBusinessRate = watchedFacilityRateBusiness ?? selectedFacility?.rate_business_hours ?? 0;
+    const facilityAfterHoursRate = watchedFacilityRateAfterHours ?? selectedFacility?.rate_after_hours ?? 0;
+    const facilityMileageRate = watchedFacilityRateMileage ?? selectedFacility?.rate_mileage ?? 0;
+    const interpreterBusinessRate = watchedInterpreterRateBusiness ?? selectedInterpreter?.rate_business_hours ?? 0;
+    const interpreterAfterHoursRate = watchedInterpreterRateAfterHours ?? selectedInterpreter?.rate_after_hours ?? 0;
+    const interpreterMileageRate = watchedInterpreterRateMileage ?? selectedInterpreter?.rate_mileage ?? 0;
     
     // Determine travel time rate based on which hour type has more hours
     const interpreterTravelTimeRate = hoursSplit.businessHours >= hoursSplit.afterHours 
@@ -528,14 +535,14 @@ export default function JobDetail() {
     
     const facilityBusinessTotal = hoursSplit.businessHours * facilityBusinessRate;
     const facilityAfterHoursTotal = hoursSplit.afterHours * facilityAfterHoursRate;
-    const facilityMileageTotal = mileage * facilityMileageRate;
-    const facilityFeesTotal = parking + tolls + miscFee;
+    const facilityMileageTotal = watchedMileage * facilityMileageRate;
+    const facilityFeesTotal = watchedParking + watchedTolls + watchedMiscFee;
     
     const interpreterBusinessTotal = hoursSplit.businessHours * interpreterBusinessRate;
     const interpreterAfterHoursTotal = hoursSplit.afterHours * interpreterAfterHoursRate;
-    const interpreterMileageTotal = mileage * interpreterMileageRate;
-    const interpreterTravelTimeTotal = travelTimeHours * interpreterTravelTimeRate;
-    const interpreterFeesTotal = parking + tolls + miscFee;
+    const interpreterMileageTotal = watchedMileage * interpreterMileageRate;
+    const interpreterTravelTimeTotal = watchedTravelTime * interpreterTravelTimeRate;
+    const interpreterFeesTotal = watchedParking + watchedTolls + watchedMiscFee;
     
     return {
       facilityBusinessTotal,
@@ -556,13 +563,13 @@ export default function JobDetail() {
       interpreterTotal: interpreterBusinessTotal + interpreterAfterHoursTotal + interpreterMileageTotal + interpreterTravelTimeTotal + interpreterFeesTotal,
       interpreterBusinessRate,
       interpreterAfterHoursRate,
-      mileage,
-      travelTimeHours,
-      parking,
-      tolls,
-      miscFee,
+      mileage: watchedMileage,
+      travelTimeHours: watchedTravelTime,
+      parking: watchedParking,
+      tolls: watchedTolls,
+      miscFee: watchedMiscFee,
     };
-  }, [hoursSplit, selectedFacility, selectedInterpreter, form]);
+  }, [hoursSplit, selectedFacility, selectedInterpreter, watchedMileage, watchedTravelTime, watchedParking, watchedTolls, watchedMiscFee, watchedFacilityRateBusiness, watchedFacilityRateAfterHours, watchedFacilityRateMileage, watchedInterpreterRateBusiness, watchedInterpreterRateAfterHours, watchedInterpreterRateMileage]);
 
   const sendOutreachMutation = useMutation({
     mutationFn: async () => {

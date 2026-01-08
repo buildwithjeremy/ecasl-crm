@@ -510,25 +510,57 @@ export default function JobDetail() {
     if (!hoursSplit) return null;
     const facilityBusinessRate = form.getValues('facility_rate_business') ?? selectedFacility?.rate_business_hours ?? 0;
     const facilityAfterHoursRate = form.getValues('facility_rate_after_hours') ?? selectedFacility?.rate_after_hours ?? 0;
+    const facilityMileageRate = form.getValues('facility_rate_mileage') ?? selectedFacility?.rate_mileage ?? 0;
     const interpreterBusinessRate = form.getValues('interpreter_rate_business') ?? selectedInterpreter?.rate_business_hours ?? 0;
     const interpreterAfterHoursRate = form.getValues('interpreter_rate_after_hours') ?? selectedInterpreter?.rate_after_hours ?? 0;
+    const interpreterMileageRate = form.getValues('interpreter_rate_mileage') ?? selectedInterpreter?.rate_mileage ?? 0;
+    
+    const mileage = form.getValues('mileage') ?? 0;
+    const travelTimeHours = form.getValues('travel_time_hours') ?? 0;
+    const parking = form.getValues('parking') ?? 0;
+    const tolls = form.getValues('tolls') ?? 0;
+    const miscFee = form.getValues('misc_fee') ?? 0;
+    
+    // Determine travel time rate based on which hour type has more hours
+    const interpreterTravelTimeRate = hoursSplit.businessHours >= hoursSplit.afterHours 
+      ? interpreterBusinessRate 
+      : interpreterAfterHoursRate;
     
     const facilityBusinessTotal = hoursSplit.businessHours * facilityBusinessRate;
     const facilityAfterHoursTotal = hoursSplit.afterHours * facilityAfterHoursRate;
+    const facilityMileageTotal = mileage * facilityMileageRate;
+    const facilityFeesTotal = parking + tolls + miscFee;
+    
     const interpreterBusinessTotal = hoursSplit.businessHours * interpreterBusinessRate;
     const interpreterAfterHoursTotal = hoursSplit.afterHours * interpreterAfterHoursRate;
+    const interpreterMileageTotal = mileage * interpreterMileageRate;
+    const interpreterTravelTimeTotal = travelTimeHours * interpreterTravelTimeRate;
+    const interpreterFeesTotal = parking + tolls + miscFee;
     
     return {
       facilityBusinessTotal,
       facilityAfterHoursTotal,
-      facilityTotal: facilityBusinessTotal + facilityAfterHoursTotal,
+      facilityMileageTotal,
+      facilityMileageRate,
+      facilityFeesTotal,
+      facilityTotal: facilityBusinessTotal + facilityAfterHoursTotal + facilityMileageTotal + facilityFeesTotal,
       facilityBusinessRate,
       facilityAfterHoursRate,
       interpreterBusinessTotal,
       interpreterAfterHoursTotal,
-      interpreterTotal: interpreterBusinessTotal + interpreterAfterHoursTotal,
+      interpreterMileageTotal,
+      interpreterMileageRate,
+      interpreterTravelTimeTotal,
+      interpreterTravelTimeRate,
+      interpreterFeesTotal,
+      interpreterTotal: interpreterBusinessTotal + interpreterAfterHoursTotal + interpreterMileageTotal + interpreterTravelTimeTotal + interpreterFeesTotal,
       interpreterBusinessRate,
       interpreterAfterHoursRate,
+      mileage,
+      travelTimeHours,
+      parking,
+      tolls,
+      miscFee,
     };
   }, [hoursSplit, selectedFacility, selectedInterpreter, form]);
 
@@ -1437,6 +1469,18 @@ export default function JobDetail() {
                               <span>After Hours:</span>
                               <span>{hoursSplit.afterHours.toFixed(2)} × ${billableTotal.facilityAfterHoursRate.toFixed(2)} = <span className="font-medium">${billableTotal.facilityAfterHoursTotal.toFixed(2)}</span></span>
                             </div>
+                            {billableTotal.mileage > 0 && (
+                              <div className="flex justify-between">
+                                <span>Mileage:</span>
+                                <span>{billableTotal.mileage.toFixed(0)} mi × ${billableTotal.facilityMileageRate.toFixed(2)} = <span className="font-medium">${billableTotal.facilityMileageTotal.toFixed(2)}</span></span>
+                              </div>
+                            )}
+                            {billableTotal.facilityFeesTotal > 0 && (
+                              <div className="flex justify-between">
+                                <span>Fees (P/T/M):</span>
+                                <span className="font-medium">${billableTotal.facilityFeesTotal.toFixed(2)}</span>
+                              </div>
+                            )}
                             <div className="flex justify-between border-t pt-1 font-semibold">
                               <span>Total:</span>
                               <span>${billableTotal.facilityTotal.toFixed(2)}</span>
@@ -1456,6 +1500,24 @@ export default function JobDetail() {
                               <span>After Hours:</span>
                               <span>{hoursSplit.afterHours.toFixed(2)} × ${billableTotal.interpreterAfterHoursRate.toFixed(2)} = <span className="font-medium">${billableTotal.interpreterAfterHoursTotal.toFixed(2)}</span></span>
                             </div>
+                            {billableTotal.mileage > 0 && (
+                              <div className="flex justify-between">
+                                <span>Mileage:</span>
+                                <span>{billableTotal.mileage.toFixed(0)} mi × ${billableTotal.interpreterMileageRate.toFixed(2)} = <span className="font-medium">${billableTotal.interpreterMileageTotal.toFixed(2)}</span></span>
+                              </div>
+                            )}
+                            {billableTotal.travelTimeHours > 0 && (
+                              <div className="flex justify-between">
+                                <span>Travel Time:</span>
+                                <span>{billableTotal.travelTimeHours.toFixed(2)} hrs × ${billableTotal.interpreterTravelTimeRate.toFixed(2)} = <span className="font-medium">${billableTotal.interpreterTravelTimeTotal.toFixed(2)}</span></span>
+                              </div>
+                            )}
+                            {billableTotal.interpreterFeesTotal > 0 && (
+                              <div className="flex justify-between">
+                                <span>Fees (P/T/M):</span>
+                                <span className="font-medium">${billableTotal.interpreterFeesTotal.toFixed(2)}</span>
+                              </div>
+                            )}
                             <div className="flex justify-between border-t pt-1 font-semibold">
                               <span>Total:</span>
                               <span>${billableTotal.interpreterTotal.toFixed(2)}</span>

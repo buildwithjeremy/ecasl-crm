@@ -10,6 +10,7 @@ import Auth from "./pages/Auth";
 import Jobs from "./pages/Jobs";
 import Interpreters from "./pages/Interpreters";
 import Facilities from "./pages/Facilities";
+import FacilityDetail from "./pages/FacilityDetail";
 import Invoices from "./pages/Invoices";
 import Payables from "./pages/Payables";
 import Settings from "./pages/Settings";
@@ -30,6 +31,7 @@ const App = () => (
             <Route path="/jobs" element={<AppLayout><Jobs /></AppLayout>} />
             <Route path="/interpreters" element={<AppLayout><Interpreters /></AppLayout>} />
             <Route path="/facilities" element={<AppLayout><Facilities /></AppLayout>} />
+            <Route path="/facilities/:id" element={<AppLayout><FacilityDetail /></AppLayout>} />
             <Route path="/invoices" element={<AppLayout><Invoices /></AppLayout>} />
             <Route path="/payables" element={<AppLayout><Payables /></AppLayout>} />
             <Route path="/settings" element={<AppLayout><Settings /></AppLayout>} />

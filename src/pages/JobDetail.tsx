@@ -473,6 +473,36 @@ export default function JobDetail() {
 
   const canSendOutreach = watchedStatus === 'new' && watchedPotentialInterpreterIds.length > 0;
 
+  const canConfirmInterpreter = watchedStatus === 'outreach_in_progress' && !!watchedInterpreterId;
+
+  const confirmInterpreterMutation = useMutation({
+    mutationFn: async () => {
+      if (!selectedJobId) throw new Error('No job selected');
+      // TODO: Implement confirmation email sending logic here
+      const { error } = await supabase
+        .from('jobs')
+        .update({ status: 'confirmed' } as never)
+        .eq('id', selectedJobId);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['job', selectedJobId] });
+      queryClient.invalidateQueries({ queryKey: ['jobs'] });
+      form.setValue('status', 'confirmed' as const);
+      toast({
+        title: 'Interpreter Confirmed',
+        description: 'Status updated to Confirmed. Confirmation email functionality coming soon.',
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: 'Error',
+        description: error.message || 'Failed to update status',
+        variant: 'destructive',
+      });
+    },
+  });
+
   return (
     <div className="space-y-6">
       <div className="flex items-center gap-4">
@@ -663,63 +693,7 @@ export default function JobDetail() {
                     )}
                   />
 
-                  <FormField
-                    control={form.control}
-                    name="interpreter_id"
-                    render={({ field }) => (
-                      <FormItem className="flex flex-col">
-                        <FormLabel>Interpreter</FormLabel>
-                        <Popover open={interpreterOpen} onOpenChange={setInterpreterOpen}>
-                          <PopoverTrigger asChild>
-                            <FormControl>
-                              <Button
-                                variant="outline"
-                                role="combobox"
-                                className={cn('justify-between', !field.value && 'text-muted-foreground')}
-                              >
-                                {selectedInterpreter
-                                  ? `${selectedInterpreter.first_name} ${selectedInterpreter.last_name}`
-                                  : 'Select interpreter...'}
-                                <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                              </Button>
-                            </FormControl>
-                          </PopoverTrigger>
-                          <PopoverContent className="w-[300px] p-0">
-                            <Command>
-                              <CommandInput placeholder="Search interpreters..." />
-                              <CommandList>
-                                <CommandEmpty>
-                                  {watchedPotentialInterpreterIds.length === 0 
-                                    ? 'Add potential interpreters first' 
-                                    : 'No interpreter found.'}
-                                </CommandEmpty>
-                                <CommandGroup>
-                                  {interpreters
-                                    ?.filter((interpreter) => watchedPotentialInterpreterIds.includes(interpreter.id))
-                                    .map((interpreter) => (
-                                      <CommandItem
-                                        key={interpreter.id}
-                                        value={`${interpreter.first_name} ${interpreter.last_name}`}
-                                        onSelect={() => {
-                                          field.onChange(interpreter.id);
-                                          setInterpreterOpen(false);
-                                        }}
-                                      >
-                                        <Check
-                                          className={cn('mr-2 h-4 w-4', field.value === interpreter.id ? 'opacity-100' : 'opacity-0')}
-                                        />
-                                        {interpreter.first_name} {interpreter.last_name}
-                                      </CommandItem>
-                                    ))}
-                                </CommandGroup>
-                              </CommandList>
-                            </Command>
-                          </PopoverContent>
-                        </Popover>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
+                  {/* Interpreter field moved below potential interpreters email button */}
 
                   <FormField
                     control={form.control}
@@ -823,6 +797,103 @@ export default function JobDetail() {
                     {!canSendOutreach && watchedStatus === 'new' && watchedPotentialInterpreterIds.length === 0 && (
                       <p className="text-sm text-muted-foreground mt-1">
                         Select at least one potential interpreter
+                      </p>
+                    )}
+                  </div>
+
+                  <FormField
+                    control={form.control}
+                    name="interpreter_id"
+                    render={({ field }) => (
+                      <FormItem className="flex flex-col">
+                        <FormLabel>Selected Interpreter</FormLabel>
+                        <Popover open={interpreterOpen} onOpenChange={setInterpreterOpen}>
+                          <PopoverTrigger asChild>
+                            <FormControl>
+                              <Button
+                                variant="outline"
+                                role="combobox"
+                                className={cn('justify-between', !field.value && 'text-muted-foreground')}
+                              >
+                                {selectedInterpreter
+                                  ? `${selectedInterpreter.first_name} ${selectedInterpreter.last_name}`
+                                  : 'Select interpreter...'}
+                                <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                              </Button>
+                            </FormControl>
+                          </PopoverTrigger>
+                          <PopoverContent className="w-[300px] p-0">
+                            <Command>
+                              <CommandInput placeholder="Search interpreters..." />
+                              <CommandList>
+                                <CommandEmpty>
+                                  {watchedPotentialInterpreterIds.length === 0 
+                                    ? 'Add potential interpreters first' 
+                                    : 'No interpreter found.'}
+                                </CommandEmpty>
+                                <CommandGroup>
+                                  {interpreters
+                                    ?.filter((interpreter) => watchedPotentialInterpreterIds.includes(interpreter.id))
+                                    .map((interpreter) => (
+                                      <CommandItem
+                                        key={interpreter.id}
+                                        value={`${interpreter.first_name} ${interpreter.last_name}`}
+                                        onSelect={() => {
+                                          field.onChange(interpreter.id);
+                                          setInterpreterOpen(false);
+                                        }}
+                                      >
+                                        <Check
+                                          className={cn('mr-2 h-4 w-4', field.value === interpreter.id ? 'opacity-100' : 'opacity-0')}
+                                        />
+                                        {interpreter.first_name} {interpreter.last_name}
+                                      </CommandItem>
+                                    ))}
+                                </CommandGroup>
+                              </CommandList>
+                            </Command>
+                          </PopoverContent>
+                        </Popover>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <div className="md:col-span-2">
+                    <AlertDialog>
+                      <AlertDialogTrigger asChild>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          disabled={!canConfirmInterpreter || confirmInterpreterMutation.isPending}
+                        >
+                          <Mail className="mr-2 h-4 w-4" />
+                          {confirmInterpreterMutation.isPending ? 'Sending...' : 'Confirm Interpreter and Send Confirmation Email'}
+                        </Button>
+                      </AlertDialogTrigger>
+                      <AlertDialogContent>
+                        <AlertDialogHeader>
+                          <AlertDialogTitle>Confirm Interpreter?</AlertDialogTitle>
+                          <AlertDialogDescription>
+                            This will send a confirmation email to {selectedInterpreter ? `${selectedInterpreter.first_name} ${selectedInterpreter.last_name}` : 'the selected interpreter'} and change the job status to "Confirmed".
+                          </AlertDialogDescription>
+                        </AlertDialogHeader>
+                        <AlertDialogFooter>
+                          <AlertDialogCancel>Cancel</AlertDialogCancel>
+                          <AlertDialogAction onClick={() => confirmInterpreterMutation.mutate()}>
+                            Confirm & Send
+                          </AlertDialogAction>
+                        </AlertDialogFooter>
+                      </AlertDialogContent>
+                    </AlertDialog>
+                    {!canConfirmInterpreter && watchedStatus !== 'outreach_in_progress' && (
+                      <p className="text-sm text-muted-foreground mt-1">
+                        Only available when status is "Outreach In Progress"
+                      </p>
+                    )}
+                    {!canConfirmInterpreter && watchedStatus === 'outreach_in_progress' && !watchedInterpreterId && (
+                      <p className="text-sm text-muted-foreground mt-1">
+                        Select an interpreter first
                       </p>
                     )}
                   </div>

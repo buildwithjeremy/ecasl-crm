@@ -475,6 +475,60 @@ export default function JobDetail() {
 
   const canConfirmInterpreter = watchedStatus === 'outreach_in_progress' && !!watchedInterpreterId;
 
+  const canGenerateBilling = watchedStatus === 'complete' && !!watchedInterpreterId;
+
+  const generateBillingMutation = useMutation({
+    mutationFn: async () => {
+      if (!selectedJobId || !job) throw new Error('No job selected');
+      if (!job.interpreter_id) throw new Error('No interpreter assigned to job');
+      
+      // Generate invoice for facility
+      const { error: invoiceError } = await supabase
+        .from('invoices')
+        .insert({
+          facility_id: job.facility_id,
+          job_id: selectedJobId,
+          status: 'draft',
+        } as never);
+      if (invoiceError) throw invoiceError;
+
+      // Generate interpreter bill
+      const { error: billError } = await supabase
+        .from('interpreter_bills')
+        .insert({
+          interpreter_id: job.interpreter_id,
+          job_id: selectedJobId,
+          status: 'queued',
+        } as never);
+      if (billError) throw billError;
+
+      // Update job status to ready_to_bill
+      const { error: updateError } = await supabase
+        .from('jobs')
+        .update({ status: 'ready_to_bill' } as never)
+        .eq('id', selectedJobId);
+      if (updateError) throw updateError;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['job', selectedJobId] });
+      queryClient.invalidateQueries({ queryKey: ['jobs'] });
+      queryClient.invalidateQueries({ queryKey: ['invoices'] });
+      queryClient.invalidateQueries({ queryKey: ['payables'] });
+      form.setValue('status', 'ready_to_bill' as const);
+      toast({
+        title: 'Billing Generated',
+        description: 'Invoice and interpreter bill created successfully.',
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: 'Error',
+        description: error.message || 'Failed to generate billing',
+        variant: 'destructive',
+      });
+    },
+  });
+
   const confirmInterpreterMutation = useMutation({
     mutationFn: async () => {
       if (!selectedJobId) throw new Error('No job selected');
@@ -1321,7 +1375,32 @@ export default function JobDetail() {
               </CardContent>
             </Card>
 
-            <div className="flex justify-end">
+            <div className="flex justify-end gap-2">
+              <AlertDialog>
+                <AlertDialogTrigger asChild>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    disabled={!canGenerateBilling || generateBillingMutation.isPending}
+                  >
+                    {generateBillingMutation.isPending ? 'Generating...' : 'Generate Invoice & Bill'}
+                  </Button>
+                </AlertDialogTrigger>
+                <AlertDialogContent>
+                  <AlertDialogHeader>
+                    <AlertDialogTitle>Generate Invoice & Interpreter Bill?</AlertDialogTitle>
+                    <AlertDialogDescription>
+                      This will create a new invoice for the facility and a new bill for {selectedInterpreter ? `${selectedInterpreter.first_name} ${selectedInterpreter.last_name}` : 'the interpreter'}. The job status will be changed to "Ready to Bill".
+                    </AlertDialogDescription>
+                  </AlertDialogHeader>
+                  <AlertDialogFooter>
+                    <AlertDialogCancel>Cancel</AlertDialogCancel>
+                    <AlertDialogAction onClick={() => generateBillingMutation.mutate()}>
+                      Generate
+                    </AlertDialogAction>
+                  </AlertDialogFooter>
+                </AlertDialogContent>
+              </AlertDialog>
               <Button type="submit" disabled={mutation.isPending}>
                 Save Changes
               </Button>

@@ -1,3 +1,4 @@
+import { useNavigate } from 'react-router-dom';
 import {
   Table,
   TableBody,
@@ -27,6 +28,12 @@ const statusColors: Record<string, 'default' | 'secondary' | 'destructive'> = {
 };
 
 export function InterpretersTable({ interpreters, isLoading, onEdit, onDelete }: InterpretersTableProps) {
+  const navigate = useNavigate();
+
+  const handleRowClick = (interpreterId: string) => {
+    navigate(`/interpreters/${interpreterId}`);
+  };
+
   if (isLoading) {
     return <div className="text-muted-foreground">Loading interpreters...</div>;
   }
@@ -51,7 +58,11 @@ export function InterpretersTable({ interpreters, isLoading, onEdit, onDelete }:
         </TableHeader>
         <TableBody>
           {interpreters.map((interpreter) => (
-            <TableRow key={interpreter.id}>
+            <TableRow 
+              key={interpreter.id} 
+              className="cursor-pointer hover:bg-muted/50"
+              onClick={() => handleRowClick(interpreter.id)}
+            >
               <TableCell className="font-medium">
                 {interpreter.first_name} {interpreter.last_name}
               </TableCell>
@@ -73,10 +84,10 @@ export function InterpretersTable({ interpreters, isLoading, onEdit, onDelete }:
               </TableCell>
               <TableCell>
                 <div className="flex gap-1">
-                  <Button variant="ghost" size="icon" onClick={() => onEdit(interpreter)}>
+                  <Button variant="ghost" size="icon" onClick={(e) => { e.stopPropagation(); onEdit(interpreter); }}>
                     <Pencil className="h-4 w-4" />
                   </Button>
-                  <Button variant="ghost" size="icon" onClick={() => onDelete(interpreter.id)}>
+                  <Button variant="ghost" size="icon" onClick={(e) => { e.stopPropagation(); onDelete(interpreter.id); }}>
                     <Trash2 className="h-4 w-4" />
                   </Button>
                 </div>

@@ -207,6 +207,7 @@ export type Database = {
       }
       interpreter_bills: {
         Row: {
+          bill_number: string | null
           created_at: string | null
           expenses_amount: number | null
           hours_amount: number | null
@@ -214,6 +215,7 @@ export type Database = {
           interpreter_id: string
           job_id: string
           mileage_amount: number | null
+          notes: string | null
           paid_date: string | null
           pay_period_end: string | null
           pay_period_start: string | null
@@ -224,6 +226,7 @@ export type Database = {
           updated_at: string | null
         }
         Insert: {
+          bill_number?: string | null
           created_at?: string | null
           expenses_amount?: number | null
           hours_amount?: number | null
@@ -231,6 +234,7 @@ export type Database = {
           interpreter_id: string
           job_id: string
           mileage_amount?: number | null
+          notes?: string | null
           paid_date?: string | null
           pay_period_end?: string | null
           pay_period_start?: string | null
@@ -241,6 +245,7 @@ export type Database = {
           updated_at?: string | null
         }
         Update: {
+          bill_number?: string | null
           created_at?: string | null
           expenses_amount?: number | null
           hours_amount?: number | null
@@ -248,6 +253,7 @@ export type Database = {
           interpreter_id?: string
           job_id?: string
           mileage_amount?: number | null
+          notes?: string | null
           paid_date?: string | null
           pay_period_end?: string | null
           pay_period_start?: string | null

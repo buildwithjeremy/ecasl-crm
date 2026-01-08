@@ -15,6 +15,7 @@ import FacilityDetail from "./pages/FacilityDetail";
 import Invoices from "./pages/Invoices";
 import InvoiceDetail from "./pages/InvoiceDetail";
 import Payables from "./pages/Payables";
+import PayableDetail from "./pages/PayableDetail";
 import Settings from "./pages/Settings";
 import NotFound from "./pages/NotFound";
 
@@ -38,6 +39,7 @@ const App = () => (
             <Route path="/invoices" element={<AppLayout><Invoices /></AppLayout>} />
             <Route path="/invoices/:id" element={<AppLayout><InvoiceDetail /></AppLayout>} />
             <Route path="/payables" element={<AppLayout><Payables /></AppLayout>} />
+            <Route path="/payables/:id" element={<AppLayout><PayableDetail /></AppLayout>} />
             <Route path="/settings" element={<AppLayout><Settings /></AppLayout>} />
             <Route path="*" element={<NotFound />} />
           </Routes>

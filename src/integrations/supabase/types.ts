@@ -531,6 +531,7 @@ export type Database = {
           location_type: Database["public"]["Enums"]["job_location_type"] | null
           location_zip: string | null
           mileage: number | null
+          misc_fee: number | null
           opportunity_source:
             | Database["public"]["Enums"]["opportunity_source"]
             | null
@@ -542,6 +543,8 @@ export type Database = {
           total_facility_charge: number | null
           total_interpreter_pay: number | null
           travel_time_hours: number | null
+          travel_time_rate: number | null
+          trilingual_rate_uplift: number | null
           updated_at: string | null
           video_call_link: string | null
         }
@@ -586,6 +589,7 @@ export type Database = {
             | null
           location_zip?: string | null
           mileage?: number | null
+          misc_fee?: number | null
           opportunity_source?:
             | Database["public"]["Enums"]["opportunity_source"]
             | null
@@ -597,6 +601,8 @@ export type Database = {
           total_facility_charge?: number | null
           total_interpreter_pay?: number | null
           travel_time_hours?: number | null
+          travel_time_rate?: number | null
+          trilingual_rate_uplift?: number | null
           updated_at?: string | null
           video_call_link?: string | null
         }
@@ -641,6 +647,7 @@ export type Database = {
             | null
           location_zip?: string | null
           mileage?: number | null
+          misc_fee?: number | null
           opportunity_source?:
             | Database["public"]["Enums"]["opportunity_source"]
             | null
@@ -652,6 +659,8 @@ export type Database = {
           total_facility_charge?: number | null
           total_interpreter_pay?: number | null
           travel_time_hours?: number | null
+          travel_time_rate?: number | null
+          trilingual_rate_uplift?: number | null
           updated_at?: string | null
           video_call_link?: string | null
         }

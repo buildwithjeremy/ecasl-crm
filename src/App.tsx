@@ -13,6 +13,7 @@ import InterpreterDetail from "./pages/InterpreterDetail";
 import Facilities from "./pages/Facilities";
 import FacilityDetail from "./pages/FacilityDetail";
 import Invoices from "./pages/Invoices";
+import InvoiceDetail from "./pages/InvoiceDetail";
 import Payables from "./pages/Payables";
 import Settings from "./pages/Settings";
 import NotFound from "./pages/NotFound";
@@ -35,6 +36,7 @@ const App = () => (
             <Route path="/facilities" element={<AppLayout><Facilities /></AppLayout>} />
             <Route path="/facilities/:id" element={<AppLayout><FacilityDetail /></AppLayout>} />
             <Route path="/invoices" element={<AppLayout><Invoices /></AppLayout>} />
+            <Route path="/invoices/:id" element={<AppLayout><InvoiceDetail /></AppLayout>} />
             <Route path="/payables" element={<AppLayout><Payables /></AppLayout>} />
             <Route path="/settings" element={<AppLayout><Settings /></AppLayout>} />
             <Route path="*" element={<NotFound />} />

@@ -178,7 +178,7 @@ export default function JobDetail() {
   // Dialog states for rate editing
   const [facilityRatesDialogOpen, setFacilityRatesDialogOpen] = useState(false);
   const [interpreterRatesDialogOpen, setInterpreterRatesDialogOpen] = useState(false);
-  const [expensesDialogOpen, setExpensesDialogOpen] = useState(false);
+  
   
   const [clientContactDialogOpen, setClientContactDialogOpen] = useState(false);
   
@@ -1056,14 +1056,6 @@ export default function JobDetail() {
     form.setValue('interpreter_rate_mileage', values.interpreter_rate_mileage);
   };
 
-  const handleExpensesSave = (values: Record<string, number>) => {
-    form.setValue('mileage', values.mileage);
-    form.setValue('travel_time_hours', values.travel_time_hours);
-    form.setValue('parking', values.parking);
-    form.setValue('tolls', values.tolls);
-    form.setValue('misc_fee', values.misc_fee);
-  };
-
   const handleClientContactSave = (values: Record<string, string>) => {
     form.setValue('client_business_name', values.client_business_name);
     form.setValue('client_contact_name', values.client_contact_name);
@@ -1084,13 +1076,6 @@ export default function JobDetail() {
     { key: 'interpreter_rate_mileage', label: 'Mileage ($/mi)', value: watchedInterpreterRateMileage, suffix: '/mi' },
   ];
 
-  const expenseFields: RateField[] = [
-    { key: 'mileage', label: 'Mileage (mi)', value: watchedMileage, step: '0.1' },
-    { key: 'travel_time_hours', label: 'Travel Time (hrs)', value: watchedTravelTime, step: '0.25' },
-    { key: 'parking', label: 'Parking ($)', value: watchedParking },
-    { key: 'tolls', label: 'Tolls ($)', value: watchedTolls },
-    { key: 'misc_fee', label: 'Misc Fee ($)', value: watchedMiscFee },
-  ];
 
   // Watch client contact fields for chips display
   const watchedClientBusinessName = form.watch('client_business_name') || '';
@@ -1679,20 +1664,101 @@ export default function JobDetail() {
                   </div>
                 )}
 
-                {/* Expenses Chips */}
-                <div className="space-y-1">
+                {/* Expenses Inline */}
+                <div className="space-y-2">
                   <h4 className="text-sm font-medium text-muted-foreground">Expenses</h4>
-                  <RateChips
-                    rates={[
-                      { label: 'Mileage', value: watchedMileage, format: 'number', suffix: ' mi' },
-                      { label: 'Travel', value: watchedTravelTime, format: 'number', suffix: ' hrs' },
-                      { label: 'Parking', value: watchedParking },
-                      { label: 'Tolls', value: watchedTolls },
-                      { label: 'Misc', value: watchedMiscFee },
-                    ]}
-                    onEditClick={() => setExpensesDialogOpen(true)}
-                    disabled={isLocked}
-                  />
+                  <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                    <div className="space-y-1">
+                      <Label htmlFor="mileage" className="text-xs">Mileage (mi)</Label>
+                      <Input
+                        id="mileage"
+                        type="text"
+                        inputMode="decimal"
+                        {...form.register('mileage', {
+                          setValueAs: (v) => {
+                            if (v === '' || v === '-' || v === '-.') return v;
+                            const num = parseFloat(v);
+                            return isNaN(num) ? 0 : num;
+                          }
+                        })}
+                        disabled={isLocked}
+                        placeholder="0"
+                        className="h-8"
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <Label htmlFor="travel_time_hours" className="text-xs">Travel Time (hrs)</Label>
+                      <Input
+                        id="travel_time_hours"
+                        type="text"
+                        inputMode="decimal"
+                        {...form.register('travel_time_hours', {
+                          setValueAs: (v) => {
+                            if (v === '' || v === '-' || v === '-.') return v;
+                            const num = parseFloat(v);
+                            return isNaN(num) ? 0 : num;
+                          }
+                        })}
+                        disabled={isLocked}
+                        placeholder="0"
+                        className="h-8"
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <Label htmlFor="parking" className="text-xs">Parking ($)</Label>
+                      <Input
+                        id="parking"
+                        type="text"
+                        inputMode="decimal"
+                        {...form.register('parking', {
+                          setValueAs: (v) => {
+                            if (v === '' || v === '-' || v === '-.') return v;
+                            const num = parseFloat(v);
+                            return isNaN(num) ? 0 : num;
+                          }
+                        })}
+                        disabled={isLocked}
+                        placeholder="0.00"
+                        className="h-8"
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <Label htmlFor="tolls" className="text-xs">Tolls ($)</Label>
+                      <Input
+                        id="tolls"
+                        type="text"
+                        inputMode="decimal"
+                        {...form.register('tolls', {
+                          setValueAs: (v) => {
+                            if (v === '' || v === '-' || v === '-.') return v;
+                            const num = parseFloat(v);
+                            return isNaN(num) ? 0 : num;
+                          }
+                        })}
+                        disabled={isLocked}
+                        placeholder="0.00"
+                        className="h-8"
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <Label htmlFor="misc_fee" className="text-xs">Misc Fee ($)</Label>
+                      <Input
+                        id="misc_fee"
+                        type="text"
+                        inputMode="decimal"
+                        {...form.register('misc_fee', {
+                          setValueAs: (v) => {
+                            if (v === '' || v === '-' || v === '-.') return v;
+                            const num = parseFloat(v);
+                            return isNaN(num) ? 0 : num;
+                          }
+                        })}
+                        disabled={isLocked}
+                        placeholder="0.00"
+                        className="h-8"
+                      />
+                    </div>
+                  </div>
                 </div>
 
                 {/* Rate Adjustments Inline */}
@@ -1920,14 +1986,6 @@ export default function JobDetail() {
       />
       
       
-      <RatesEditDialog
-        open={expensesDialogOpen}
-        onOpenChange={setExpensesDialogOpen}
-        title="Edit Expenses"
-        fields={expenseFields}
-        onSave={handleExpensesSave}
-        disabled={isLocked}
-      />
       
       <ContactEditDialog
         open={clientContactDialogOpen}

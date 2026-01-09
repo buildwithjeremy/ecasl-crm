@@ -57,8 +57,8 @@ export function AppSidebar() {
             <NavLink 
               to={item.url} 
               end 
-              className="flex items-center gap-3 px-3 py-2 rounded-md transition-colors hover:bg-accent"
-              activeClassName="bg-primary text-primary-foreground hover:bg-primary/90"
+              className="flex items-center gap-3 px-3 py-2 rounded-md transition-colors hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
+              activeClassName="bg-primary text-primary-foreground hover:bg-primary/90 hover:text-primary-foreground"
             >
               <item.icon className="h-4 w-4 shrink-0" />
               {!collapsed && <span>{item.title}</span>}

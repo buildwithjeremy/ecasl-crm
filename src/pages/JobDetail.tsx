@@ -53,7 +53,10 @@ import { useToast } from '@/hooks/use-toast';
 import { Check, ChevronsUpDown, ArrowLeft, Mail } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Badge } from '@/components/ui/badge';
+import { Separator } from '@/components/ui/separator';
 import { format } from 'date-fns';
+import { RatesEditDialog, RateField } from '@/components/jobs/RatesEditDialog';
+import { RateChips } from '@/components/jobs/RateChips';
 
 // Helper to calculate hours split between business (8am-5pm) and after-hours
 function calculateHoursSplit(startTime: string, endTime: string, minimumHours: number = 2): {
@@ -167,6 +170,12 @@ export default function JobDetail() {
   const [interpreterOpen, setInterpreterOpen] = useState(false);
   const [potentialInterpretersOpen, setPotentialInterpretersOpen] = useState(false);
   const [selectedJobId, setSelectedJobId] = useState<string | null>(id || null);
+  
+  // Dialog states for rate editing
+  const [facilityRatesDialogOpen, setFacilityRatesDialogOpen] = useState(false);
+  const [interpreterRatesDialogOpen, setInterpreterRatesDialogOpen] = useState(false);
+  const [expensesDialogOpen, setExpensesDialogOpen] = useState(false);
+  
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
@@ -430,114 +439,6 @@ export default function JobDetail() {
     }
   }, [watchedInterpreterId, interpreters, form]);
 
-  const mutation = useMutation({
-    mutationFn: async (data: FormData) => {
-      if (!selectedJobId) return;
-      
-      // Calculate hourly and billable totals
-      let facilityHourlyTotal: number | null = null;
-      let facilityBillableTotal: number | null = null;
-      let interpreterHourlyTotal: number | null = null;
-      let interpreterBillableTotal: number | null = null;
-      
-      if (hoursSplit) {
-        const facilityBusinessRate = data.facility_rate_business ?? selectedFacility?.rate_business_hours ?? 0;
-        const facilityAfterHoursRate = data.facility_rate_after_hours ?? selectedFacility?.rate_after_hours ?? 0;
-        const facilityMileageRate = data.facility_rate_mileage ?? selectedFacility?.rate_mileage ?? 0;
-        const interpreterBusinessRate = data.interpreter_rate_business ?? selectedInterpreter?.rate_business_hours ?? 0;
-        const interpreterAfterHoursRate = data.interpreter_rate_after_hours ?? selectedInterpreter?.rate_after_hours ?? 0;
-        const interpreterMileageRate = data.interpreter_rate_mileage ?? selectedInterpreter?.rate_mileage ?? 0;
-        
-        const mileage = data.mileage ?? 0;
-        const travelTimeHours = data.travel_time_hours ?? 0;
-        const parking = data.parking ?? 0;
-        const tolls = data.tolls ?? 0;
-        const miscFee = data.misc_fee ?? 0;
-        
-        // Get trilingual uplift from existing job data
-        const trilingualUplift = job?.trilingual_rate_uplift ?? 0;
-        
-        // Facility calculations - add trilingual uplift to hourly rates before multiplying
-        const facilityBusinessTotal = hoursSplit.businessHours * (facilityBusinessRate + trilingualUplift);
-        const facilityAfterHoursTotal = hoursSplit.afterHours * (facilityAfterHoursRate + trilingualUplift);
-        facilityHourlyTotal = facilityBusinessTotal + facilityAfterHoursTotal;
-        const facilityMileageTotal = mileage * facilityMileageRate;
-        const facilityFeesTotal = parking + tolls + miscFee;
-        facilityBillableTotal = facilityHourlyTotal + facilityMileageTotal + facilityFeesTotal;
-        
-        // Interpreter calculations
-        const interpreterBusinessTotal = hoursSplit.businessHours * interpreterBusinessRate;
-        const interpreterAfterHoursTotal = hoursSplit.afterHours * interpreterAfterHoursRate;
-        interpreterHourlyTotal = interpreterBusinessTotal + interpreterAfterHoursTotal;
-        const interpreterMileageTotal = mileage * interpreterMileageRate;
-        const interpreterTravelTimeRate = hoursSplit.businessHours >= hoursSplit.afterHours 
-          ? interpreterBusinessRate 
-          : interpreterAfterHoursRate;
-        const interpreterTravelTimeTotal = travelTimeHours * interpreterTravelTimeRate;
-        const interpreterFeesTotal = parking + tolls + miscFee;
-        interpreterBillableTotal = interpreterHourlyTotal + interpreterMileageTotal + interpreterTravelTimeTotal + interpreterFeesTotal;
-      }
-      
-      const payload: Record<string, unknown> = {
-        facility_id: data.facility_id,
-        interpreter_id: data.interpreter_id || null,
-        deaf_client_name: data.deaf_client_name || null,
-        job_date: data.job_date,
-        start_time: data.start_time,
-        end_time: data.end_time,
-        location_type: data.location_type,
-        location_address: data.location_address || null,
-        location_city: data.location_city || null,
-        location_state: data.location_state || null,
-        location_zip: data.location_zip || null,
-        video_call_link: data.video_call_link || null,
-        status: data.status,
-        opportunity_source: data.opportunity_source || null,
-        billable_hours: data.billable_hours || null,
-        mileage: data.mileage || null,
-        parking: data.parking || null,
-        tolls: data.tolls || null,
-        misc_fee: data.misc_fee || null,
-        travel_time_hours: data.travel_time_hours || null,
-        facility_rate_business: data.facility_rate_business || null,
-        facility_rate_after_hours: data.facility_rate_after_hours || null,
-        facility_rate_mileage: data.facility_rate_mileage || null,
-        interpreter_rate_business: data.interpreter_rate_business || null,
-        interpreter_rate_after_hours: data.interpreter_rate_after_hours || null,
-        interpreter_rate_mileage: data.interpreter_rate_mileage || null,
-        emergency_fee_applied: data.emergency_fee_applied || false,
-        holiday_fee_applied: data.holiday_fee_applied || false,
-        internal_notes: data.internal_notes || null,
-        client_business_name: data.client_business_name || null,
-        client_contact_name: data.client_contact_name || null,
-        client_contact_phone: data.client_contact_phone || null,
-        client_contact_email: data.client_contact_email || null,
-        potential_interpreter_ids: data.potential_interpreter_ids || [],
-        facility_hourly_total: facilityHourlyTotal,
-        facility_billable_total: facilityBillableTotal,
-        interpreter_hourly_total: interpreterHourlyTotal,
-        interpreter_billable_total: interpreterBillableTotal,
-      };
-      const { error } = await supabase
-        .from('jobs')
-        .update(payload as never)
-        .eq('id', selectedJobId);
-      if (error) throw error;
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['job', selectedJobId] });
-      queryClient.invalidateQueries({ queryKey: ['jobs'] });
-      toast({ title: 'Job updated successfully' });
-    },
-    onError: (error) => {
-      toast({ title: 'Error updating job', description: error.message, variant: 'destructive' });
-    },
-  });
-
-  const onSubmit = (data: FormData) => {
-    mutation.mutate(data);
-  };
-
   const selectedJob = jobs?.find((j) => j.id === selectedJobId);
   const selectedFacility = facilities?.find((f) => f.id === form.watch('facility_id'));
   const selectedInterpreter = interpreters?.find((i) => i.id === form.watch('interpreter_id'));
@@ -657,6 +558,114 @@ export default function JobDetail() {
     };
   }, [hoursSplit, selectedFacility, selectedInterpreter, watchedMileage, watchedTravelTime, watchedParking, watchedTolls, watchedMiscFee, rawFacilityRateBusiness, rawFacilityRateAfterHours, rawFacilityRateMileage, rawInterpreterRateBusiness, rawInterpreterRateAfterHours, rawInterpreterRateMileage, watchedFacilityRateBusiness, watchedFacilityRateAfterHours, watchedFacilityRateMileage, watchedInterpreterRateBusiness, watchedInterpreterRateAfterHours, watchedInterpreterRateMileage]);
 
+  const mutation = useMutation({
+    mutationFn: async (data: FormData) => {
+      if (!selectedJobId) return;
+      
+      // Calculate hourly and billable totals
+      let facilityHourlyTotal: number | null = null;
+      let facilityBillableTotal: number | null = null;
+      let interpreterHourlyTotal: number | null = null;
+      let interpreterBillableTotal: number | null = null;
+      
+      if (hoursSplit) {
+        const facilityBusinessRate = data.facility_rate_business ?? selectedFacility?.rate_business_hours ?? 0;
+        const facilityAfterHoursRate = data.facility_rate_after_hours ?? selectedFacility?.rate_after_hours ?? 0;
+        const facilityMileageRate = data.facility_rate_mileage ?? selectedFacility?.rate_mileage ?? 0;
+        const interpreterBusinessRate = data.interpreter_rate_business ?? selectedInterpreter?.rate_business_hours ?? 0;
+        const interpreterAfterHoursRate = data.interpreter_rate_after_hours ?? selectedInterpreter?.rate_after_hours ?? 0;
+        const interpreterMileageRate = data.interpreter_rate_mileage ?? selectedInterpreter?.rate_mileage ?? 0;
+        
+        const mileage = data.mileage ?? 0;
+        const travelTimeHours = data.travel_time_hours ?? 0;
+        const parking = data.parking ?? 0;
+        const tolls = data.tolls ?? 0;
+        const miscFee = data.misc_fee ?? 0;
+        
+        // Get trilingual uplift from existing job data
+        const trilingualUplift = job?.trilingual_rate_uplift ?? 0;
+        
+        // Facility calculations - add trilingual uplift to hourly rates before multiplying
+        const facilityBusinessTotal = hoursSplit.businessHours * (facilityBusinessRate + trilingualUplift);
+        const facilityAfterHoursTotal = hoursSplit.afterHours * (facilityAfterHoursRate + trilingualUplift);
+        facilityHourlyTotal = facilityBusinessTotal + facilityAfterHoursTotal;
+        const facilityMileageTotal = mileage * facilityMileageRate;
+        const facilityFeesTotal = parking + tolls + miscFee;
+        facilityBillableTotal = facilityHourlyTotal + facilityMileageTotal + facilityFeesTotal;
+        
+        // Interpreter calculations
+        const interpreterBusinessTotal = hoursSplit.businessHours * interpreterBusinessRate;
+        const interpreterAfterHoursTotal = hoursSplit.afterHours * interpreterAfterHoursRate;
+        interpreterHourlyTotal = interpreterBusinessTotal + interpreterAfterHoursTotal;
+        const interpreterMileageTotal = mileage * interpreterMileageRate;
+        const interpreterTravelTimeRate = hoursSplit.businessHours >= hoursSplit.afterHours 
+          ? interpreterBusinessRate 
+          : interpreterAfterHoursRate;
+        const interpreterTravelTimeTotal = travelTimeHours * interpreterTravelTimeRate;
+        const interpreterFeesTotal = parking + tolls + miscFee;
+        interpreterBillableTotal = interpreterHourlyTotal + interpreterMileageTotal + interpreterTravelTimeTotal + interpreterFeesTotal;
+      }
+      
+      const payload: Record<string, unknown> = {
+        facility_id: data.facility_id,
+        interpreter_id: data.interpreter_id || null,
+        deaf_client_name: data.deaf_client_name || null,
+        job_date: data.job_date,
+        start_time: data.start_time,
+        end_time: data.end_time,
+        location_type: data.location_type,
+        location_address: data.location_address || null,
+        location_city: data.location_city || null,
+        location_state: data.location_state || null,
+        location_zip: data.location_zip || null,
+        video_call_link: data.video_call_link || null,
+        status: data.status,
+        opportunity_source: data.opportunity_source || null,
+        billable_hours: data.billable_hours || null,
+        mileage: data.mileage || null,
+        parking: data.parking || null,
+        tolls: data.tolls || null,
+        misc_fee: data.misc_fee || null,
+        travel_time_hours: data.travel_time_hours || null,
+        facility_rate_business: data.facility_rate_business || null,
+        facility_rate_after_hours: data.facility_rate_after_hours || null,
+        facility_rate_mileage: data.facility_rate_mileage || null,
+        interpreter_rate_business: data.interpreter_rate_business || null,
+        interpreter_rate_after_hours: data.interpreter_rate_after_hours || null,
+        interpreter_rate_mileage: data.interpreter_rate_mileage || null,
+        emergency_fee_applied: data.emergency_fee_applied || false,
+        holiday_fee_applied: data.holiday_fee_applied || false,
+        internal_notes: data.internal_notes || null,
+        client_business_name: data.client_business_name || null,
+        client_contact_name: data.client_contact_name || null,
+        client_contact_phone: data.client_contact_phone || null,
+        client_contact_email: data.client_contact_email || null,
+        potential_interpreter_ids: data.potential_interpreter_ids || [],
+        facility_hourly_total: facilityHourlyTotal,
+        facility_billable_total: facilityBillableTotal,
+        interpreter_hourly_total: interpreterHourlyTotal,
+        interpreter_billable_total: interpreterBillableTotal,
+      };
+      const { error } = await supabase
+        .from('jobs')
+        .update(payload as never)
+        .eq('id', selectedJobId);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['job', selectedJobId] });
+      queryClient.invalidateQueries({ queryKey: ['jobs'] });
+      toast({ title: 'Job updated successfully' });
+    },
+    onError: (error) => {
+      toast({ title: 'Error updating job', description: error.message, variant: 'destructive' });
+    },
+  });
+
+  const onSubmit = (data: FormData) => {
+    mutation.mutate(data);
+  };
+
   const sendOutreachMutation = useMutation({
     mutationFn: async () => {
       if (!selectedJobId) throw new Error('No job selected');
@@ -718,7 +727,7 @@ export default function JobDetail() {
         location_state: data.location_state || null,
         location_zip: data.location_zip || null,
         video_call_link: data.video_call_link || null,
-        status: 'outreach_in_progress', // Set status to outreach_in_progress
+        status: 'outreach_in_progress',
         opportunity_source: data.opportunity_source || null,
         billable_hours: data.billable_hours || null,
         mileage: data.mileage || null,
@@ -761,7 +770,7 @@ export default function JobDetail() {
         description: 'Job saved and status updated to Outreach In Progress. Email functionality coming soon.',
       });
     },
-    onError: (error: any) => {
+    onError: (error: Error) => {
       toast({
         title: 'Error',
         description: error.message || 'Failed to save and update status',
@@ -802,24 +811,24 @@ export default function JobDetail() {
       if (billError) throw billError;
 
       // Update job status to ready_to_bill
-      const { error: updateError } = await supabase
+      const { error: jobError } = await supabase
         .from('jobs')
         .update({ status: 'ready_to_bill' } as never)
         .eq('id', selectedJobId);
-      if (updateError) throw updateError;
+      if (jobError) throw jobError;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['job', selectedJobId] });
       queryClient.invalidateQueries({ queryKey: ['jobs'] });
       queryClient.invalidateQueries({ queryKey: ['invoices'] });
-      queryClient.invalidateQueries({ queryKey: ['payables'] });
+      queryClient.invalidateQueries({ queryKey: ['interpreter-bills'] });
       form.setValue('status', 'ready_to_bill' as const);
       toast({
         title: 'Billing Generated',
-        description: 'Invoice and interpreter bill created successfully.',
+        description: 'Invoice and interpreter bill have been created. Job status updated to Ready to Bill.',
       });
     },
-    onError: (error: any) => {
+    onError: (error: Error) => {
       toast({
         title: 'Error',
         description: error.message || 'Failed to generate billing',
@@ -831,16 +840,27 @@ export default function JobDetail() {
   const confirmInterpreterMutation = useMutation({
     mutationFn: async () => {
       if (!selectedJobId) throw new Error('No job selected');
-      if (!selectedInterpreter) throw new Error('No interpreter selected');
       
-      // Get current form values to save before updating status
       const data = form.getValues();
+      const interpreterId = data.interpreter_id;
       
-      const minimumHours = selectedInterpreter.minimum_hours ?? 2;
-      const currentBillableHours = data.billable_hours ?? 0;
-      const newBillableHours = currentBillableHours < minimumHours ? minimumHours : currentBillableHours;
+      if (!interpreterId) throw new Error('No interpreter selected');
       
-      // Build the full payload to save all form data
+      // Find interpreter's minimum hours
+      const interpreter = interpreters?.find((i) => i.id === interpreterId);
+      const interpreterMinHours = interpreter?.minimum_hours ?? 2;
+      const facilityMinHours = selectedFacility?.minimum_billable_hours ?? 2;
+      
+      // Use the higher of the two minimums
+      const effectiveMinHours = Math.max(interpreterMinHours, facilityMinHours);
+      
+      // Recalculate billable hours with new minimum
+      let newBillableHours = data.billable_hours ?? 0;
+      if (hoursSplit) {
+        newBillableHours = Math.max(hoursSplit.totalHours, effectiveMinHours);
+      }
+      
+      // Build payload
       let facilityHourlyTotal: number | null = null;
       let facilityBillableTotal: number | null = null;
       let interpreterHourlyTotal: number | null = null;
@@ -883,7 +903,7 @@ export default function JobDetail() {
       
       const payload: Record<string, unknown> = {
         facility_id: data.facility_id,
-        interpreter_id: data.interpreter_id || null,
+        interpreter_id: interpreterId,
         deaf_client_name: data.deaf_client_name || null,
         job_date: data.job_date,
         start_time: data.start_time,
@@ -894,7 +914,7 @@ export default function JobDetail() {
         location_state: data.location_state || null,
         location_zip: data.location_zip || null,
         video_call_link: data.video_call_link || null,
-        status: 'confirmed', // Set status to confirmed
+        status: 'confirmed',
         opportunity_source: data.opportunity_source || null,
         billable_hours: newBillableHours,
         mileage: data.mileage || null,
@@ -940,7 +960,7 @@ export default function JobDetail() {
         description: 'Job saved and status updated to Confirmed. Confirmation email functionality coming soon.',
       });
     },
-    onError: (error: any) => {
+    onError: (error: Error) => {
       toast({
         title: 'Error',
         description: error.message || 'Failed to save and update status',
@@ -949,87 +969,121 @@ export default function JobDetail() {
     },
   });
 
+  // Handle rate dialog saves
+  const handleFacilityRatesSave = (values: Record<string, number>) => {
+    form.setValue('facility_rate_business', values.facility_rate_business);
+    form.setValue('facility_rate_after_hours', values.facility_rate_after_hours);
+    form.setValue('facility_rate_mileage', values.facility_rate_mileage);
+  };
+
+  const handleInterpreterRatesSave = (values: Record<string, number>) => {
+    form.setValue('interpreter_rate_business', values.interpreter_rate_business);
+    form.setValue('interpreter_rate_after_hours', values.interpreter_rate_after_hours);
+    form.setValue('interpreter_rate_mileage', values.interpreter_rate_mileage);
+  };
+
+  const handleExpensesSave = (values: Record<string, number>) => {
+    form.setValue('mileage', values.mileage);
+    form.setValue('travel_time_hours', values.travel_time_hours);
+    form.setValue('parking', values.parking);
+    form.setValue('tolls', values.tolls);
+    form.setValue('misc_fee', values.misc_fee);
+  };
+
+  // Prepare rate fields for dialogs
+  const facilityRateFields: RateField[] = [
+    { key: 'facility_rate_business', label: 'Business ($/hr)', value: watchedFacilityRateBusiness, suffix: '/hr' },
+    { key: 'facility_rate_after_hours', label: 'After Hours ($/hr)', value: watchedFacilityRateAfterHours, suffix: '/hr' },
+    { key: 'facility_rate_mileage', label: 'Mileage ($/mi)', value: watchedFacilityRateMileage, suffix: '/mi' },
+  ];
+
+  const interpreterRateFields: RateField[] = [
+    { key: 'interpreter_rate_business', label: 'Business ($/hr)', value: watchedInterpreterRateBusiness, suffix: '/hr' },
+    { key: 'interpreter_rate_after_hours', label: 'After Hours ($/hr)', value: watchedInterpreterRateAfterHours, suffix: '/hr' },
+    { key: 'interpreter_rate_mileage', label: 'Mileage ($/mi)', value: watchedInterpreterRateMileage, suffix: '/mi' },
+  ];
+
+  const expenseFields: RateField[] = [
+    { key: 'mileage', label: 'Mileage (mi)', value: watchedMileage, step: '0.1' },
+    { key: 'travel_time_hours', label: 'Travel Time (hrs)', value: watchedTravelTime, step: '0.25' },
+    { key: 'parking', label: 'Parking ($)', value: watchedParking },
+    { key: 'tolls', label: 'Tolls ($)', value: watchedTolls },
+    { key: 'misc_fee', label: 'Misc Fee ($)', value: watchedMiscFee },
+  ];
+
   return (
-    <div className="space-y-6">
-      <div className="flex items-center gap-4">
+    <div className="space-y-4">
+      {/* Compact Header with Job Selector */}
+      <div className="flex items-center gap-4 flex-wrap">
         <Button variant="ghost" size="icon" onClick={() => navigate('/jobs')}>
           <ArrowLeft className="h-4 w-4" />
         </Button>
-        <div>
-          <h1 className="text-3xl font-bold text-foreground">Job Details</h1>
-          <p className="text-muted-foreground">View and edit job information</p>
-        </div>
-      </div>
+        <h1 className="text-2xl font-bold text-foreground">
+          {job ? `Job #${job.job_number}` : 'Job Details'}
+        </h1>
+        
+        {/* Compact Job Selector */}
+        <Popover open={searchOpen} onOpenChange={setSearchOpen}>
+          <PopoverTrigger asChild>
+            <Button
+              variant="outline"
+              role="combobox"
+              className="w-[280px] justify-between text-sm"
+            >
+              {selectedJob
+                ? `${selectedJob.job_number} - ${format(new Date(selectedJob.job_date), 'MMM d')}`
+                : 'Select job...'}
+              <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+            </Button>
+          </PopoverTrigger>
+          <PopoverContent className="w-[400px] p-0">
+            <Command>
+              <CommandInput placeholder="Search jobs..." />
+              <CommandList>
+                <CommandEmpty>No job found.</CommandEmpty>
+                <CommandGroup>
+                  {jobs?.map((j) => (
+                    <CommandItem
+                      key={j.id}
+                      value={`${j.job_number} ${j.deaf_client_name || ''}`}
+                      onSelect={() => {
+                        setSelectedJobId(j.id);
+                        setSearchOpen(false);
+                      }}
+                    >
+                      <Check
+                        className={cn(
+                          'mr-2 h-4 w-4',
+                          selectedJobId === j.id ? 'opacity-100' : 'opacity-0'
+                        )}
+                      />
+                      {j.job_number} - {j.deaf_client_name || 'N/A'} ({format(new Date(j.job_date), 'MMM d, yyyy')})
+                    </CommandItem>
+                  ))}
+                </CommandGroup>
+              </CommandList>
+            </Command>
+          </PopoverContent>
+        </Popover>
 
-      {/* Job Search/Select */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Select Job</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <Popover open={searchOpen} onOpenChange={setSearchOpen}>
-            <PopoverTrigger asChild>
-              <Button
-                variant="outline"
-                role="combobox"
-                className="w-full justify-between"
-              >
-                {selectedJob
-                  ? `${selectedJob.job_number} - ${selectedJob.deaf_client_name || 'N/A'} (${format(new Date(selectedJob.job_date), 'MMM d, yyyy')})`
-                  : 'Search for a job...'}
-                <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-              </Button>
-            </PopoverTrigger>
-            <PopoverContent className="w-[500px] p-0">
-              <Command>
-                <CommandInput placeholder="Search jobs..." />
-                <CommandList>
-                  <CommandEmpty>No job found.</CommandEmpty>
-                  <CommandGroup>
-                    {jobs?.map((j) => (
-                      <CommandItem
-                        key={j.id}
-                        value={`${j.job_number} ${j.deaf_client_name || ''}`}
-                        onSelect={() => {
-                          setSelectedJobId(j.id);
-                          setSearchOpen(false);
-                        }}
-                      >
-                        <Check
-                          className={cn(
-                            'mr-2 h-4 w-4',
-                            selectedJobId === j.id ? 'opacity-100' : 'opacity-0'
-                          )}
-                        />
-                        {j.job_number} - {j.deaf_client_name || 'N/A'} ({format(new Date(j.job_date), 'MMM d, yyyy')})
-                      </CommandItem>
-                    ))}
-                  </CommandGroup>
-                </CommandList>
-              </Command>
-            </PopoverContent>
-          </Popover>
-        </CardContent>
-      </Card>
+        {job?.status && (
+          <Badge variant="secondary">{statusLabels[job.status]}</Badge>
+        )}
+      </div>
 
       {jobLoading && <p className="text-muted-foreground">Loading job...</p>}
 
       {job && (
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-            {/* Job Info Card */}
+          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+            {/* Job Info Card - Consolidated */}
             <Card>
-              <CardHeader>
-                <div className="flex items-center justify-between">
-                  <CardTitle>Job #{job.job_number}</CardTitle>
-                  {job.status && (
-                    <Badge variant="secondary">{statusLabels[job.status]}</Badge>
-                  )}
-                </div>
+              <CardHeader className="pb-4">
+                <CardTitle className="text-lg">Job Information</CardTitle>
               </CardHeader>
-              <CardContent className="space-y-6">
-                {/* Basic Info */}
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <CardContent className="space-y-4">
+                {/* Row 1: Status, Date, Start, End, Billable Hours */}
+                <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
                   <FormField
                     control={form.control}
                     name="status"
@@ -1074,12 +1128,40 @@ export default function JobDetail() {
 
                   <FormField
                     control={form.control}
-                    name="deaf_client_name"
+                    name="start_time"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Deaf Client Name</FormLabel>
+                        <FormLabel>Start Time</FormLabel>
                         <FormControl>
-                          <Input {...field} disabled={isLocked} />
+                          <Input type="time" {...field} disabled={isLocked} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <FormField
+                    control={form.control}
+                    name="end_time"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>End Time</FormLabel>
+                        <FormControl>
+                          <Input type="time" {...field} disabled={isLocked} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <FormField
+                    control={form.control}
+                    name="billable_hours"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Billable Hours</FormLabel>
+                        <FormControl>
+                          <Input type="number" step="0.25" {...field} disabled={isLocked} />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -1087,7 +1169,7 @@ export default function JobDetail() {
                   />
                 </div>
 
-                {/* Facility & Interpreter */}
+                {/* Row 2: Facility & Deaf Client */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <FormField
                     control={form.control}
@@ -1128,6 +1210,9 @@ export default function JobDetail() {
                                         className={cn('mr-2 h-4 w-4', field.value === facility.id ? 'opacity-100' : 'opacity-0')}
                                       />
                                       {facility.name}
+                                      {facility.contractor && (
+                                        <Badge variant="outline" className="ml-2 text-xs">Contractor</Badge>
+                                      )}
                                     </CommandItem>
                                   ))}
                                 </CommandGroup>
@@ -1140,21 +1225,36 @@ export default function JobDetail() {
                     )}
                   />
 
-                  {/* Interpreter field moved below potential interpreters email button */}
-
                   <FormField
                     control={form.control}
-                    name="potential_interpreter_ids"
+                    name="deaf_client_name"
                     render={({ field }) => (
-                      <FormItem className="flex flex-col md:col-span-2">
-                        <FormLabel>Potential Interpreters</FormLabel>
+                      <FormItem>
+                        <FormLabel>Deaf Client Name</FormLabel>
+                        <FormControl>
+                          <Input {...field} disabled={isLocked} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
+
+                {/* Row 3: Potential Interpreters */}
+                <FormField
+                  control={form.control}
+                  name="potential_interpreter_ids"
+                  render={({ field }) => (
+                    <FormItem className="flex flex-col">
+                      <FormLabel>Potential Interpreters</FormLabel>
+                      <div className="flex gap-2 items-start flex-wrap">
                         <Popover open={potentialInterpretersOpen} onOpenChange={setPotentialInterpretersOpen}>
                           <PopoverTrigger asChild>
                             <FormControl>
                               <Button
                                 variant="outline"
                                 role="combobox"
-                                className={cn('justify-between h-auto min-h-10', selectedPotentialInterpreters.length === 0 && 'text-muted-foreground')}
+                                className={cn('justify-between h-auto min-h-10 flex-1 min-w-[200px]', selectedPotentialInterpreters.length === 0 && 'text-muted-foreground')}
                                 disabled={isLocked}
                               >
                                 <div className="flex flex-wrap gap-1">
@@ -1205,55 +1305,47 @@ export default function JobDetail() {
                             </Command>
                           </PopoverContent>
                         </Popover>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
+                        
+                        <AlertDialog>
+                          <AlertDialogTrigger asChild>
+                            <Button
+                              type="button"
+                              variant="outline"
+                              size="sm"
+                              disabled={isLocked || !canSendOutreach || sendOutreachMutation.isPending}
+                            >
+                              <Mail className="mr-2 h-4 w-4" />
+                              {sendOutreachMutation.isPending ? 'Sending...' : 'Send Outreach'}
+                            </Button>
+                          </AlertDialogTrigger>
+                          <AlertDialogContent>
+                            <AlertDialogHeader>
+                              <AlertDialogTitle>Send Outreach Email?</AlertDialogTitle>
+                              <AlertDialogDescription>
+                                This will send an email to {watchedPotentialInterpreterIds.length} potential interpreter{watchedPotentialInterpreterIds.length !== 1 ? 's' : ''} and change the job status to "Outreach In Progress".
+                              </AlertDialogDescription>
+                            </AlertDialogHeader>
+                            <AlertDialogFooter>
+                              <AlertDialogCancel>Cancel</AlertDialogCancel>
+                              <AlertDialogAction onClick={() => sendOutreachMutation.mutate()}>
+                                Send Email
+                              </AlertDialogAction>
+                            </AlertDialogFooter>
+                          </AlertDialogContent>
+                        </AlertDialog>
+                      </div>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
 
-                  <div className="md:col-span-2">
-                    <AlertDialog>
-                      <AlertDialogTrigger asChild>
-                        <Button
-                          type="button"
-                          variant="outline"
-                          disabled={isLocked || !canSendOutreach || sendOutreachMutation.isPending}
-                        >
-                          <Mail className="mr-2 h-4 w-4" />
-                          {sendOutreachMutation.isPending ? 'Sending...' : 'Send Potential Interpreters Email'}
-                        </Button>
-                      </AlertDialogTrigger>
-                      <AlertDialogContent>
-                        <AlertDialogHeader>
-                          <AlertDialogTitle>Send Outreach Email?</AlertDialogTitle>
-                          <AlertDialogDescription>
-                            This will send an email to {watchedPotentialInterpreterIds.length} potential interpreter{watchedPotentialInterpreterIds.length !== 1 ? 's' : ''} and change the job status to "Outreach In Progress".
-                          </AlertDialogDescription>
-                        </AlertDialogHeader>
-                        <AlertDialogFooter>
-                          <AlertDialogCancel>Cancel</AlertDialogCancel>
-                          <AlertDialogAction onClick={() => sendOutreachMutation.mutate()}>
-                            Send Email
-                          </AlertDialogAction>
-                        </AlertDialogFooter>
-                      </AlertDialogContent>
-                    </AlertDialog>
-                    {!canSendOutreach && watchedStatus !== 'new' && (
-                      <p className="text-sm text-muted-foreground mt-1">
-                        Only available when status is "New"
-                      </p>
-                    )}
-                    {!canSendOutreach && watchedStatus === 'new' && watchedPotentialInterpreterIds.length === 0 && (
-                      <p className="text-sm text-muted-foreground mt-1">
-                        Select at least one potential interpreter
-                      </p>
-                    )}
-                  </div>
-
+                {/* Row 4: Selected Interpreter with Confirm */}
+                <div className="flex gap-2 items-end flex-wrap">
                   <FormField
                     control={form.control}
                     name="interpreter_id"
                     render={({ field }) => (
-                      <FormItem className="flex flex-col">
+                      <FormItem className="flex flex-col flex-1 min-w-[200px]">
                         <FormLabel>Selected Interpreter</FormLabel>
                         <Popover open={interpreterOpen} onOpenChange={setInterpreterOpen}>
                           <PopoverTrigger asChild>
@@ -1275,29 +1367,23 @@ export default function JobDetail() {
                             <Command>
                               <CommandInput placeholder="Search interpreters..." />
                               <CommandList>
-                                <CommandEmpty>
-                                  {watchedPotentialInterpreterIds.length === 0 
-                                    ? 'Add potential interpreters first' 
-                                    : 'No interpreter found.'}
-                                </CommandEmpty>
+                                <CommandEmpty>No interpreter found.</CommandEmpty>
                                 <CommandGroup>
-                                  {interpreters
-                                    ?.filter((interpreter) => watchedPotentialInterpreterIds.includes(interpreter.id))
-                                    .map((interpreter) => (
-                                      <CommandItem
-                                        key={interpreter.id}
-                                        value={`${interpreter.first_name} ${interpreter.last_name}`}
-                                        onSelect={() => {
-                                          field.onChange(interpreter.id);
-                                          setInterpreterOpen(false);
-                                        }}
-                                      >
-                                        <Check
-                                          className={cn('mr-2 h-4 w-4', field.value === interpreter.id ? 'opacity-100' : 'opacity-0')}
-                                        />
-                                        {interpreter.first_name} {interpreter.last_name}
-                                      </CommandItem>
-                                    ))}
+                                  {interpreters?.map((interpreter) => (
+                                    <CommandItem
+                                      key={interpreter.id}
+                                      value={`${interpreter.first_name} ${interpreter.last_name}`}
+                                      onSelect={() => {
+                                        field.onChange(interpreter.id);
+                                        setInterpreterOpen(false);
+                                      }}
+                                    >
+                                      <Check
+                                        className={cn('mr-2 h-4 w-4', field.value === interpreter.id ? 'opacity-100' : 'opacity-0')}
+                                      />
+                                      {interpreter.first_name} {interpreter.last_name}
+                                    </CommandItem>
+                                  ))}
                                 </CommandGroup>
                               </CommandList>
                             </Command>
@@ -1307,477 +1393,137 @@ export default function JobDetail() {
                       </FormItem>
                     )}
                   />
-
-                  <div className="md:col-span-2">
-                    <AlertDialog>
-                      <AlertDialogTrigger asChild>
-                        <Button
-                          type="button"
-                          variant="outline"
-                          disabled={isLocked || !canConfirmInterpreter || confirmInterpreterMutation.isPending}
-                        >
-                          <Mail className="mr-2 h-4 w-4" />
-                          {confirmInterpreterMutation.isPending ? 'Sending...' : 'Confirm Interpreter and Send Confirmation Email'}
-                        </Button>
-                      </AlertDialogTrigger>
-                      <AlertDialogContent>
-                        <AlertDialogHeader>
-                          <AlertDialogTitle>Confirm Interpreter?</AlertDialogTitle>
-                          <AlertDialogDescription>
-                            This will send a confirmation email to {selectedInterpreter ? `${selectedInterpreter.first_name} ${selectedInterpreter.last_name}` : 'the selected interpreter'} and change the job status to "Confirmed".
-                          </AlertDialogDescription>
-                        </AlertDialogHeader>
-                        <AlertDialogFooter>
-                          <AlertDialogCancel>Cancel</AlertDialogCancel>
-                          <AlertDialogAction onClick={() => confirmInterpreterMutation.mutate()}>
-                            Confirm & Send
-                          </AlertDialogAction>
-                        </AlertDialogFooter>
-                      </AlertDialogContent>
-                    </AlertDialog>
-                    {!canConfirmInterpreter && watchedStatus !== 'outreach_in_progress' && (
-                      <p className="text-sm text-muted-foreground mt-1">
-                        Only available when status is "Outreach In Progress"
-                      </p>
-                    )}
-                    {!canConfirmInterpreter && watchedStatus === 'outreach_in_progress' && !watchedInterpreterId && (
-                      <p className="text-sm text-muted-foreground mt-1">
-                        Select an interpreter first
-                      </p>
-                    )}
-                  </div>
-                </div>
-
-                {/* Schedule */}
-                <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                  <FormField
-                    control={form.control}
-                    name="start_time"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Start Time</FormLabel>
-                        <FormControl>
-                          <Input type="time" {...field} disabled={isLocked} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-
-                  <FormField
-                    control={form.control}
-                    name="end_time"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>End Time</FormLabel>
-                        <FormControl>
-                          <Input type="time" {...field} disabled={isLocked} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-
-
-                  <FormField
-                    control={form.control}
-                    name="billable_hours"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Billable Hours</FormLabel>
-                        <FormControl>
-                          <Input type="number" step="0.25" {...field} disabled={isLocked} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
+                  
+                  <AlertDialog>
+                    <AlertDialogTrigger asChild>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        disabled={isLocked || !canConfirmInterpreter || confirmInterpreterMutation.isPending}
+                      >
+                        <Check className="mr-2 h-4 w-4" />
+                        {confirmInterpreterMutation.isPending ? 'Confirming...' : 'Confirm Interpreter'}
+                      </Button>
+                    </AlertDialogTrigger>
+                    <AlertDialogContent>
+                      <AlertDialogHeader>
+                        <AlertDialogTitle>Confirm Interpreter?</AlertDialogTitle>
+                        <AlertDialogDescription>
+                          This will assign {selectedInterpreter ? `${selectedInterpreter.first_name} ${selectedInterpreter.last_name}` : 'the interpreter'} to this job, save all changes, and update the job status to "Confirmed".
+                        </AlertDialogDescription>
+                      </AlertDialogHeader>
+                      <AlertDialogFooter>
+                        <AlertDialogCancel>Cancel</AlertDialogCancel>
+                        <AlertDialogAction onClick={() => confirmInterpreterMutation.mutate()}>
+                          Confirm
+                        </AlertDialogAction>
+                      </AlertDialogFooter>
+                    </AlertDialogContent>
+                  </AlertDialog>
                 </div>
               </CardContent>
             </Card>
 
-            {/* Location Card */}
+            {/* Location & Client Card - Merged */}
             <Card>
-              <CardHeader>
-                <CardTitle>Location</CardTitle>
+              <CardHeader className="pb-4">
+                <CardTitle className="text-lg">Location & Contact</CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
-                <FormField
-                  control={form.control}
-                  name="location_type"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Location Type</FormLabel>
-                      <Select onValueChange={field.onChange} value={field.value} disabled={isLocked}>
-                        <FormControl>
-                          <SelectTrigger className="w-[200px]" disabled={isLocked}>
-                            <SelectValue />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          <SelectItem value="in_person">In-Person</SelectItem>
-                          <SelectItem value="remote">Remote</SelectItem>
-                        </SelectContent>
-                      </Select>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                {watchedLocationType === 'in_person' ? (
-                  <>
+                {/* Location Section */}
+                <div className="space-y-3">
+                  <div className="flex items-center gap-4">
                     <FormField
                       control={form.control}
-                      name="location_address"
+                      name="location_type"
                       render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Address</FormLabel>
-                          <FormControl>
-                            <Input {...field} disabled={isLocked} />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                    <div className="grid grid-cols-3 gap-4">
-                      <FormField
-                        control={form.control}
-                        name="location_city"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>City</FormLabel>
+                        <FormItem className="flex-shrink-0">
+                          <Select onValueChange={field.onChange} value={field.value} disabled={isLocked}>
                             <FormControl>
-                              <Input {...field} disabled={isLocked} />
+                              <SelectTrigger className="w-[140px]" disabled={isLocked}>
+                                <SelectValue />
+                              </SelectTrigger>
                             </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-                      <FormField
-                        control={form.control}
-                        name="location_state"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>State</FormLabel>
-                            <FormControl>
-                              <Input {...field} disabled={isLocked} />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-                      <FormField
-                        control={form.control}
-                        name="location_zip"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Zip</FormLabel>
-                            <FormControl>
-                              <Input {...field} disabled={isLocked} />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-                    </div>
-                  </>
-                ) : (
-                  <FormField
-                    control={form.control}
-                    name="video_call_link"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Video Call Link</FormLabel>
-                        <FormControl>
-                          <Input placeholder="https://..." {...field} disabled={isLocked} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                )}
-              </CardContent>
-            </Card>
-
-            {/* Rates & Fees Card */}
-            <Card>
-              <CardHeader>
-                <CardTitle>Rates & Fees</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-6">
-                {/* Facility Rates */}
-                <div>
-                  <h4 className="text-sm font-medium mb-3">Facility Rates</h4>
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    <FormField
-                      control={form.control}
-                      name="facility_rate_business"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Business Rate ($/hr)</FormLabel>
-                          <FormControl>
-                            <Input type="number" step="0.01" {...field} disabled={isLocked} />
-                          </FormControl>
+                            <SelectContent>
+                              <SelectItem value="in_person">In-Person</SelectItem>
+                              <SelectItem value="remote">Remote</SelectItem>
+                            </SelectContent>
+                          </Select>
                           <FormMessage />
                         </FormItem>
                       )}
                     />
-                    <FormField
-                      control={form.control}
-                      name="facility_rate_after_hours"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>After Hours Rate ($/hr)</FormLabel>
-                          <FormControl>
-                            <Input type="number" step="0.01" {...field} disabled={isLocked} />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                    <FormField
-                      control={form.control}
-                      name="facility_rate_mileage"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Mileage Rate ($/mi)</FormLabel>
-                          <FormControl>
-                            <Input type="number" step="0.01" {...field} disabled={isLocked} />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                  </div>
-                </div>
-
-                {/* Interpreter Rates */}
-                <div>
-                  <h4 className="text-sm font-medium mb-3">Interpreter Rates</h4>
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    <FormField
-                      control={form.control}
-                      name="interpreter_rate_business"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Business Rate ($/hr)</FormLabel>
-                          <FormControl>
-                            <Input type="number" step="0.01" {...field} disabled={isLocked} />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                    <FormField
-                      control={form.control}
-                      name="interpreter_rate_after_hours"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>After Hours Rate ($/hr)</FormLabel>
-                          <FormControl>
-                            <Input type="number" step="0.01" {...field} disabled={isLocked} />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                    <FormField
-                      control={form.control}
-                      name="interpreter_rate_mileage"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Mileage Rate ($/mi)</FormLabel>
-                          <FormControl>
-                            <Input type="number" step="0.01" {...field} disabled={isLocked} />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                  </div>
-                </div>
-
-                {/* Expenses */}
-                <div>
-                  <h4 className="text-sm font-medium mb-3">Expenses</h4>
-                  <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
-                    <FormField
-                      control={form.control}
-                      name="mileage"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Mileage (mi)</FormLabel>
-                          <FormControl>
-                            <Input type="number" step="0.1" {...field} disabled={isLocked} />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                    <FormField
-                      control={form.control}
-                      name="travel_time_hours"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Travel Time (hrs)</FormLabel>
-                          <FormControl>
-                            <Input type="number" step="0.25" {...field} disabled={isLocked} />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                    <FormField
-                      control={form.control}
-                      name="parking"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Parking ($)</FormLabel>
-                          <FormControl>
-                            <Input type="number" step="0.01" {...field} disabled={isLocked} />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                    <FormField
-                      control={form.control}
-                      name="tolls"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Tolls ($)</FormLabel>
-                          <FormControl>
-                            <Input type="number" step="0.01" {...field} disabled={isLocked} />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                    <FormField
-                      control={form.control}
-                      name="misc_fee"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Misc Fee ($)</FormLabel>
-                          <FormControl>
-                            <Input type="number" step="0.01" {...field} disabled={isLocked} />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                  </div>
-                </div>
-
-                {/* Billable Calculation */}
-                {hoursSplit && billableTotal && (
-                  <div>
-                    <h4 className="text-sm font-medium mb-3">Billable Calculation</h4>
-                    <div className="rounded-lg border bg-muted/50 p-4 space-y-4">
-                      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
-                        <div>
-                          <span className="text-muted-foreground">Job Duration:</span>
-                          <span className="ml-2 font-medium">{hoursSplit.totalHours.toFixed(2)} hrs</span>
-                        </div>
-                        <div>
-                          <span className="text-muted-foreground">Billable Hours:</span>
-                          <span className="ml-2 font-medium">{hoursSplit.billableHours.toFixed(2)} hrs</span>
-                          {hoursSplit.minimumApplied > 0 && (
-                            <span className="ml-1 text-xs text-muted-foreground">(min applied)</span>
+                    
+                    {watchedLocationType === 'in_person' ? (
+                      <div className="flex-1 grid grid-cols-1 md:grid-cols-4 gap-2">
+                        <FormField
+                          control={form.control}
+                          name="location_address"
+                          render={({ field }) => (
+                            <FormItem className="md:col-span-2">
+                              <FormControl>
+                                <Input placeholder="Address" {...field} disabled={isLocked} />
+                              </FormControl>
+                            </FormItem>
                           )}
-                        </div>
-                        <div>
-                          <span className="text-muted-foreground">Business (8am-5pm):</span>
-                          <span className="ml-2 font-medium">{hoursSplit.businessHours.toFixed(2)} hrs</span>
-                        </div>
-                        <div>
-                          <span className="text-muted-foreground">After Hours:</span>
-                          <span className="ml-2 font-medium">{hoursSplit.afterHours.toFixed(2)} hrs</span>
-                        </div>
-                      </div>
-                      
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 border-t pt-4">
-                        {/* Facility Totals */}
-                        <div className="space-y-2">
-                          <h5 className="text-sm font-medium">Facility Charge</h5>
-                          <div className="text-sm space-y-1">
-                            <div className="flex justify-between">
-                              <span>Business Hours:</span>
-                              <span>{hoursSplit.businessHours.toFixed(2)} × ${billableTotal.facilityBusinessRate.toFixed(2)} = <span className="font-medium">${billableTotal.facilityBusinessTotal.toFixed(2)}</span></span>
-                            </div>
-                            <div className="flex justify-between">
-                              <span>After Hours:</span>
-                              <span>{hoursSplit.afterHours.toFixed(2)} × ${billableTotal.facilityAfterHoursRate.toFixed(2)} = <span className="font-medium">${billableTotal.facilityAfterHoursTotal.toFixed(2)}</span></span>
-                            </div>
-                            {billableTotal.mileage > 0 && (
-                              <div className="flex justify-between">
-                                <span>Mileage:</span>
-                                <span>{billableTotal.mileage.toFixed(0)} mi × ${billableTotal.facilityMileageRate.toFixed(2)} = <span className="font-medium">${billableTotal.facilityMileageTotal.toFixed(2)}</span></span>
-                              </div>
+                        />
+                        <FormField
+                          control={form.control}
+                          name="location_city"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormControl>
+                                <Input placeholder="City" {...field} disabled={isLocked} />
+                              </FormControl>
+                            </FormItem>
+                          )}
+                        />
+                        <div className="flex gap-2">
+                          <FormField
+                            control={form.control}
+                            name="location_state"
+                            render={({ field }) => (
+                              <FormItem className="w-20">
+                                <FormControl>
+                                  <Input placeholder="State" {...field} disabled={isLocked} />
+                                </FormControl>
+                              </FormItem>
                             )}
-                            {billableTotal.facilityFeesTotal > 0 && (
-                              <div className="flex justify-between">
-                                <span>Fees (P/T/M):</span>
-                                <span className="font-medium">${billableTotal.facilityFeesTotal.toFixed(2)}</span>
-                              </div>
+                          />
+                          <FormField
+                            control={form.control}
+                            name="location_zip"
+                            render={({ field }) => (
+                              <FormItem className="flex-1">
+                                <FormControl>
+                                  <Input placeholder="Zip" {...field} disabled={isLocked} />
+                                </FormControl>
+                              </FormItem>
                             )}
-                            <div className="flex justify-between border-t pt-1 font-semibold">
-                              <span>Total:</span>
-                              <span>${billableTotal.facilityTotal.toFixed(2)}</span>
-                            </div>
-                          </div>
-                        </div>
-                        
-                        {/* Interpreter Totals */}
-                        <div className="space-y-2">
-                          <h5 className="text-sm font-medium">Interpreter Pay</h5>
-                          <div className="text-sm space-y-1">
-                            <div className="flex justify-between">
-                              <span>Business Hours:</span>
-                              <span>{hoursSplit.businessHours.toFixed(2)} × ${billableTotal.interpreterBusinessRate.toFixed(2)} = <span className="font-medium">${billableTotal.interpreterBusinessTotal.toFixed(2)}</span></span>
-                            </div>
-                            <div className="flex justify-between">
-                              <span>After Hours:</span>
-                              <span>{hoursSplit.afterHours.toFixed(2)} × ${billableTotal.interpreterAfterHoursRate.toFixed(2)} = <span className="font-medium">${billableTotal.interpreterAfterHoursTotal.toFixed(2)}</span></span>
-                            </div>
-                            {billableTotal.mileage > 0 && (
-                              <div className="flex justify-between">
-                                <span>Mileage:</span>
-                                <span>{billableTotal.mileage.toFixed(0)} mi × ${billableTotal.interpreterMileageRate.toFixed(2)} = <span className="font-medium">${billableTotal.interpreterMileageTotal.toFixed(2)}</span></span>
-                              </div>
-                            )}
-                            {billableTotal.travelTimeHours > 0 && (
-                              <div className="flex justify-between">
-                                <span>Travel Time:</span>
-                                <span>{billableTotal.travelTimeHours.toFixed(2)} hrs × ${billableTotal.interpreterTravelTimeRate.toFixed(2)} = <span className="font-medium">${billableTotal.interpreterTravelTimeTotal.toFixed(2)}</span></span>
-                              </div>
-                            )}
-                            {billableTotal.interpreterFeesTotal > 0 && (
-                              <div className="flex justify-between">
-                                <span>Fees (P/T/M):</span>
-                                <span className="font-medium">${billableTotal.interpreterFeesTotal.toFixed(2)}</span>
-                              </div>
-                            )}
-                            <div className="flex justify-between border-t pt-1 font-semibold">
-                              <span>Total:</span>
-                              <span>${billableTotal.interpreterTotal.toFixed(2)}</span>
-                            </div>
-                          </div>
+                          />
                         </div>
                       </div>
-                    </div>
+                    ) : (
+                      <FormField
+                        control={form.control}
+                        name="video_call_link"
+                        render={({ field }) => (
+                          <FormItem className="flex-1">
+                            <FormControl>
+                              <Input placeholder="Video call link (https://...)" {...field} disabled={isLocked} />
+                            </FormControl>
+                          </FormItem>
+                        )}
+                      />
+                    )}
                   </div>
-                )}
-              </CardContent>
-            </Card>
+                </div>
 
-            {/* Client & Notes Card */}
-            <Card>
-              <CardHeader>
-                <CardTitle>Client Information</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <Separator />
+
+                {/* Client Info Section */}
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                   <FormField
                     control={form.control}
                     name="client_business_name"
@@ -1787,7 +1533,6 @@ export default function JobDetail() {
                         <FormControl>
                           <Input {...field} disabled={isLocked} />
                         </FormControl>
-                        <FormMessage />
                       </FormItem>
                     )}
                   />
@@ -1800,7 +1545,6 @@ export default function JobDetail() {
                         <FormControl>
                           <Input {...field} disabled={isLocked} />
                         </FormControl>
-                        <FormMessage />
                       </FormItem>
                     )}
                   />
@@ -1809,11 +1553,10 @@ export default function JobDetail() {
                     name="client_contact_phone"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Contact Phone</FormLabel>
+                        <FormLabel>Phone</FormLabel>
                         <FormControl>
                           <Input {...field} disabled={isLocked} />
                         </FormControl>
-                        <FormMessage />
                       </FormItem>
                     )}
                   />
@@ -1822,24 +1565,184 @@ export default function JobDetail() {
                     name="client_contact_email"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Contact Email</FormLabel>
+                        <FormLabel>Email</FormLabel>
                         <FormControl>
                           <Input type="email" {...field} disabled={isLocked} />
                         </FormControl>
-                        <FormMessage />
                       </FormItem>
                     )}
                   />
                 </div>
+              </CardContent>
+            </Card>
 
+            {/* Billing Summary Card */}
+            <Card>
+              <CardHeader className="pb-4">
+                <CardTitle className="text-lg">Billing</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                {/* Facility Rates Chips */}
+                <div className="space-y-1">
+                  <h4 className="text-sm font-medium text-muted-foreground">Facility Rates</h4>
+                  <RateChips
+                    rates={[
+                      { label: 'Business', value: watchedFacilityRateBusiness, suffix: '/hr' },
+                      { label: 'After Hours', value: watchedFacilityRateAfterHours, suffix: '/hr' },
+                      { label: 'Mileage', value: watchedFacilityRateMileage, suffix: '/mi' },
+                    ]}
+                    onEditClick={() => setFacilityRatesDialogOpen(true)}
+                    disabled={isLocked}
+                  />
+                </div>
+
+                {/* Interpreter Rates Chips */}
+                {selectedInterpreter && (
+                  <div className="space-y-1">
+                    <h4 className="text-sm font-medium text-muted-foreground">Interpreter Rates</h4>
+                    <RateChips
+                      rates={[
+                        { label: 'Business', value: watchedInterpreterRateBusiness, suffix: '/hr' },
+                        { label: 'After Hours', value: watchedInterpreterRateAfterHours, suffix: '/hr' },
+                        { label: 'Mileage', value: watchedInterpreterRateMileage, suffix: '/mi' },
+                      ]}
+                      onEditClick={() => setInterpreterRatesDialogOpen(true)}
+                      disabled={isLocked}
+                    />
+                  </div>
+                )}
+
+                {/* Expenses Chips */}
+                <div className="space-y-1">
+                  <h4 className="text-sm font-medium text-muted-foreground">Expenses</h4>
+                  <RateChips
+                    rates={[
+                      { label: 'Mileage', value: watchedMileage, format: 'number', suffix: ' mi' },
+                      { label: 'Travel', value: watchedTravelTime, format: 'number', suffix: ' hrs' },
+                      { label: 'Parking', value: watchedParking },
+                      { label: 'Tolls', value: watchedTolls },
+                      { label: 'Misc', value: watchedMiscFee },
+                    ]}
+                    onEditClick={() => setExpensesDialogOpen(true)}
+                    disabled={isLocked}
+                  />
+                </div>
+
+                {/* Billable Calculation */}
+                {hoursSplit && billableTotal && (
+                  <>
+                    <Separator />
+                    <div className="rounded-lg border bg-muted/50 p-4 space-y-3">
+                      <div className="grid grid-cols-2 md:grid-cols-4 gap-2 text-sm">
+                        <div>
+                          <span className="text-muted-foreground">Duration:</span>
+                          <span className="ml-1 font-medium">{hoursSplit.totalHours.toFixed(2)} hrs</span>
+                        </div>
+                        <div>
+                          <span className="text-muted-foreground">Billable:</span>
+                          <span className="ml-1 font-medium">{hoursSplit.billableHours.toFixed(2)} hrs</span>
+                          {hoursSplit.minimumApplied > 0 && (
+                            <span className="ml-1 text-xs text-muted-foreground">(min)</span>
+                          )}
+                        </div>
+                        <div>
+                          <span className="text-muted-foreground">Business:</span>
+                          <span className="ml-1 font-medium">{hoursSplit.businessHours.toFixed(2)} hrs</span>
+                        </div>
+                        <div>
+                          <span className="text-muted-foreground">After Hours:</span>
+                          <span className="ml-1 font-medium">{hoursSplit.afterHours.toFixed(2)} hrs</span>
+                        </div>
+                      </div>
+                      
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 border-t pt-3">
+                        {/* Facility Totals */}
+                        <div className="space-y-1">
+                          <h5 className="text-sm font-medium">Facility Charge</h5>
+                          <div className="text-sm space-y-0.5">
+                            <div className="flex justify-between">
+                              <span>Business:</span>
+                              <span>${billableTotal.facilityBusinessTotal.toFixed(2)}</span>
+                            </div>
+                            <div className="flex justify-between">
+                              <span>After Hours:</span>
+                              <span>${billableTotal.facilityAfterHoursTotal.toFixed(2)}</span>
+                            </div>
+                            {billableTotal.mileage > 0 && (
+                              <div className="flex justify-between">
+                                <span>Mileage:</span>
+                                <span>${billableTotal.facilityMileageTotal.toFixed(2)}</span>
+                              </div>
+                            )}
+                            {billableTotal.facilityFeesTotal > 0 && (
+                              <div className="flex justify-between">
+                                <span>Fees:</span>
+                                <span>${billableTotal.facilityFeesTotal.toFixed(2)}</span>
+                              </div>
+                            )}
+                            <div className="flex justify-between border-t pt-1 font-semibold">
+                              <span>Total:</span>
+                              <span>${billableTotal.facilityTotal.toFixed(2)}</span>
+                            </div>
+                          </div>
+                        </div>
+                        
+                        {/* Interpreter Totals */}
+                        <div className="space-y-1">
+                          <h5 className="text-sm font-medium">Interpreter Pay</h5>
+                          <div className="text-sm space-y-0.5">
+                            <div className="flex justify-between">
+                              <span>Business:</span>
+                              <span>${billableTotal.interpreterBusinessTotal.toFixed(2)}</span>
+                            </div>
+                            <div className="flex justify-between">
+                              <span>After Hours:</span>
+                              <span>${billableTotal.interpreterAfterHoursTotal.toFixed(2)}</span>
+                            </div>
+                            {billableTotal.mileage > 0 && (
+                              <div className="flex justify-between">
+                                <span>Mileage:</span>
+                                <span>${billableTotal.interpreterMileageTotal.toFixed(2)}</span>
+                              </div>
+                            )}
+                            {billableTotal.travelTimeHours > 0 && (
+                              <div className="flex justify-between">
+                                <span>Travel Time:</span>
+                                <span>${billableTotal.interpreterTravelTimeTotal.toFixed(2)}</span>
+                              </div>
+                            )}
+                            {billableTotal.interpreterFeesTotal > 0 && (
+                              <div className="flex justify-between">
+                                <span>Fees:</span>
+                                <span>${billableTotal.interpreterFeesTotal.toFixed(2)}</span>
+                              </div>
+                            )}
+                            <div className="flex justify-between border-t pt-1 font-semibold">
+                              <span>Total:</span>
+                              <span>${billableTotal.interpreterTotal.toFixed(2)}</span>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </>
+                )}
+              </CardContent>
+            </Card>
+
+            {/* Notes Card */}
+            <Card>
+              <CardHeader className="pb-4">
+                <CardTitle className="text-lg">Notes</CardTitle>
+              </CardHeader>
+              <CardContent>
                 <FormField
                   control={form.control}
                   name="internal_notes"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Internal Notes</FormLabel>
                       <FormControl>
-                        <Textarea placeholder="Notes for internal use..." {...field} />
+                        <Textarea placeholder="Internal notes..." className="min-h-[80px]" {...field} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -1889,6 +1792,34 @@ export default function JobDetail() {
           </CardContent>
         </Card>
       )}
+
+      {/* Rate Edit Dialogs */}
+      <RatesEditDialog
+        open={facilityRatesDialogOpen}
+        onOpenChange={setFacilityRatesDialogOpen}
+        title="Edit Facility Rates"
+        fields={facilityRateFields}
+        onSave={handleFacilityRatesSave}
+        disabled={isLocked}
+      />
+      
+      <RatesEditDialog
+        open={interpreterRatesDialogOpen}
+        onOpenChange={setInterpreterRatesDialogOpen}
+        title="Edit Interpreter Rates"
+        fields={interpreterRateFields}
+        onSave={handleInterpreterRatesSave}
+        disabled={isLocked}
+      />
+      
+      <RatesEditDialog
+        open={expensesDialogOpen}
+        onOpenChange={setExpensesDialogOpen}
+        title="Edit Expenses"
+        fields={expenseFields}
+        onSave={handleExpensesSave}
+        disabled={isLocked}
+      />
     </div>
   );
 }

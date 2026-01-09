@@ -374,14 +374,18 @@ Deno.serve(async (req) => {
 
     // Generate PDF
     const pdfBuffer = generatePdf(invoiceData);
-    const fileName = `invoice-${invoice.invoice_number}.pdf`;
+    
+    // Create filename with timestamp to avoid browser/storage caching
+    const timestamp = new Date().toISOString().replace(/[:.]/g, "-");
+    const fileName = `${invoice.invoice_number}/invoice_${timestamp}.pdf`;
 
     // Upload to Supabase Storage
     const { error: uploadError } = await supabase.storage
       .from('invoices')
       .upload(fileName, pdfBuffer, {
         contentType: 'application/pdf',
-        upsert: true
+        cacheControl: 'no-cache',
+        upsert: false
       });
 
     if (uploadError) {

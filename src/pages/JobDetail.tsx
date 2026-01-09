@@ -1035,69 +1035,83 @@ export default function JobDetail() {
 
   return (
     <div className="space-y-4">
-      {/* Compact Header with Job Selector */}
-      <div className="flex items-center gap-4 flex-wrap">
-        <Button variant="ghost" size="icon" onClick={() => navigate('/jobs')}>
-          <ArrowLeft className="h-4 w-4" />
-        </Button>
-        <h1 className="text-2xl font-bold text-foreground">
-          {job ? `Job #${job.job_number}` : 'Job Details'}
-        </h1>
-        
-        {/* Compact Job Selector */}
-        <Popover open={searchOpen} onOpenChange={setSearchOpen}>
-          <PopoverTrigger asChild>
-            <Button
-              variant="outline"
-              role="combobox"
-              className="w-[280px] justify-between text-sm"
-            >
-              {selectedJob
-                ? `${selectedJob.job_number} - ${format(new Date(selectedJob.job_date), 'MMM d')}`
-                : 'Select job...'}
-              <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-            </Button>
-          </PopoverTrigger>
-          <PopoverContent className="w-[400px] p-0">
-            <Command>
-              <CommandInput placeholder="Search jobs..." />
-              <CommandList>
-                <CommandEmpty>No job found.</CommandEmpty>
-                <CommandGroup>
-                  {jobs?.map((j) => (
-                    <CommandItem
-                      key={j.id}
-                      value={`${j.job_number} ${j.deaf_client_name || ''}`}
-                      onSelect={() => {
-                        setSelectedJobId(j.id);
-                        setSearchOpen(false);
-                      }}
-                    >
-                      <Check
-                        className={cn(
-                          'mr-2 h-4 w-4',
-                          selectedJobId === j.id ? 'opacity-100' : 'opacity-0'
-                        )}
-                      />
-                      {j.job_number} - {j.deaf_client_name || 'N/A'} ({format(new Date(j.job_date), 'MMM d, yyyy')})
-                    </CommandItem>
-                  ))}
-                </CommandGroup>
-              </CommandList>
-            </Command>
-          </PopoverContent>
-        </Popover>
+      {/* Sticky Header with Job Selector and Save Button */}
+      <div className="sticky top-0 z-10 bg-background pb-4 border-b">
+        <div className="flex items-center gap-3">
+          <Button variant="ghost" size="icon" onClick={() => navigate('/jobs')}>
+            <ArrowLeft className="h-4 w-4" />
+          </Button>
+          <h1 className="text-xl font-bold text-foreground">
+            {job ? `Job #${job.job_number}` : 'Job Details'}
+          </h1>
+          
+          {/* Compact Job Selector */}
+          <Popover open={searchOpen} onOpenChange={setSearchOpen}>
+            <PopoverTrigger asChild>
+              <Button
+                variant="outline"
+                role="combobox"
+                className="w-[180px] justify-between text-sm"
+              >
+                {selectedJob
+                  ? `${selectedJob.job_number} - ${format(new Date(selectedJob.job_date), 'M/d')}`
+                  : 'Select job...'}
+                <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-[300px] p-0">
+              <Command>
+                <CommandInput placeholder="Search jobs..." />
+                <CommandList>
+                  <CommandEmpty>No job found.</CommandEmpty>
+                  <CommandGroup>
+                    {jobs?.map((j) => (
+                      <CommandItem
+                        key={j.id}
+                        value={`${j.job_number} ${j.deaf_client_name || ''}`}
+                        onSelect={() => {
+                          setSelectedJobId(j.id);
+                          setSearchOpen(false);
+                        }}
+                      >
+                        <Check
+                          className={cn(
+                            'mr-2 h-4 w-4',
+                            selectedJobId === j.id ? 'opacity-100' : 'opacity-0'
+                          )}
+                        />
+                        {j.job_number} - {j.deaf_client_name || 'N/A'} ({format(new Date(j.job_date), 'MMM d, yyyy')})
+                      </CommandItem>
+                    ))}
+                  </CommandGroup>
+                </CommandList>
+              </Command>
+            </PopoverContent>
+          </Popover>
 
-        {job?.status && (
-          <Badge variant="secondary">{statusLabels[job.status]}</Badge>
-        )}
+          {job?.status && (
+            <Badge variant="secondary">{statusLabels[job.status]}</Badge>
+          )}
+
+          {/* Save button in header */}
+          {job && (
+            <Button 
+              type="submit" 
+              form="job-detail-form"
+              disabled={isLocked || mutation.isPending}
+              className="ml-auto"
+            >
+              {mutation.isPending ? 'Saving...' : 'Save Changes'}
+            </Button>
+          )}
+        </div>
       </div>
 
       {jobLoading && <p className="text-muted-foreground">Loading job...</p>}
 
       {job && (
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+          <form id="job-detail-form" onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
             {/* Job Info Card - Consolidated */}
             <Card>
               <CardHeader className="pb-4">
@@ -1751,9 +1765,6 @@ export default function JobDetail() {
                   </AlertDialogFooter>
                 </AlertDialogContent>
               </AlertDialog>
-              <Button type="submit" disabled={isLocked || mutation.isPending}>
-                Save Changes
-              </Button>
             </div>
           </form>
         </Form>

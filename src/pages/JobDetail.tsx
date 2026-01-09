@@ -1035,8 +1035,8 @@ export default function JobDetail() {
 
   return (
     <div className="space-y-4">
-      {/* Sticky Header with Job Selector and Save Button */}
-      <div className="sticky top-0 z-10 bg-background py-4 border-b -mx-6 px-6 -mt-6 mb-4">
+      {/* Sticky Header with Job Selector and Save Button - positioned below app header (h-14 = 56px) */}
+      <div className="sticky top-14 z-10 bg-background py-3 border-b -mx-6 px-6 -mt-6 mb-4">
         <div className="flex items-center gap-3">
           <Button variant="ghost" size="icon" onClick={() => navigate('/jobs')}>
             <ArrowLeft className="h-4 w-4" />

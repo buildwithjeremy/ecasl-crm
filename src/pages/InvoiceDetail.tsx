@@ -47,7 +47,6 @@ const formSchema = z.object({
   issued_date: z.string().optional(),
   due_date: z.string().optional(),
   paid_date: z.string().optional(),
-  pdf_url: z.string().optional(),
   notes: z.string().optional(),
 });
 
@@ -103,6 +102,7 @@ export default function InvoiceDetail() {
   const [searchOpen, setSearchOpen] = useState(false);
   const [selectedInvoiceId, setSelectedInvoiceId] = useState<string | null>(id || null);
   const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
+  const [pdfUrl, setPdfUrl] = useState<string | null>(null);
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
@@ -113,7 +113,6 @@ export default function InvoiceDetail() {
       issued_date: '',
       due_date: '',
       paid_date: '',
-      pdf_url: '',
       notes: '',
     },
   });
@@ -187,9 +186,9 @@ export default function InvoiceDetail() {
         issued_date: invoice.issued_date || '',
         due_date: invoice.due_date || '',
         paid_date: invoice.paid_date || '',
-        pdf_url: invoice.pdf_url || '',
         notes: invoice.notes || '',
       });
+      setPdfUrl(invoice.pdf_url || null);
     }
   }, [invoice, form]);
 
@@ -203,7 +202,6 @@ export default function InvoiceDetail() {
           issued_date: data.issued_date || null,
           due_date: data.due_date || null,
           paid_date: data.paid_date || null,
-          pdf_url: data.pdf_url || null,
           notes: data.notes || null,
         } as never)
         .eq('id', selectedInvoiceId);
@@ -243,7 +241,7 @@ export default function InvoiceDetail() {
       if (error) throw error;
 
       if (data?.pdfUrl) {
-        form.setValue('pdf_url', data.pdfUrl, { shouldDirty: true });
+        setPdfUrl(data.pdfUrl);
         queryClient.invalidateQueries({ queryKey: ['invoice', selectedInvoiceId] });
         toast({
           title: 'PDF Generated',
@@ -392,39 +390,27 @@ export default function InvoiceDetail() {
           {/* Invoice Details Form */}
           <Card>
             <CardHeader className="pb-4">
-              <div className="flex items-center justify-between">
+                <div className="flex items-center justify-between">
                 <CardTitle className="text-lg">Invoice Details</CardTitle>
-                <div className="flex gap-2">
-                  <Button
-                    type="button"
-                    variant="outline"
-                    onClick={handleGeneratePdf}
-                    disabled={isGeneratingPdf || !job}
-                    size="sm"
-                  >
-                    {isGeneratingPdf ? (
-                      <>
-                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                        Generating...
-                      </>
-                    ) : (
-                      <>
-                        <FileText className="mr-2 h-4 w-4" />
-                        Generate PDF
-                      </>
-                    )}
-                  </Button>
-                  {invoice.pdf_url && (
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      onClick={() => window.open(invoice.pdf_url || '', '_blank')}
-                    >
-                      View PDF
-                    </Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={handleGeneratePdf}
+                  disabled={isGeneratingPdf || !job}
+                  size="sm"
+                >
+                  {isGeneratingPdf ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Generating...
+                    </>
+                  ) : (
+                    <>
+                      <FileText className="mr-2 h-4 w-4" />
+                      Generate PDF
+                    </>
                   )}
-                </div>
+                </Button>
               </div>
             </CardHeader>
             <CardContent>
@@ -496,19 +482,21 @@ export default function InvoiceDetail() {
                       )}
                     />
 
-                    <FormField
-                      control={form.control}
-                      name="pdf_url"
-                      render={({ field }) => (
-                        <FormItem className="md:col-span-2">
-                          <FormLabel>Invoice PDF URL</FormLabel>
-                          <FormControl>
-                            <Input placeholder="https://..." {...field} />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
+                    <div className="md:col-span-2 space-y-2">
+                      <FormLabel>Invoice PDF URL</FormLabel>
+                      {pdfUrl ? (
+                        <a
+                          href={pdfUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="block text-sm text-primary underline hover:text-primary/80 truncate"
+                        >
+                          {pdfUrl}
+                        </a>
+                      ) : (
+                        <p className="text-sm text-muted-foreground">No PDF generated yet</p>
                       )}
-                    />
+                    </div>
 
                     <FormField
                       control={form.control}

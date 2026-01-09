@@ -60,7 +60,11 @@ type Payable = {
   notes: string | null;
   total: number | null;
   interpreter: { first_name: string; last_name: string } | null;
-  job: { job_number: string | null } | null;
+  job: { 
+    job_number: string | null;
+    interpreter_hourly_total: number | null;
+    interpreter_billable_total: number | null;
+  } | null;
 };
 
 const statusDisplayMap: Record<string, string> = {
@@ -105,7 +109,7 @@ export default function PayableDetail() {
       if (!selectedPayableId) return null;
       const { data, error } = await supabase
         .from('interpreter_bills')
-        .select('*, interpreter:interpreters(first_name, last_name), job:jobs(job_number)')
+        .select('*, interpreter:interpreters(first_name, last_name), job:jobs(job_number, interpreter_hourly_total, interpreter_billable_total)')
         .eq('id', selectedPayableId)
         .maybeSingle();
       if (error) throw error;
@@ -244,7 +248,7 @@ export default function PayableDetail() {
             </div>
           </CardHeader>
           <CardContent>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
               <div className="space-y-1">
                 <p className="text-sm font-medium text-muted-foreground">Interpreter</p>
                 <p className="text-lg font-semibold">
@@ -257,9 +261,24 @@ export default function PayableDetail() {
                 <p className="text-sm font-medium text-muted-foreground">Job #</p>
                 <p className="text-lg font-semibold">{payable.job?.job_number || '-'}</p>
               </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6 p-4 bg-muted/50 rounded-lg">
               <div className="space-y-1">
-                <p className="text-sm font-medium text-muted-foreground">Total</p>
-                <p className="text-lg font-semibold text-primary">{formatCurrency(payable.total)}</p>
+                <p className="text-sm font-medium text-muted-foreground">Hourly Total</p>
+                <p className="text-lg font-semibold">{formatCurrency(payable.job?.interpreter_hourly_total)}</p>
+              </div>
+              <div className="space-y-1">
+                <p className="text-sm font-medium text-muted-foreground">Billable Total</p>
+                <p className="text-lg font-semibold">{formatCurrency(payable.job?.interpreter_billable_total)}</p>
+              </div>
+              <div className="space-y-1">
+                <p className="text-sm font-medium text-muted-foreground">Overall Total</p>
+                <p className="text-lg font-semibold text-primary">
+                  {formatCurrency(
+                    (payable.job?.interpreter_hourly_total ?? 0) + (payable.job?.interpreter_billable_total ?? 0)
+                  )}
+                </p>
               </div>
             </div>
 

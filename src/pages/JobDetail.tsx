@@ -1082,36 +1082,8 @@ export default function JobDetail() {
                 <CardTitle className="text-lg">Job Information</CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
-                {/* Row 1: Status, Date, Start, End, Billable Hours */}
-                <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
-                  <FormField
-                    control={form.control}
-                    name="status"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Status</FormLabel>
-                        <Select onValueChange={field.onChange} value={field.value} disabled={isLocked}>
-                          <FormControl>
-                            <SelectTrigger disabled={isLocked}>
-                              <SelectValue placeholder="Select status" />
-                            </SelectTrigger>
-                          </FormControl>
-                          <SelectContent>
-                            <SelectItem value="new">New</SelectItem>
-                            <SelectItem value="outreach_in_progress">Outreach</SelectItem>
-                            <SelectItem value="confirmed">Confirmed</SelectItem>
-                            <SelectItem value="complete">Complete</SelectItem>
-                            <SelectItem value="ready_to_bill">Ready to Bill</SelectItem>
-                            <SelectItem value="billed">Billed</SelectItem>
-                            <SelectItem value="paid">Paid</SelectItem>
-                            <SelectItem value="cancelled">Cancelled</SelectItem>
-                          </SelectContent>
-                        </Select>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-
+                {/* Row 1: Date, Start, End */}
+                <div className="grid grid-cols-3 gap-4">
                   <FormField
                     control={form.control}
                     name="job_date"
@@ -1148,20 +1120,6 @@ export default function JobDetail() {
                         <FormLabel>End Time</FormLabel>
                         <FormControl>
                           <Input type="time" {...field} disabled={isLocked} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-
-                  <FormField
-                    control={form.control}
-                    name="billable_hours"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Billable Hours</FormLabel>
-                        <FormControl>
-                          <Input type="number" step="0.25" {...field} disabled={isLocked} />
                         </FormControl>
                         <FormMessage />
                       </FormItem>

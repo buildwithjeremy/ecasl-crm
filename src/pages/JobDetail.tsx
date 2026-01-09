@@ -331,6 +331,38 @@ export default function JobDetail() {
     enabled: !!selectedJobId,
   });
 
+  // Fetch invoice for this job
+  const { data: jobInvoice } = useQuery({
+    queryKey: ['job-invoice', selectedJobId],
+    queryFn: async () => {
+      if (!selectedJobId) return null;
+      const { data, error } = await supabase
+        .from('invoices')
+        .select('id, invoice_number')
+        .eq('job_id', selectedJobId)
+        .maybeSingle();
+      if (error) throw error;
+      return data as { id: string; invoice_number: string } | null;
+    },
+    enabled: !!selectedJobId,
+  });
+
+  // Fetch interpreter bill for this job
+  const { data: jobBill } = useQuery({
+    queryKey: ['job-bill', selectedJobId],
+    queryFn: async () => {
+      if (!selectedJobId) return null;
+      const { data, error } = await supabase
+        .from('interpreter_bills')
+        .select('id, bill_number')
+        .eq('job_id', selectedJobId)
+        .maybeSingle();
+      if (error) throw error;
+      return data as { id: string; bill_number: string | null } | null;
+    },
+    enabled: !!selectedJobId,
+  });
+
   // Check if job is locked (status is 'paid')
   const isLocked = job?.status === 'paid';
 
@@ -1732,32 +1764,54 @@ export default function JobDetail() {
               <CardHeader className="pb-4">
                 <div className="flex items-center justify-between">
                   <CardTitle className="text-lg">Billing</CardTitle>
-                  <AlertDialog>
-                    <AlertDialogTrigger asChild>
+                  <div className="flex items-center gap-2">
+                    {jobInvoice && (
                       <Button
                         type="button"
                         variant="outline"
                         size="sm"
-                        disabled={isLocked || !canGenerateBilling || generateBillingMutation.isPending}
+                        onClick={() => navigate(`/invoices/${jobInvoice.id}`)}
                       >
-                        {generateBillingMutation.isPending ? 'Generating...' : 'Generate Invoice & Bill'}
+                        View Invoice
                       </Button>
-                    </AlertDialogTrigger>
-                    <AlertDialogContent>
-                      <AlertDialogHeader>
-                        <AlertDialogTitle>Generate Invoice & Interpreter Bill?</AlertDialogTitle>
-                        <AlertDialogDescription>
-                          This will create a new invoice for the facility and a new bill for {selectedInterpreter ? `${selectedInterpreter.first_name} ${selectedInterpreter.last_name}` : 'the interpreter'}. The job status will be changed to "Ready to Bill".
-                        </AlertDialogDescription>
-                      </AlertDialogHeader>
-                      <AlertDialogFooter>
-                        <AlertDialogCancel>Cancel</AlertDialogCancel>
-                        <AlertDialogAction onClick={() => generateBillingMutation.mutate()}>
-                          Generate
-                        </AlertDialogAction>
-                      </AlertDialogFooter>
-                    </AlertDialogContent>
-                  </AlertDialog>
+                    )}
+                    {jobBill && (
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => navigate(`/payables/${jobBill.id}`)}
+                      >
+                        View Bill
+                      </Button>
+                    )}
+                    <AlertDialog>
+                      <AlertDialogTrigger asChild>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          disabled={isLocked || !canGenerateBilling || generateBillingMutation.isPending}
+                        >
+                          {generateBillingMutation.isPending ? 'Generating...' : 'Generate Invoice & Bill'}
+                        </Button>
+                      </AlertDialogTrigger>
+                      <AlertDialogContent>
+                        <AlertDialogHeader>
+                          <AlertDialogTitle>Generate Invoice & Interpreter Bill?</AlertDialogTitle>
+                          <AlertDialogDescription>
+                            This will create a new invoice for the facility and a new bill for {selectedInterpreter ? `${selectedInterpreter.first_name} ${selectedInterpreter.last_name}` : 'the interpreter'}. The job status will be changed to "Ready to Bill".
+                          </AlertDialogDescription>
+                        </AlertDialogHeader>
+                        <AlertDialogFooter>
+                          <AlertDialogCancel>Cancel</AlertDialogCancel>
+                          <AlertDialogAction onClick={() => generateBillingMutation.mutate()}>
+                            Generate
+                          </AlertDialogAction>
+                        </AlertDialogFooter>
+                      </AlertDialogContent>
+                    </AlertDialog>
+                  </div>
                 </div>
               </CardHeader>
               <CardContent className="space-y-4">

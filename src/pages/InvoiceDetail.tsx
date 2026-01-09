@@ -86,6 +86,7 @@ type Job = {
   emergency_fee_applied: boolean | null;
   holiday_fee_applied: boolean | null;
   total_facility_charge: number | null;
+  facility_hourly_total: number | null;
   facility: { name: string; emergency_fee: number | null; holiday_fee: number | null } | null;
 };
 
@@ -158,7 +159,7 @@ export default function InvoiceDetail() {
           parking, tolls, misc_fee, trilingual_rate_uplift,
           facility_rate_business, facility_rate_after_hours,
           billable_hours, emergency_fee_applied, holiday_fee_applied,
-          total_facility_charge,
+          total_facility_charge, facility_hourly_total,
           facility:facilities(name, emergency_fee, holiday_fee)
         `)
         .eq('id', invoice.job_id)
@@ -228,6 +229,11 @@ export default function InvoiceDetail() {
   const facilityHourlyTotal = (job?.billable_hours || 0) * (job?.facility_rate_business || 0);
   const emergencyFee = job?.emergency_fee_applied ? (job.facility?.emergency_fee || 0) : 0;
   const holidayFee = job?.holiday_fee_applied ? (job.facility?.holiday_fee || 0) : 0;
+  
+  // Calculate totals for summary
+  const hourlyTotal = job?.facility_hourly_total ?? 0;
+  const travelFeeTotal = mileageTotal + travelTimeTotal + (job?.parking || 0) + (job?.tolls || 0) + (job?.misc_fee || 0) + emergencyFee;
+  const overallTotal = hourlyTotal + travelFeeTotal;
 
   const formatCurrency = (value: number | null | undefined) => {
     if (value === null || value === undefined) return '-';
@@ -503,15 +509,23 @@ export default function InvoiceDetail() {
                     </p>
                   </div>
 
-                  {/* Totals */}
-                  <div className="space-y-1">
-                    <p className="text-sm font-medium text-muted-foreground">Facility Hourly Total</p>
-                    <p className="text-lg font-semibold">{formatCurrency(facilityHourlyTotal)}</p>
-                  </div>
+                </div>
 
-                  <div className="space-y-1">
-                    <p className="text-sm font-medium text-muted-foreground">Facility Billable Total</p>
-                    <p className="text-lg font-semibold text-primary">{formatCurrency(job.total_facility_charge)}</p>
+                {/* Totals Summary */}
+                <div className="mt-6 pt-6 border-t border-border">
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-6 bg-muted/50 rounded-lg p-4">
+                    <div className="space-y-1">
+                      <p className="text-sm font-medium text-muted-foreground">Hourly Total</p>
+                      <p className="text-lg font-semibold">{formatCurrency(hourlyTotal)}</p>
+                    </div>
+                    <div className="space-y-1">
+                      <p className="text-sm font-medium text-muted-foreground">Travel/Fee Total</p>
+                      <p className="text-lg font-semibold">{formatCurrency(travelFeeTotal)}</p>
+                    </div>
+                    <div className="space-y-1">
+                      <p className="text-sm font-medium text-muted-foreground">Overall Total</p>
+                      <p className="text-lg font-semibold text-primary">{formatCurrency(overallTotal)}</p>
+                    </div>
                   </div>
                 </div>
               </CardContent>

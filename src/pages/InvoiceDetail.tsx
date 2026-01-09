@@ -38,7 +38,7 @@ import {
   CommandList,
 } from '@/components/ui/command';
 import { useToast } from '@/hooks/use-toast';
-import { Check, ChevronsUpDown, ArrowLeft } from 'lucide-react';
+import { Check, ChevronsUpDown, ArrowLeft, FileText, Loader2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Badge } from '@/components/ui/badge';
 
@@ -101,6 +101,7 @@ export default function InvoiceDetail() {
   const navigate = useNavigate();
   const [searchOpen, setSearchOpen] = useState(false);
   const [selectedInvoiceId, setSelectedInvoiceId] = useState<string | null>(id || null);
+  const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
@@ -219,6 +220,44 @@ export default function InvoiceDetail() {
 
   const onSubmit = (data: FormData) => {
     mutation.mutate(data);
+  };
+
+  const handleGeneratePdf = async () => {
+    if (!selectedInvoiceId || !job) {
+      toast({
+        title: 'Cannot generate PDF',
+        description: 'This invoice must be linked to a job to generate a PDF.',
+        variant: 'destructive'
+      });
+      return;
+    }
+
+    setIsGeneratingPdf(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('generate-invoice-pdf', {
+        body: { invoiceId: selectedInvoiceId }
+      });
+
+      if (error) throw error;
+
+      if (data?.pdfUrl) {
+        form.setValue('pdf_url', data.pdfUrl);
+        queryClient.invalidateQueries({ queryKey: ['invoice', selectedInvoiceId] });
+        toast({
+          title: 'PDF Generated',
+          description: data.note || 'Invoice PDF has been generated and saved.'
+        });
+      }
+    } catch (error) {
+      console.error('Error generating PDF:', error);
+      toast({
+        title: 'Error generating PDF',
+        description: error instanceof Error ? error.message : 'An unexpected error occurred',
+        variant: 'destructive'
+      });
+    } finally {
+      setIsGeneratingPdf(false);
+    }
   };
 
   const selectedInvoice = invoices?.find((i) => i.id === selectedInvoiceId);
@@ -437,7 +476,25 @@ export default function InvoiceDetail() {
                     />
                   </div>
 
-                  <div className="flex justify-end">
+                  <div className="flex justify-end gap-2">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={handleGeneratePdf}
+                      disabled={isGeneratingPdf || !job}
+                    >
+                      {isGeneratingPdf ? (
+                        <>
+                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                          Generating...
+                        </>
+                      ) : (
+                        <>
+                          <FileText className="mr-2 h-4 w-4" />
+                          Generate PDF
+                        </>
+                      )}
+                    </Button>
                     <Button type="submit" disabled={mutation.isPending}>
                       Save Changes
                     </Button>

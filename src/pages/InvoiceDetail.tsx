@@ -212,6 +212,7 @@ export default function InvoiceDetail() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['invoice', selectedInvoiceId] });
       queryClient.invalidateQueries({ queryKey: ['invoices'] });
+      form.reset(form.getValues());
       toast({ title: 'Invoice updated successfully' });
     },
     onError: (error) => {
@@ -242,7 +243,7 @@ export default function InvoiceDetail() {
       if (error) throw error;
 
       if (data?.pdfUrl) {
-        form.setValue('pdf_url', data.pdfUrl);
+        form.setValue('pdf_url', data.pdfUrl, { shouldDirty: true });
         queryClient.invalidateQueries({ queryKey: ['invoice', selectedInvoiceId] });
         toast({
           title: 'PDF Generated',
@@ -266,13 +267,11 @@ export default function InvoiceDetail() {
   // Calculate derived values
   const mileageTotal = (job?.mileage || 0) * (job?.facility_rate_mileage || 0);
   const travelTimeTotal = (job?.travel_time_hours || 0) * (job?.travel_time_rate || 0);
-  // Add trilingual uplift to hourly rate before multiplying by billable hours
   const trilingualUplift = job?.trilingual_rate_uplift || 0;
   const facilityHourlyTotal = (job?.billable_hours || 0) * ((job?.facility_rate_business || 0) + trilingualUplift);
   const emergencyFee = job?.emergency_fee_applied ? (job.facility?.emergency_fee || 0) : 0;
   const holidayFee = job?.holiday_fee_applied ? (job.facility?.holiday_fee || 0) : 0;
   
-  // Calculate totals for summary
   const hourlyTotal = job?.facility_hourly_total ?? 0;
   const travelFeeTotal = mileageTotal + travelTimeTotal + (job?.parking || 0) + (job?.tolls || 0) + (job?.misc_fee || 0) + emergencyFee;
   const overallTotal = hourlyTotal + travelFeeTotal;
@@ -283,33 +282,28 @@ export default function InvoiceDetail() {
   };
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center gap-4">
-        <Button variant="ghost" size="icon" onClick={() => navigate('/invoices')}>
-          <ArrowLeft className="h-4 w-4" />
-        </Button>
-        <div>
-          <h1 className="text-3xl font-bold text-foreground">Invoice Details</h1>
-          <p className="text-muted-foreground">View and edit invoice information</p>
-        </div>
-      </div>
-
-      {/* Invoice Search/Select */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Select Invoice</CardTitle>
-        </CardHeader>
-        <CardContent>
+    <div className="space-y-4">
+      {/* Sticky Header */}
+      <div className="sticky top-14 z-10 bg-background py-3 border-b -mx-6 px-6 -mt-6 mb-4">
+        <div className="flex items-center gap-3">
+          <Button variant="ghost" size="icon" onClick={() => navigate('/invoices')}>
+            <ArrowLeft className="h-4 w-4" />
+          </Button>
+          <h1 className="text-xl font-bold text-foreground">
+            {invoice ? `Invoice #${invoice.invoice_number}` : 'Invoice Details'}
+          </h1>
+          
+          {/* Compact Invoice Selector */}
           <Popover open={searchOpen} onOpenChange={setSearchOpen}>
             <PopoverTrigger asChild>
               <Button
                 variant="outline"
                 role="combobox"
-                className="w-full justify-between"
+                className="w-[220px] justify-between text-sm"
               >
                 {selectedInvoice
                   ? `${selectedInvoice.invoice_number} - ${selectedInvoice.facility?.name || 'N/A'}`
-                  : 'Search for an invoice...'}
+                  : 'Select invoice...'}
                 <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
               </Button>
             </PopoverTrigger>
@@ -342,48 +336,104 @@ export default function InvoiceDetail() {
               </Command>
             </PopoverContent>
           </Popover>
-        </CardContent>
-      </Card>
+
+          {invoice?.status && (
+            <Badge variant={invoice.status === 'paid' ? 'outline' : invoice.status === 'submitted' ? 'default' : 'secondary'}>
+              {statusDisplayMap[invoice.status]}
+            </Badge>
+          )}
+
+          {/* Save button in header with unsaved indicator */}
+          {invoice && (
+            <div className="ml-auto flex items-center gap-2">
+              {form.formState.isDirty && (
+                <span className="flex items-center gap-1 text-sm text-muted-foreground">
+                  <span className="h-2 w-2 rounded-full bg-orange-500" />
+                  Unsaved
+                </span>
+              )}
+              <Button 
+                type="submit" 
+                form="invoice-detail-form"
+                disabled={mutation.isPending}
+              >
+                {mutation.isPending ? 'Saving...' : 'Save Changes'}
+              </Button>
+            </div>
+          )}
+        </div>
+      </div>
 
       {invoiceLoading && <p className="text-muted-foreground">Loading invoice...</p>}
 
       {invoice && (
         <>
+          {/* Totals Summary */}
+          {job && (
+            <Card>
+              <CardHeader className="pb-4">
+                <CardTitle className="text-lg">Invoice Summary</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6 bg-muted/50 rounded-lg p-4">
+                  <div className="space-y-1">
+                    <p className="text-sm font-medium text-muted-foreground">Hourly Total</p>
+                    <p className="text-lg font-semibold">{formatCurrency(hourlyTotal)}</p>
+                  </div>
+                  <div className="space-y-1">
+                    <p className="text-sm font-medium text-muted-foreground">Travel/Fee Total</p>
+                    <p className="text-lg font-semibold">{formatCurrency(travelFeeTotal)}</p>
+                  </div>
+                  <div className="space-y-1">
+                    <p className="text-sm font-medium text-muted-foreground">Overall Total</p>
+                    <p className="text-lg font-semibold text-primary">{formatCurrency(overallTotal)}</p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
           {/* Invoice Details Form */}
           <Card>
-            <CardHeader>
+            <CardHeader className="pb-4">
               <div className="flex items-center justify-between">
-                <CardTitle>Invoice #{invoice.invoice_number}</CardTitle>
-                {invoice.status && (
-                  <Badge variant={invoice.status === 'paid' ? 'outline' : invoice.status === 'submitted' ? 'default' : 'secondary'}>
-                    {statusDisplayMap[invoice.status]}
-                  </Badge>
-                )}
+                <CardTitle className="text-lg">Invoice Details</CardTitle>
+                <div className="flex gap-2">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={handleGeneratePdf}
+                    disabled={isGeneratingPdf || !job}
+                    size="sm"
+                  >
+                    {isGeneratingPdf ? (
+                      <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        Generating...
+                      </>
+                    ) : (
+                      <>
+                        <FileText className="mr-2 h-4 w-4" />
+                        Generate PDF
+                      </>
+                    )}
+                  </Button>
+                  {invoice.pdf_url && (
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => window.open(invoice.pdf_url || '', '_blank')}
+                    >
+                      View PDF
+                    </Button>
+                  )}
+                </div>
               </div>
             </CardHeader>
             <CardContent>
-              {/* Totals Summary */}
-              {job && (
-                <div className="mb-6 pb-6 border-b border-border">
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-6 bg-muted/50 rounded-lg p-4">
-                    <div className="space-y-1">
-                      <p className="text-sm font-medium text-muted-foreground">Hourly Total</p>
-                      <p className="text-lg font-semibold">{formatCurrency(hourlyTotal)}</p>
-                    </div>
-                    <div className="space-y-1">
-                      <p className="text-sm font-medium text-muted-foreground">Travel/Fee Total</p>
-                      <p className="text-lg font-semibold">{formatCurrency(travelFeeTotal)}</p>
-                    </div>
-                    <div className="space-y-1">
-                      <p className="text-sm font-medium text-muted-foreground">Overall Total</p>
-                      <p className="text-lg font-semibold text-primary">{formatCurrency(overallTotal)}</p>
-                    </div>
-                  </div>
-                </div>
-              )}
-
               <Form {...form}>
-                <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+                <form id="invoice-detail-form" onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                     <FormField
                       control={form.control}
@@ -478,131 +528,72 @@ export default function InvoiceDetail() {
                       )}
                     />
                   </div>
-
-                  <div className="flex justify-end gap-2">
-                    <Button
-                      type="button"
-                      variant="outline"
-                      onClick={handleGeneratePdf}
-                      disabled={isGeneratingPdf || !job}
-                    >
-                      {isGeneratingPdf ? (
-                        <>
-                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                          Generating...
-                        </>
-                      ) : (
-                        <>
-                          <FileText className="mr-2 h-4 w-4" />
-                          Generate PDF
-                        </>
-                      )}
-                    </Button>
-                    <Button type="submit" disabled={mutation.isPending}>
-                      Save Changes
-                    </Button>
-                  </div>
                 </form>
               </Form>
             </CardContent>
           </Card>
 
-          {/* Job Details Section */}
-          {job ? (
+          {/* Line Items */}
+          {job && (
             <Card>
-              <CardHeader>
-                <CardTitle>Job Details - {job.job_number}</CardTitle>
+              <CardHeader className="pb-4">
+                <CardTitle className="text-lg">Line Items (Job #{job.job_number})</CardTitle>
               </CardHeader>
               <CardContent>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                  {/* Facility Info */}
-                  <div className="space-y-1">
-                    <p className="text-sm font-medium text-muted-foreground">Facility Name</p>
-                    <p className="text-lg font-semibold">{job.facility?.name || '-'}</p>
+                <div className="space-y-2">
+                  {hourlyTotal > 0 && (
+                    <div className="flex justify-between py-2 border-b">
+                      <span>Interpreter Services {trilingualUplift > 0 ? '(incl. Trilingual)' : ''}</span>
+                      <span className="font-medium">{formatCurrency(hourlyTotal)}</span>
+                    </div>
+                  )}
+                  {mileageTotal > 0 && (
+                    <div className="flex justify-between py-2 border-b">
+                      <span>Mileage ({job.mileage} mi × ${job.facility_rate_mileage}/mi)</span>
+                      <span className="font-medium">{formatCurrency(mileageTotal)}</span>
+                    </div>
+                  )}
+                  {travelTimeTotal > 0 && (
+                    <div className="flex justify-between py-2 border-b">
+                      <span>Travel Time ({job.travel_time_hours} hrs × ${job.travel_time_rate}/hr)</span>
+                      <span className="font-medium">{formatCurrency(travelTimeTotal)}</span>
+                    </div>
+                  )}
+                  {(job.parking || 0) > 0 && (
+                    <div className="flex justify-between py-2 border-b">
+                      <span>Parking</span>
+                      <span className="font-medium">{formatCurrency(job.parking)}</span>
+                    </div>
+                  )}
+                  {(job.tolls || 0) > 0 && (
+                    <div className="flex justify-between py-2 border-b">
+                      <span>Tolls</span>
+                      <span className="font-medium">{formatCurrency(job.tolls)}</span>
+                    </div>
+                  )}
+                  {(job.misc_fee || 0) > 0 && (
+                    <div className="flex justify-between py-2 border-b">
+                      <span>Miscellaneous Fee</span>
+                      <span className="font-medium">{formatCurrency(job.misc_fee)}</span>
+                    </div>
+                  )}
+                  {emergencyFee > 0 && (
+                    <div className="flex justify-between py-2 border-b">
+                      <span>Emergency Fee</span>
+                      <span className="font-medium">{formatCurrency(emergencyFee)}</span>
+                    </div>
+                  )}
+                  {holidayFee > 0 && (
+                    <div className="flex justify-between py-2 border-b">
+                      <span>Holiday Fee</span>
+                      <span className="font-medium">{formatCurrency(holidayFee)}</span>
+                    </div>
+                  )}
+                  <div className="flex justify-between py-3 font-semibold text-lg">
+                    <span>Total</span>
+                    <span className="text-primary">{formatCurrency(overallTotal)}</span>
                   </div>
-
-                  {/* Mileage */}
-                  <div className="space-y-1">
-                    <p className="text-sm font-medium text-muted-foreground">Mileage</p>
-                    <p className="text-lg font-semibold">{job.mileage ?? '-'} miles</p>
-                  </div>
-
-                  <div className="space-y-1">
-                    <p className="text-sm font-medium text-muted-foreground">Mileage Rate</p>
-                    <p className="text-lg font-semibold">{formatCurrency(job.interpreter_rate_mileage ?? 0.7)}/mile</p>
-                  </div>
-
-                  {/* Travel Time */}
-                  <div className="space-y-1">
-                    <p className="text-sm font-medium text-muted-foreground">Travel Time</p>
-                    <p className="text-lg font-semibold">{job.travel_time_hours ?? '-'} hours</p>
-                  </div>
-
-                  <div className="space-y-1">
-                    <p className="text-sm font-medium text-muted-foreground">Travel Time Rate</p>
-                    <p className="text-lg font-semibold">{formatCurrency(job.travel_time_rate)}/hr</p>
-                  </div>
-
-                  {/* Fees */}
-                  <div className="space-y-1">
-                    <p className="text-sm font-medium text-muted-foreground">Parking Fee</p>
-                    <p className="text-lg font-semibold">{formatCurrency(job.parking)}</p>
-                  </div>
-
-                  <div className="space-y-1">
-                    <p className="text-sm font-medium text-muted-foreground">Toll Fee</p>
-                    <p className="text-lg font-semibold">{formatCurrency(job.tolls)}</p>
-                  </div>
-
-                  <div className="space-y-1">
-                    <p className="text-sm font-medium text-muted-foreground">Misc Fee</p>
-                    <p className="text-lg font-semibold">{formatCurrency(job.misc_fee)}</p>
-                  </div>
-
-                  <div className="space-y-1">
-                    <p className="text-sm font-medium text-muted-foreground">Trilingual Rate Uplift</p>
-                    <p className="text-lg font-semibold">{formatCurrency(job.trilingual_rate_uplift)}</p>
-                  </div>
-
-                  {/* Rates & Hours */}
-                  <div className="space-y-1">
-                    <p className="text-sm font-medium text-muted-foreground">Facility Rate</p>
-                    <p className="text-lg font-semibold">{formatCurrency(job.facility_rate_business)}/hr</p>
-                  </div>
-
-                  <div className="space-y-1">
-                    <p className="text-sm font-medium text-muted-foreground">Billable Hours</p>
-                    <p className="text-lg font-semibold">{job.billable_hours ?? '-'} hours</p>
-                  </div>
-
-                  <div className="space-y-1">
-                    <p className="text-sm font-medium text-muted-foreground">Emergency Fee</p>
-                    <p className="text-lg font-semibold">
-                      {job.emergency_fee_applied ? formatCurrency(emergencyFee) : '-'}
-                    </p>
-                  </div>
-
-                  <div className="space-y-1">
-                    <p className="text-sm font-medium text-muted-foreground">Holiday Fee</p>
-                    <p className="text-lg font-semibold">
-                      {job.holiday_fee_applied ? formatCurrency(holidayFee) : '-'}
-                    </p>
-                  </div>
-
                 </div>
-              </CardContent>
-            </Card>
-          ) : invoice.job_id ? (
-            <Card>
-              <CardContent className="py-6">
-                <p className="text-muted-foreground">Loading job details...</p>
-              </CardContent>
-            </Card>
-          ) : (
-            <Card>
-              <CardContent className="py-6">
-                <p className="text-muted-foreground">No job linked to this invoice.</p>
               </CardContent>
             </Card>
           )}

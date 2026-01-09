@@ -152,6 +152,7 @@ export default function PayableDetail() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['payable', selectedPayableId] });
       queryClient.invalidateQueries({ queryKey: ['payables'] });
+      form.reset(form.getValues());
       toast({ title: 'Payable updated successfully' });
     },
     onError: (error) => {
@@ -171,33 +172,28 @@ export default function PayableDetail() {
   };
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center gap-4">
-        <Button variant="ghost" size="icon" onClick={() => navigate('/payables')}>
-          <ArrowLeft className="h-4 w-4" />
-        </Button>
-        <div>
-          <h1 className="text-3xl font-bold text-foreground">Payable Details</h1>
-          <p className="text-muted-foreground">View and edit payable information</p>
-        </div>
-      </div>
-
-      {/* Payable Search/Select */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Select Payable</CardTitle>
-        </CardHeader>
-        <CardContent>
+    <div className="space-y-4">
+      {/* Sticky Header */}
+      <div className="sticky top-14 z-10 bg-background py-3 border-b -mx-6 px-6 -mt-6 mb-4">
+        <div className="flex items-center gap-3">
+          <Button variant="ghost" size="icon" onClick={() => navigate('/payables')}>
+            <ArrowLeft className="h-4 w-4" />
+          </Button>
+          <h1 className="text-xl font-bold text-foreground">
+            {payable ? `Bill #${payable.bill_number || 'N/A'}` : 'Payable Details'}
+          </h1>
+          
+          {/* Compact Payable Selector */}
           <Popover open={searchOpen} onOpenChange={setSearchOpen}>
             <PopoverTrigger asChild>
               <Button
                 variant="outline"
                 role="combobox"
-                className="w-full justify-between"
+                className="w-[260px] justify-between text-sm"
               >
                 {selectedPayable
                   ? `${selectedPayable.bill_number || 'N/A'} - ${selectedPayable.interpreter?.first_name} ${selectedPayable.interpreter?.last_name}`
-                  : 'Search for a payable...'}
+                  : 'Select payable...'}
                 <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
               </Button>
             </PopoverTrigger>
@@ -230,123 +226,146 @@ export default function PayableDetail() {
               </Command>
             </PopoverContent>
           </Popover>
-        </CardContent>
-      </Card>
+
+          {payable?.status && (
+            <Badge variant={payable.status === 'paid' ? 'outline' : 'secondary'}>
+              {statusDisplayMap[payable.status]}
+            </Badge>
+          )}
+
+          {/* Save button in header with unsaved indicator */}
+          {payable && (
+            <div className="ml-auto flex items-center gap-2">
+              {form.formState.isDirty && (
+                <span className="flex items-center gap-1 text-sm text-muted-foreground">
+                  <span className="h-2 w-2 rounded-full bg-orange-500" />
+                  Unsaved
+                </span>
+              )}
+              <Button 
+                type="submit" 
+                form="payable-detail-form"
+                disabled={mutation.isPending}
+              >
+                {mutation.isPending ? 'Saving...' : 'Save Changes'}
+              </Button>
+            </div>
+          )}
+        </div>
+      </div>
 
       {payableLoading && <p className="text-muted-foreground">Loading payable...</p>}
 
       {payable && (
-        <Card>
-          <CardHeader>
-            <div className="flex items-center justify-between">
-              <CardTitle>Bill #{payable.bill_number || 'N/A'}</CardTitle>
-              {payable.status && (
-                <Badge variant={payable.status === 'paid' ? 'outline' : 'secondary'}>
-                  {statusDisplayMap[payable.status]}
-                </Badge>
-              )}
-            </div>
-          </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
-              <div className="space-y-1">
-                <p className="text-sm font-medium text-muted-foreground">Interpreter</p>
-                <p className="text-lg font-semibold">
-                  {payable.interpreter
-                    ? `${payable.interpreter.first_name} ${payable.interpreter.last_name}`
-                    : '-'}
-                </p>
+        <>
+          {/* Summary */}
+          <Card>
+            <CardHeader className="pb-4">
+              <CardTitle className="text-lg">Bill Summary</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+                <div className="space-y-1">
+                  <p className="text-sm font-medium text-muted-foreground">Interpreter</p>
+                  <p className="text-lg font-semibold">
+                    {payable.interpreter
+                      ? `${payable.interpreter.first_name} ${payable.interpreter.last_name}`
+                      : '-'}
+                  </p>
+                </div>
+                <div className="space-y-1">
+                  <p className="text-sm font-medium text-muted-foreground">Job #</p>
+                  <p className="text-lg font-semibold">{payable.job?.job_number || '-'}</p>
+                </div>
               </div>
-              <div className="space-y-1">
-                <p className="text-sm font-medium text-muted-foreground">Job #</p>
-                <p className="text-lg font-semibold">{payable.job?.job_number || '-'}</p>
-              </div>
-            </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6 p-4 bg-muted/50 rounded-lg">
-              <div className="space-y-1">
-                <p className="text-sm font-medium text-muted-foreground">Hourly Total</p>
-                <p className="text-lg font-semibold">{formatCurrency(payable.job?.interpreter_hourly_total)}</p>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6 p-4 bg-muted/50 rounded-lg">
+                <div className="space-y-1">
+                  <p className="text-sm font-medium text-muted-foreground">Hourly Total</p>
+                  <p className="text-lg font-semibold">{formatCurrency(payable.job?.interpreter_hourly_total)}</p>
+                </div>
+                <div className="space-y-1">
+                  <p className="text-sm font-medium text-muted-foreground">Travel/Fee Total</p>
+                  <p className="text-lg font-semibold">
+                    {formatCurrency(
+                      (payable.job?.interpreter_billable_total ?? 0) - (payable.job?.interpreter_hourly_total ?? 0)
+                    )}
+                  </p>
+                </div>
+                <div className="space-y-1">
+                  <p className="text-sm font-medium text-muted-foreground">Overall Total</p>
+                  <p className="text-lg font-semibold text-primary">
+                    {formatCurrency(payable.job?.interpreter_billable_total)}
+                  </p>
+                </div>
               </div>
-              <div className="space-y-1">
-                <p className="text-sm font-medium text-muted-foreground">Travel/Fee Total</p>
-                <p className="text-lg font-semibold">
-                  {formatCurrency(
-                    (payable.job?.interpreter_billable_total ?? 0) - (payable.job?.interpreter_hourly_total ?? 0)
-                  )}
-                </p>
-              </div>
-              <div className="space-y-1">
-                <p className="text-sm font-medium text-muted-foreground">Overall Total</p>
-                <p className="text-lg font-semibold text-primary">
-                  {formatCurrency(payable.job?.interpreter_billable_total)}
-                </p>
-              </div>
-            </div>
+            </CardContent>
+          </Card>
 
-            <Form {...form}>
-              <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <FormField
-                    control={form.control}
-                    name="status"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Status</FormLabel>
-                        <Select onValueChange={field.onChange} value={field.value}>
+          {/* Bill Details Form */}
+          <Card>
+            <CardHeader className="pb-4">
+              <CardTitle className="text-lg">Bill Details</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <Form {...form}>
+                <form id="payable-detail-form" onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <FormField
+                      control={form.control}
+                      name="status"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Status</FormLabel>
+                          <Select onValueChange={field.onChange} value={field.value}>
+                            <FormControl>
+                              <SelectTrigger>
+                                <SelectValue placeholder="Select status" />
+                              </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                              <SelectItem value="queued">Payment Pending</SelectItem>
+                              <SelectItem value="paid">Paid</SelectItem>
+                            </SelectContent>
+                          </Select>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    <FormField
+                      control={form.control}
+                      name="paid_date"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Paid Date</FormLabel>
                           <FormControl>
-                            <SelectTrigger>
-                              <SelectValue placeholder="Select status" />
-                            </SelectTrigger>
+                            <Input type="date" {...field} />
                           </FormControl>
-                          <SelectContent>
-                            <SelectItem value="queued">Payment Pending</SelectItem>
-                            <SelectItem value="paid">Paid</SelectItem>
-                          </SelectContent>
-                        </Select>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
 
-                  <FormField
-                    control={form.control}
-                    name="paid_date"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Paid Date</FormLabel>
-                        <FormControl>
-                          <Input type="date" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-
-                  <FormField
-                    control={form.control}
-                    name="notes"
-                    render={({ field }) => (
-                      <FormItem className="md:col-span-2">
-                        <FormLabel>Notes</FormLabel>
-                        <FormControl>
-                          <Textarea placeholder="Additional notes..." {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                </div>
-
-                <div className="flex justify-end">
-                  <Button type="submit" disabled={mutation.isPending}>
-                    Save Changes
-                  </Button>
-                </div>
-              </form>
-            </Form>
-          </CardContent>
-        </Card>
+                    <FormField
+                      control={form.control}
+                      name="notes"
+                      render={({ field }) => (
+                        <FormItem className="md:col-span-2">
+                          <FormLabel>Notes</FormLabel>
+                          <FormControl>
+                            <Textarea placeholder="Additional notes..." {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+                </form>
+              </Form>
+            </CardContent>
+          </Card>
+        </>
       )}
 
       {!selectedPayableId && (

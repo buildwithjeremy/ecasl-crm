@@ -32,8 +32,9 @@ import {
   PopoverTrigger,
 } from '@/components/ui/popover';
 import { useToast } from '@/hooks/use-toast';
-import { ArrowLeft, Check, ChevronsUpDown, Save } from 'lucide-react';
+import { ArrowLeft, Check, ChevronsUpDown } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { Badge } from '@/components/ui/badge';
 import type { Database } from '@/types/database';
 
 type Facility = Database['public']['Tables']['facilities']['Row'];
@@ -69,6 +70,12 @@ const facilitySchema = z.object({
 });
 
 type FormData = z.infer<typeof facilitySchema>;
+
+const statusLabels: Record<string, string> = {
+  active: 'Active',
+  inactive: 'Inactive',
+  pending: 'Pending',
+};
 
 export default function FacilityDetail() {
   const { id } = useParams<{ id: string }>();
@@ -205,6 +212,7 @@ export default function FacilityDetail() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['facilities'] });
       queryClient.invalidateQueries({ queryKey: ['facility', selectedFacilityId] });
+      form.reset(form.getValues());
       toast({ title: 'Facility updated successfully' });
     },
     onError: (error) => {
@@ -219,36 +227,30 @@ export default function FacilityDetail() {
   const selectedFacility = facilities?.find(f => f.id === selectedFacilityId);
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center gap-4">
-        <Button variant="ghost" size="icon" onClick={() => navigate('/facilities')}>
-          <ArrowLeft className="h-4 w-4" />
-        </Button>
-        <div>
-          <h1 className="text-3xl font-bold text-foreground">Facility Details</h1>
-          <p className="text-muted-foreground">View and edit facility information</p>
-        </div>
-      </div>
-
-      {/* Facility Search/Select */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Select Facility</CardTitle>
-        </CardHeader>
-        <CardContent>
+    <div className="space-y-4">
+      {/* Sticky Header */}
+      <div className="sticky top-14 z-10 bg-background py-3 border-b -mx-6 px-6 -mt-6 mb-4">
+        <div className="flex items-center gap-3">
+          <Button variant="ghost" size="icon" onClick={() => navigate('/facilities')}>
+            <ArrowLeft className="h-4 w-4" />
+          </Button>
+          <h1 className="text-xl font-bold text-foreground">
+            {facility?.name || 'Facility Details'}
+          </h1>
+          
+          {/* Compact Facility Selector */}
           <Popover open={searchOpen} onOpenChange={setSearchOpen}>
             <PopoverTrigger asChild>
               <Button
                 variant="outline"
                 role="combobox"
-                aria-expanded={searchOpen}
-                className="w-full max-w-md justify-between"
+                className="w-[200px] justify-between text-sm"
               >
-                {selectedFacility?.name || "Search for a facility..."}
+                {selectedFacility?.name || 'Select facility...'}
                 <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
               </Button>
             </PopoverTrigger>
-            <PopoverContent className="w-full max-w-md p-0">
+            <PopoverContent className="w-[300px] p-0">
               <Command>
                 <CommandInput placeholder="Search facilities..." />
                 <CommandList>
@@ -265,8 +267,8 @@ export default function FacilityDetail() {
                       >
                         <Check
                           className={cn(
-                            "mr-2 h-4 w-4",
-                            selectedFacilityId === f.id ? "opacity-100" : "opacity-0"
+                            'mr-2 h-4 w-4',
+                            selectedFacilityId === f.id ? 'opacity-100' : 'opacity-0'
                           )}
                         />
                         {f.name}
@@ -277,20 +279,42 @@ export default function FacilityDetail() {
               </Command>
             </PopoverContent>
           </Popover>
-        </CardContent>
-      </Card>
 
-      {/* Facility Details Form */}
+          {facility?.status && (
+            <Badge variant="secondary">{statusLabels[facility.status]}</Badge>
+          )}
+
+          {/* Save button in header with unsaved indicator */}
+          {facility && (
+            <div className="ml-auto flex items-center gap-2">
+              {form.formState.isDirty && (
+                <span className="flex items-center gap-1 text-sm text-muted-foreground">
+                  <span className="h-2 w-2 rounded-full bg-orange-500" />
+                  Unsaved
+                </span>
+              )}
+              <Button 
+                type="submit" 
+                form="facility-detail-form"
+                disabled={mutation.isPending}
+              >
+                {mutation.isPending ? 'Saving...' : 'Save Changes'}
+              </Button>
+            </div>
+          )}
+        </div>
+      </div>
+
       {isLoading && selectedFacilityId && (
         <div className="text-muted-foreground">Loading facility details...</div>
       )}
 
       {facility && (
-        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+        <form id="facility-detail-form" onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
           {/* Basic Information */}
           <Card>
-            <CardHeader>
-              <CardTitle>Basic Information</CardTitle>
+            <CardHeader className="pb-4">
+              <CardTitle className="text-lg">Basic Information</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="grid grid-cols-2 gap-4">
@@ -312,7 +336,7 @@ export default function FacilityDetail() {
                   <Label htmlFor="status">Status</Label>
                   <Select
                     value={form.watch('status')}
-                    onValueChange={(value) => form.setValue('status', value as 'active' | 'inactive' | 'pending')}
+                    onValueChange={(value) => form.setValue('status', value as 'active' | 'inactive' | 'pending', { shouldDirty: true })}
                   >
                     <SelectTrigger>
                       <SelectValue />
@@ -329,7 +353,7 @@ export default function FacilityDetail() {
                     <Checkbox
                       id="is_gsa"
                       checked={form.watch('is_gsa')}
-                      onCheckedChange={(checked) => form.setValue('is_gsa', !!checked)}
+                      onCheckedChange={(checked) => form.setValue('is_gsa', !!checked, { shouldDirty: true })}
                     />
                     <Label htmlFor="is_gsa">GSA Contract</Label>
                   </div>
@@ -337,7 +361,7 @@ export default function FacilityDetail() {
                     <Checkbox
                       id="contractor"
                       checked={form.watch('contractor')}
-                      onCheckedChange={(checked) => form.setValue('contractor', !!checked)}
+                      onCheckedChange={(checked) => form.setValue('contractor', !!checked, { shouldDirty: true })}
                     />
                     <Label htmlFor="contractor">Contractor</Label>
                   </div>
@@ -348,8 +372,8 @@ export default function FacilityDetail() {
 
           {/* Admin Contact */}
           <Card>
-            <CardHeader>
-              <CardTitle>Admin Contact</CardTitle>
+            <CardHeader className="pb-4">
+              <CardTitle className="text-lg">Admin Contact</CardTitle>
             </CardHeader>
             <CardContent>
               <div className="grid grid-cols-3 gap-4">
@@ -371,8 +395,8 @@ export default function FacilityDetail() {
 
           {/* Billing Address */}
           <Card>
-            <CardHeader>
-              <CardTitle>Billing Address</CardTitle>
+            <CardHeader className="pb-4">
+              <CardTitle className="text-lg">Billing Address</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="space-y-2">
@@ -398,8 +422,8 @@ export default function FacilityDetail() {
 
           {/* Physical Address */}
           <Card>
-            <CardHeader>
-              <CardTitle>Physical Address (for Job Locations)</CardTitle>
+            <CardHeader className="pb-4">
+              <CardTitle className="text-lg">Physical Address (for Job Locations)</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="space-y-2">
@@ -425,8 +449,8 @@ export default function FacilityDetail() {
 
           {/* Rates */}
           <Card>
-            <CardHeader>
-              <CardTitle>Rates (What We Charge)</CardTitle>
+            <CardHeader className="pb-4">
+              <CardTitle className="text-lg">Rates (What We Charge)</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="grid grid-cols-3 gap-4">
@@ -445,7 +469,7 @@ export default function FacilityDetail() {
               </div>
               <div className="grid grid-cols-3 gap-4">
                 <div className="space-y-2">
-                  <Label htmlFor="minimum_billable_hours">Minimum Hours</Label>
+                  <Label htmlFor="minimum_billable_hours">Minimum Billable Hours</Label>
                   <Input id="minimum_billable_hours" type="number" step="0.5" {...form.register('minimum_billable_hours')} />
                 </div>
                 <div className="space-y-2">
@@ -462,10 +486,10 @@ export default function FacilityDetail() {
 
           {/* Billing Settings */}
           <Card>
-            <CardHeader>
-              <CardTitle>Billing Settings</CardTitle>
+            <CardHeader className="pb-4">
+              <CardTitle className="text-lg">Billing Settings</CardTitle>
             </CardHeader>
-            <CardContent className="space-y-4">
+            <CardContent>
               <div className="grid grid-cols-3 gap-4">
                 <div className="space-y-2">
                   <Label htmlFor="invoice_prefix">Invoice Prefix</Label>
@@ -480,13 +504,22 @@ export default function FacilityDetail() {
                   <Input id="net_terms" type="number" {...form.register('net_terms')} />
                 </div>
               </div>
-              <div className="space-y-2">
+            </CardContent>
+          </Card>
+
+          {/* Contract Status */}
+          <Card>
+            <CardHeader className="pb-4">
+              <CardTitle className="text-lg">Contract</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-2 max-w-xs">
                 <Label htmlFor="contract_status">Contract Status</Label>
                 <Select
                   value={form.watch('contract_status')}
-                  onValueChange={(value) => form.setValue('contract_status', value as 'not_sent' | 'sent' | 'signed')}
+                  onValueChange={(value) => form.setValue('contract_status', value as 'not_sent' | 'sent' | 'signed', { shouldDirty: true })}
                 >
-                  <SelectTrigger className="w-[200px]">
+                  <SelectTrigger>
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -501,28 +534,20 @@ export default function FacilityDetail() {
 
           {/* Notes */}
           <Card>
-            <CardHeader>
-              <CardTitle>Notes</CardTitle>
+            <CardHeader className="pb-4">
+              <CardTitle className="text-lg">Notes</CardTitle>
             </CardHeader>
             <CardContent>
-              <Textarea id="notes" {...form.register('notes')} />
+              <Textarea id="notes" {...form.register('notes')} rows={4} />
             </CardContent>
           </Card>
-
-          {/* Save Button */}
-          <div className="flex justify-end">
-            <Button type="submit" disabled={mutation.isPending}>
-              <Save className="mr-2 h-4 w-4" />
-              {mutation.isPending ? 'Saving...' : 'Save Changes'}
-            </Button>
-          </div>
         </form>
       )}
 
       {!selectedFacilityId && (
         <Card>
-          <CardContent className="py-8 text-center text-muted-foreground">
-            Select a facility above to view and edit its details.
+          <CardContent className="py-6">
+            <p className="text-muted-foreground">Select a facility to view details.</p>
           </CardContent>
         </Card>
       )}

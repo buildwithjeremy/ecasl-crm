@@ -32,9 +32,10 @@ import {
   PopoverTrigger,
 } from '@/components/ui/popover';
 import { useToast } from '@/hooks/use-toast';
-import { ArrowLeft, Check, ChevronsUpDown } from 'lucide-react';
+import { ArrowLeft, Check, ChevronsUpDown, FileText, ExternalLink, Loader2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Badge } from '@/components/ui/badge';
+import { ContractComplianceSection } from '@/components/interpreters/ContractComplianceSection';
 import type { Database } from '@/types/database';
 
 type Interpreter = Database['public']['Tables']['interpreters']['Row'];
@@ -502,39 +503,13 @@ export default function InterpreterDetail() {
           </Card>
 
           {/* Contract & Compliance */}
-          <Card>
-            <CardHeader className="pb-4">
-              <CardTitle className="text-lg">Contract & Compliance</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="contract_status">Contract Status</Label>
-                  <Select
-                    value={form.watch('contract_status')}
-                    onValueChange={(value) => form.setValue('contract_status', value as 'not_sent' | 'sent' | 'signed', { shouldDirty: true })}
-                  >
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="not_sent">Not Sent</SelectItem>
-                      <SelectItem value="sent">Sent</SelectItem>
-                      <SelectItem value="signed">Signed</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="flex items-center space-x-2 pt-6">
-                  <Checkbox
-                    id="w9_received"
-                    checked={form.watch('w9_received')}
-                    onCheckedChange={(checked) => form.setValue('w9_received', !!checked, { shouldDirty: true })}
-                  />
-                  <Label htmlFor="w9_received">W-9 Received</Label>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
+          <ContractComplianceSection 
+            form={form} 
+            interpreter={interpreter}
+            onContractGenerated={() => {
+              queryClient.invalidateQueries({ queryKey: ['interpreter', selectedInterpreterId] });
+            }}
+          />
 
           {/* Notes */}
           <Card>

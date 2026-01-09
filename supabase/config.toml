@@ -3,6 +3,9 @@ project_id = "umyjqvmpvjfikljhoofy"
 [functions.auto-complete-jobs]
 verify_jwt = false
 
+[functions.generate-interpreter-contract]
+verify_jwt = false
+
 [functions.generate-invoice-pdf]
 verify_jwt = false
 

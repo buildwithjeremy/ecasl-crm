@@ -74,6 +74,7 @@ type Job = {
   facility_id: string;
   mileage: number | null;
   facility_rate_mileage: number | null;
+  interpreter_rate_mileage: number | null;
   travel_time_hours: number | null;
   travel_time_rate: number | null;
   parking: number | null;
@@ -527,7 +528,7 @@ export default function InvoiceDetail() {
 
                   <div className="space-y-1">
                     <p className="text-sm font-medium text-muted-foreground">Mileage Rate</p>
-                    <p className="text-lg font-semibold">{formatCurrency(job.facility_rate_mileage)}/mile</p>
+                    <p className="text-lg font-semibold">{formatCurrency(job.interpreter_rate_mileage ?? 0.7)}/mile</p>
                   </div>
 
                   {/* Travel Time */}

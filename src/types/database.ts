@@ -16,7 +16,6 @@ export type InvoiceStatus = 'draft' | 'submitted' | 'paid';
 export type PaymentMethod = 'zelle' | 'check';
 export type BillStatus = 'queued' | 'paid';
 export type OpportunitySource = 'direct' | 'agency' | 'gsa' | 'referral' | 'repeat' | 'other';
-export type BillingHoursType = 'business' | 'after_hours' | 'emergency';
 
 export interface Database {
   public: {
@@ -278,7 +277,6 @@ export interface Database {
           video_call_link: string | null;
           status: JobStatus;
           opportunity_source: OpportunitySource | null;
-          billing_hours_type: BillingHoursType;
           business_hours_worked: number | null;
           after_hours_worked: number | null;
           actual_start_time: string | null;
@@ -334,7 +332,6 @@ export interface Database {
           video_call_link?: string | null;
           status?: JobStatus;
           opportunity_source?: OpportunitySource | null;
-          billing_hours_type?: BillingHoursType;
           business_hours_worked?: number | null;
           after_hours_worked?: number | null;
           actual_start_time?: string | null;
@@ -390,7 +387,6 @@ export interface Database {
           video_call_link?: string | null;
           status?: JobStatus;
           opportunity_source?: OpportunitySource | null;
-          billing_hours_type?: BillingHoursType;
           business_hours_worked?: number | null;
           after_hours_worked?: number | null;
           actual_start_time?: string | null;
@@ -646,7 +642,6 @@ export interface Database {
       payment_method: PaymentMethod;
       bill_status: BillStatus;
       opportunity_source: OpportunitySource;
-      billing_hours_type: BillingHoursType;
     };
   };
 }

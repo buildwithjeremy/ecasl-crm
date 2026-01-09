@@ -125,7 +125,6 @@ const formSchema = z.object({
   video_call_link: z.string().optional(),
   status: z.enum(['new', 'outreach_in_progress', 'confirmed', 'complete', 'ready_to_bill', 'billed', 'paid', 'cancelled']),
   opportunity_source: z.enum(['direct', 'agency', 'gsa', 'referral', 'repeat', 'other']).nullable().optional(),
-  billing_hours_type: z.enum(['business', 'after_hours', 'emergency']),
   billable_hours: z.coerce.number().optional(),
   mileage: z.coerce.number().optional(),
   parking: z.coerce.number().optional(),
@@ -179,7 +178,6 @@ export default function JobDetail() {
       potential_interpreter_ids: [],
       location_type: 'in_person',
       status: 'new',
-      billing_hours_type: 'business',
       job_date: format(new Date(), 'yyyy-MM-dd'),
       start_time: '09:00',
       end_time: '10:00',
@@ -272,7 +270,6 @@ export default function JobDetail() {
         video_call_link: string | null;
         status: 'new' | 'outreach_in_progress' | 'confirmed' | 'complete' | 'ready_to_bill' | 'billed' | 'paid' | 'cancelled' | null;
         opportunity_source: 'direct' | 'agency' | 'gsa' | 'referral' | 'repeat' | 'other' | null;
-        billing_hours_type: 'business' | 'after_hours' | 'emergency' | null;
         billable_hours: number | null;
         mileage: number | null;
         parking: number | null;
@@ -328,7 +325,6 @@ export default function JobDetail() {
         video_call_link: job.video_call_link || '',
         status: job.status || 'new',
         opportunity_source: job.opportunity_source,
-        billing_hours_type: job.billing_hours_type || 'business',
         billable_hours: job.billable_hours || 0,
         mileage: job.mileage || 0,
         parking: job.parking || 0,
@@ -497,7 +493,6 @@ export default function JobDetail() {
         video_call_link: data.video_call_link || null,
         status: data.status,
         opportunity_source: data.opportunity_source || null,
-        billing_hours_type: data.billing_hours_type,
         billable_hours: data.billable_hours || null,
         mileage: data.mileage || null,
         parking: data.parking || null,
@@ -725,7 +720,6 @@ export default function JobDetail() {
         video_call_link: data.video_call_link || null,
         status: 'outreach_in_progress', // Set status to outreach_in_progress
         opportunity_source: data.opportunity_source || null,
-        billing_hours_type: data.billing_hours_type,
         billable_hours: data.billable_hours || null,
         mileage: data.mileage || null,
         parking: data.parking || null,
@@ -902,7 +896,6 @@ export default function JobDetail() {
         video_call_link: data.video_call_link || null,
         status: 'confirmed', // Set status to confirmed
         opportunity_source: data.opportunity_source || null,
-        billing_hours_type: data.billing_hours_type,
         billable_hours: newBillableHours,
         mileage: data.mileage || null,
         parking: data.parking || null,
@@ -1385,28 +1378,6 @@ export default function JobDetail() {
                     )}
                   />
 
-                  <FormField
-                    control={form.control}
-                    name="billing_hours_type"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Billing Type</FormLabel>
-                        <Select onValueChange={field.onChange} value={field.value} disabled={isLocked}>
-                          <FormControl>
-                            <SelectTrigger disabled={isLocked}>
-                              <SelectValue />
-                            </SelectTrigger>
-                          </FormControl>
-                          <SelectContent>
-                            <SelectItem value="business">Business Hours</SelectItem>
-                            <SelectItem value="after_hours">After Hours</SelectItem>
-                            <SelectItem value="emergency">Emergency</SelectItem>
-                          </SelectContent>
-                        </Select>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
 
                   <FormField
                     control={form.control}

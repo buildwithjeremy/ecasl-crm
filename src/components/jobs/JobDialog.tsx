@@ -96,7 +96,6 @@ const jobSchema = z.object({
   location_zip: z.string().optional(),
   video_call_link: z.string().optional(),
   opportunity_source: z.enum(['direct', 'agency', 'gsa', 'referral', 'repeat', 'other']).nullable().optional(),
-  billing_hours_type: z.enum(['business', 'after_hours', 'emergency']),
   internal_notes: z.string().optional(),
   client_business_name: z.string().optional(),
   client_contact_name: z.string().optional(),
@@ -139,7 +138,6 @@ export function JobDialog({ open, onOpenChange, job }: JobDialogProps) {
     defaultValues: {
       facility_id: '',
       location_type: 'in_person',
-      billing_hours_type: 'business',
       job_date: format(new Date(), 'yyyy-MM-dd'),
       start_time: '09:00',
       end_time: '10:00',
@@ -190,10 +188,8 @@ export function JobDialog({ open, onOpenChange, job }: JobDialogProps) {
     }
   }, [watchedFacilityId, watchedLocationType, facilities, form]);
 
-  // Auto-detect billing hours type based on time
   const watchedStartTime = form.watch('start_time');
   const watchedEndTime = form.watch('end_time');
-  const watchedJobDate = form.watch('job_date');
 
   // Calculate billable hours split
   const hoursSplit = useMemo(() => {
@@ -247,23 +243,6 @@ export function JobDialog({ open, onOpenChange, job }: JobDialogProps) {
   }, [hoursSplit, selectedFacility, watchedMileage, watchedTravelTime, watchedParking, watchedTolls, watchedMiscFee]);
 
   useEffect(() => {
-    if (watchedStartTime && watchedJobDate) {
-      const date = new Date(watchedJobDate);
-      const dayOfWeek = date.getDay();
-      const [hours] = watchedStartTime.split(':').map(Number);
-      
-      const isWeekday = dayOfWeek >= 1 && dayOfWeek <= 5;
-      const isBusinessHours = hours >= 9 && hours < 17;
-      
-      if (isWeekday && isBusinessHours) {
-        form.setValue('billing_hours_type', 'business');
-      } else {
-        form.setValue('billing_hours_type', 'after_hours');
-      }
-    }
-  }, [watchedStartTime, watchedJobDate, form]);
-
-  useEffect(() => {
     if (job) {
       form.reset({
         facility_id: job.facility_id,
@@ -278,7 +257,6 @@ export function JobDialog({ open, onOpenChange, job }: JobDialogProps) {
         location_zip: job.location_zip || '',
         video_call_link: job.video_call_link || '',
         opportunity_source: job.opportunity_source,
-        billing_hours_type: job.billing_hours_type || 'business',
         internal_notes: job.internal_notes || '',
         client_business_name: job.client_business_name || '',
         client_contact_name: job.client_contact_name || '',
@@ -294,7 +272,6 @@ export function JobDialog({ open, onOpenChange, job }: JobDialogProps) {
       form.reset({
         facility_id: '',
         location_type: 'in_person',
-        billing_hours_type: 'business',
         job_date: format(new Date(), 'yyyy-MM-dd'),
         start_time: '09:00',
         end_time: '10:00',
@@ -322,7 +299,6 @@ export function JobDialog({ open, onOpenChange, job }: JobDialogProps) {
         location_zip: data.location_zip || null,
         video_call_link: data.video_call_link || null,
         opportunity_source: data.opportunity_source || null,
-        billing_hours_type: data.billing_hours_type,
         internal_notes: data.internal_notes || null,
         client_business_name: data.client_business_name || null,
         client_contact_name: data.client_contact_name || null,
@@ -483,22 +459,6 @@ export function JobDialog({ open, onOpenChange, job }: JobDialogProps) {
               <div className="space-y-2">
                 <Label htmlFor="end_time">End Time *</Label>
                 <Input id="end_time" type="time" {...form.register('end_time')} />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="billing_hours_type">Billing Type</Label>
-                <Select
-                  value={form.watch('billing_hours_type')}
-                  onValueChange={(value) => form.setValue('billing_hours_type', value as FormData['billing_hours_type'])}
-                >
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="business">Business Hours</SelectItem>
-                    <SelectItem value="after_hours">After Hours</SelectItem>
-                    <SelectItem value="emergency">Emergency</SelectItem>
-                  </SelectContent>
-                </Select>
               </div>
             </div>
           </div>

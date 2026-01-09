@@ -624,10 +624,96 @@ export default function JobDetail() {
   const sendOutreachMutation = useMutation({
     mutationFn: async () => {
       if (!selectedJobId) throw new Error('No job selected');
-      // TODO: Implement email sending logic here
+      
+      // Get current form values to save before updating status
+      const data = form.getValues();
+      
+      // Build the same payload as the main mutation, but with status set to outreach_in_progress
+      let facilityHourlyTotal: number | null = null;
+      let facilityBillableTotal: number | null = null;
+      let interpreterHourlyTotal: number | null = null;
+      let interpreterBillableTotal: number | null = null;
+      
+      if (hoursSplit) {
+        const facilityBusinessRate = data.facility_rate_business ?? selectedFacility?.rate_business_hours ?? 0;
+        const facilityAfterHoursRate = data.facility_rate_after_hours ?? selectedFacility?.rate_after_hours ?? 0;
+        const facilityMileageRate = data.facility_rate_mileage ?? selectedFacility?.rate_mileage ?? 0;
+        const interpreterBusinessRate = data.interpreter_rate_business ?? selectedInterpreter?.rate_business_hours ?? 0;
+        const interpreterAfterHoursRate = data.interpreter_rate_after_hours ?? selectedInterpreter?.rate_after_hours ?? 0;
+        const interpreterMileageRate = data.interpreter_rate_mileage ?? selectedInterpreter?.rate_mileage ?? 0;
+        
+        const mileage = data.mileage ?? 0;
+        const travelTimeHours = data.travel_time_hours ?? 0;
+        const parking = data.parking ?? 0;
+        const tolls = data.tolls ?? 0;
+        const miscFee = data.misc_fee ?? 0;
+        
+        const trilingualUplift = job?.trilingual_rate_uplift ?? 0;
+        
+        const facilityBusinessTotal = hoursSplit.businessHours * (facilityBusinessRate + trilingualUplift);
+        const facilityAfterHoursTotal = hoursSplit.afterHours * (facilityAfterHoursRate + trilingualUplift);
+        facilityHourlyTotal = facilityBusinessTotal + facilityAfterHoursTotal;
+        const facilityMileageTotal = mileage * facilityMileageRate;
+        const facilityFeesTotal = parking + tolls + miscFee;
+        facilityBillableTotal = facilityHourlyTotal + facilityMileageTotal + facilityFeesTotal;
+        
+        const interpreterBusinessTotal = hoursSplit.businessHours * interpreterBusinessRate;
+        const interpreterAfterHoursTotal = hoursSplit.afterHours * interpreterAfterHoursRate;
+        interpreterHourlyTotal = interpreterBusinessTotal + interpreterAfterHoursTotal;
+        const interpreterMileageTotal = mileage * interpreterMileageRate;
+        const interpreterTravelTimeRate = hoursSplit.businessHours >= hoursSplit.afterHours 
+          ? interpreterBusinessRate 
+          : interpreterAfterHoursRate;
+        const interpreterTravelTimeTotal = travelTimeHours * interpreterTravelTimeRate;
+        const interpreterFeesTotal = parking + tolls + miscFee;
+        interpreterBillableTotal = interpreterHourlyTotal + interpreterMileageTotal + interpreterTravelTimeTotal + interpreterFeesTotal;
+      }
+      
+      const payload: Record<string, unknown> = {
+        facility_id: data.facility_id,
+        interpreter_id: data.interpreter_id || null,
+        deaf_client_name: data.deaf_client_name || null,
+        job_date: data.job_date,
+        start_time: data.start_time,
+        end_time: data.end_time,
+        location_type: data.location_type,
+        location_address: data.location_address || null,
+        location_city: data.location_city || null,
+        location_state: data.location_state || null,
+        location_zip: data.location_zip || null,
+        video_call_link: data.video_call_link || null,
+        status: 'outreach_in_progress', // Set status to outreach_in_progress
+        opportunity_source: data.opportunity_source || null,
+        billing_hours_type: data.billing_hours_type,
+        billable_hours: data.billable_hours || null,
+        mileage: data.mileage || null,
+        parking: data.parking || null,
+        tolls: data.tolls || null,
+        misc_fee: data.misc_fee || null,
+        travel_time_hours: data.travel_time_hours || null,
+        facility_rate_business: data.facility_rate_business || null,
+        facility_rate_after_hours: data.facility_rate_after_hours || null,
+        facility_rate_mileage: data.facility_rate_mileage || null,
+        interpreter_rate_business: data.interpreter_rate_business || null,
+        interpreter_rate_after_hours: data.interpreter_rate_after_hours || null,
+        interpreter_rate_mileage: data.interpreter_rate_mileage || null,
+        emergency_fee_applied: data.emergency_fee_applied || false,
+        holiday_fee_applied: data.holiday_fee_applied || false,
+        internal_notes: data.internal_notes || null,
+        client_business_name: data.client_business_name || null,
+        client_contact_name: data.client_contact_name || null,
+        client_contact_phone: data.client_contact_phone || null,
+        client_contact_email: data.client_contact_email || null,
+        potential_interpreter_ids: data.potential_interpreter_ids || [],
+        facility_hourly_total: facilityHourlyTotal,
+        facility_billable_total: facilityBillableTotal,
+        interpreter_hourly_total: interpreterHourlyTotal,
+        interpreter_billable_total: interpreterBillableTotal,
+      };
+      
       const { error } = await supabase
         .from('jobs')
-        .update({ status: 'outreach_in_progress' } as never)
+        .update(payload as never)
         .eq('id', selectedJobId);
       if (error) throw error;
     },
@@ -637,13 +723,13 @@ export default function JobDetail() {
       form.setValue('status', 'outreach_in_progress' as const);
       toast({
         title: 'Outreach Started',
-        description: 'Status updated to Outreach In Progress. Email functionality coming soon.',
+        description: 'Job saved and status updated to Outreach In Progress. Email functionality coming soon.',
       });
     },
     onError: (error: any) => {
       toast({
         title: 'Error',
-        description: error.message || 'Failed to update status',
+        description: error.message || 'Failed to save and update status',
         variant: 'destructive',
       });
     },

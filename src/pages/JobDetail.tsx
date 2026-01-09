@@ -299,6 +299,9 @@ export default function JobDetail() {
     enabled: !!selectedJobId,
   });
 
+  // Check if job is locked (status is 'paid')
+  const isLocked = job?.status === 'paid';
+
   // Update URL when job changes
   useEffect(() => {
     if (selectedJobId && selectedJobId !== id) {
@@ -1040,9 +1043,9 @@ export default function JobDetail() {
                     render={({ field }) => (
                       <FormItem>
                         <FormLabel>Status</FormLabel>
-                        <Select onValueChange={field.onChange} value={field.value}>
+                        <Select onValueChange={field.onChange} value={field.value} disabled={isLocked}>
                           <FormControl>
-                            <SelectTrigger>
+                            <SelectTrigger disabled={isLocked}>
                               <SelectValue placeholder="Select status" />
                             </SelectTrigger>
                           </FormControl>
@@ -1069,7 +1072,7 @@ export default function JobDetail() {
                       <FormItem>
                         <FormLabel>Job Date</FormLabel>
                         <FormControl>
-                          <Input type="date" {...field} />
+                          <Input type="date" {...field} disabled={isLocked} />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -1083,7 +1086,7 @@ export default function JobDetail() {
                       <FormItem>
                         <FormLabel>Deaf Client Name</FormLabel>
                         <FormControl>
-                          <Input {...field} />
+                          <Input {...field} disabled={isLocked} />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -1106,6 +1109,7 @@ export default function JobDetail() {
                                 variant="outline"
                                 role="combobox"
                                 className={cn('justify-between', !field.value && 'text-muted-foreground')}
+                                disabled={isLocked}
                               >
                                 {selectedFacility?.name || 'Select facility...'}
                                 <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
@@ -1158,6 +1162,7 @@ export default function JobDetail() {
                                 variant="outline"
                                 role="combobox"
                                 className={cn('justify-between h-auto min-h-10', selectedPotentialInterpreters.length === 0 && 'text-muted-foreground')}
+                                disabled={isLocked}
                               >
                                 <div className="flex flex-wrap gap-1">
                                   {selectedPotentialInterpreters.length > 0 ? (
@@ -1218,7 +1223,7 @@ export default function JobDetail() {
                         <Button
                           type="button"
                           variant="outline"
-                          disabled={!canSendOutreach || sendOutreachMutation.isPending}
+                          disabled={isLocked || !canSendOutreach || sendOutreachMutation.isPending}
                         >
                           <Mail className="mr-2 h-4 w-4" />
                           {sendOutreachMutation.isPending ? 'Sending...' : 'Send Potential Interpreters Email'}
@@ -1264,6 +1269,7 @@ export default function JobDetail() {
                                 variant="outline"
                                 role="combobox"
                                 className={cn('justify-between', !field.value && 'text-muted-foreground')}
+                                disabled={isLocked}
                               >
                                 {selectedInterpreter
                                   ? `${selectedInterpreter.first_name} ${selectedInterpreter.last_name}`
@@ -1315,7 +1321,7 @@ export default function JobDetail() {
                         <Button
                           type="button"
                           variant="outline"
-                          disabled={!canConfirmInterpreter || confirmInterpreterMutation.isPending}
+                          disabled={isLocked || !canConfirmInterpreter || confirmInterpreterMutation.isPending}
                         >
                           <Mail className="mr-2 h-4 w-4" />
                           {confirmInterpreterMutation.isPending ? 'Sending...' : 'Confirm Interpreter and Send Confirmation Email'}
@@ -1358,7 +1364,7 @@ export default function JobDetail() {
                       <FormItem>
                         <FormLabel>Start Time</FormLabel>
                         <FormControl>
-                          <Input type="time" {...field} />
+                          <Input type="time" {...field} disabled={isLocked} />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -1372,7 +1378,7 @@ export default function JobDetail() {
                       <FormItem>
                         <FormLabel>End Time</FormLabel>
                         <FormControl>
-                          <Input type="time" {...field} />
+                          <Input type="time" {...field} disabled={isLocked} />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -1385,9 +1391,9 @@ export default function JobDetail() {
                     render={({ field }) => (
                       <FormItem>
                         <FormLabel>Billing Type</FormLabel>
-                        <Select onValueChange={field.onChange} value={field.value}>
+                        <Select onValueChange={field.onChange} value={field.value} disabled={isLocked}>
                           <FormControl>
-                            <SelectTrigger>
+                            <SelectTrigger disabled={isLocked}>
                               <SelectValue />
                             </SelectTrigger>
                           </FormControl>
@@ -1409,7 +1415,7 @@ export default function JobDetail() {
                       <FormItem>
                         <FormLabel>Billable Hours</FormLabel>
                         <FormControl>
-                          <Input type="number" step="0.25" {...field} />
+                          <Input type="number" step="0.25" {...field} disabled={isLocked} />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -1431,9 +1437,9 @@ export default function JobDetail() {
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>Location Type</FormLabel>
-                      <Select onValueChange={field.onChange} value={field.value}>
+                      <Select onValueChange={field.onChange} value={field.value} disabled={isLocked}>
                         <FormControl>
-                          <SelectTrigger className="w-[200px]">
+                          <SelectTrigger className="w-[200px]" disabled={isLocked}>
                             <SelectValue />
                           </SelectTrigger>
                         </FormControl>
@@ -1456,7 +1462,7 @@ export default function JobDetail() {
                         <FormItem>
                           <FormLabel>Address</FormLabel>
                           <FormControl>
-                            <Input {...field} />
+                            <Input {...field} disabled={isLocked} />
                           </FormControl>
                           <FormMessage />
                         </FormItem>
@@ -1470,7 +1476,7 @@ export default function JobDetail() {
                           <FormItem>
                             <FormLabel>City</FormLabel>
                             <FormControl>
-                              <Input {...field} />
+                              <Input {...field} disabled={isLocked} />
                             </FormControl>
                             <FormMessage />
                           </FormItem>
@@ -1483,7 +1489,7 @@ export default function JobDetail() {
                           <FormItem>
                             <FormLabel>State</FormLabel>
                             <FormControl>
-                              <Input {...field} />
+                              <Input {...field} disabled={isLocked} />
                             </FormControl>
                             <FormMessage />
                           </FormItem>
@@ -1496,7 +1502,7 @@ export default function JobDetail() {
                           <FormItem>
                             <FormLabel>Zip</FormLabel>
                             <FormControl>
-                              <Input {...field} />
+                              <Input {...field} disabled={isLocked} />
                             </FormControl>
                             <FormMessage />
                           </FormItem>
@@ -1512,7 +1518,7 @@ export default function JobDetail() {
                       <FormItem>
                         <FormLabel>Video Call Link</FormLabel>
                         <FormControl>
-                          <Input placeholder="https://..." {...field} />
+                          <Input placeholder="https://..." {...field} disabled={isLocked} />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -1539,7 +1545,7 @@ export default function JobDetail() {
                         <FormItem>
                           <FormLabel>Business Rate ($/hr)</FormLabel>
                           <FormControl>
-                            <Input type="number" step="0.01" {...field} />
+                            <Input type="number" step="0.01" {...field} disabled={isLocked} />
                           </FormControl>
                           <FormMessage />
                         </FormItem>
@@ -1552,7 +1558,7 @@ export default function JobDetail() {
                         <FormItem>
                           <FormLabel>After Hours Rate ($/hr)</FormLabel>
                           <FormControl>
-                            <Input type="number" step="0.01" {...field} />
+                            <Input type="number" step="0.01" {...field} disabled={isLocked} />
                           </FormControl>
                           <FormMessage />
                         </FormItem>
@@ -1565,7 +1571,7 @@ export default function JobDetail() {
                         <FormItem>
                           <FormLabel>Mileage Rate ($/mi)</FormLabel>
                           <FormControl>
-                            <Input type="number" step="0.01" {...field} />
+                            <Input type="number" step="0.01" {...field} disabled={isLocked} />
                           </FormControl>
                           <FormMessage />
                         </FormItem>
@@ -1585,7 +1591,7 @@ export default function JobDetail() {
                         <FormItem>
                           <FormLabel>Business Rate ($/hr)</FormLabel>
                           <FormControl>
-                            <Input type="number" step="0.01" {...field} />
+                            <Input type="number" step="0.01" {...field} disabled={isLocked} />
                           </FormControl>
                           <FormMessage />
                         </FormItem>
@@ -1598,7 +1604,7 @@ export default function JobDetail() {
                         <FormItem>
                           <FormLabel>After Hours Rate ($/hr)</FormLabel>
                           <FormControl>
-                            <Input type="number" step="0.01" {...field} />
+                            <Input type="number" step="0.01" {...field} disabled={isLocked} />
                           </FormControl>
                           <FormMessage />
                         </FormItem>
@@ -1611,7 +1617,7 @@ export default function JobDetail() {
                         <FormItem>
                           <FormLabel>Mileage Rate ($/mi)</FormLabel>
                           <FormControl>
-                            <Input type="number" step="0.01" {...field} />
+                            <Input type="number" step="0.01" {...field} disabled={isLocked} />
                           </FormControl>
                           <FormMessage />
                         </FormItem>
@@ -1631,7 +1637,7 @@ export default function JobDetail() {
                         <FormItem>
                           <FormLabel>Mileage (mi)</FormLabel>
                           <FormControl>
-                            <Input type="number" step="0.1" {...field} />
+                            <Input type="number" step="0.1" {...field} disabled={isLocked} />
                           </FormControl>
                           <FormMessage />
                         </FormItem>
@@ -1644,7 +1650,7 @@ export default function JobDetail() {
                         <FormItem>
                           <FormLabel>Travel Time (hrs)</FormLabel>
                           <FormControl>
-                            <Input type="number" step="0.25" {...field} />
+                            <Input type="number" step="0.25" {...field} disabled={isLocked} />
                           </FormControl>
                           <FormMessage />
                         </FormItem>
@@ -1657,7 +1663,7 @@ export default function JobDetail() {
                         <FormItem>
                           <FormLabel>Parking ($)</FormLabel>
                           <FormControl>
-                            <Input type="number" step="0.01" {...field} />
+                            <Input type="number" step="0.01" {...field} disabled={isLocked} />
                           </FormControl>
                           <FormMessage />
                         </FormItem>
@@ -1670,7 +1676,7 @@ export default function JobDetail() {
                         <FormItem>
                           <FormLabel>Tolls ($)</FormLabel>
                           <FormControl>
-                            <Input type="number" step="0.01" {...field} />
+                            <Input type="number" step="0.01" {...field} disabled={isLocked} />
                           </FormControl>
                           <FormMessage />
                         </FormItem>
@@ -1683,7 +1689,7 @@ export default function JobDetail() {
                         <FormItem>
                           <FormLabel>Misc Fee ($)</FormLabel>
                           <FormControl>
-                            <Input type="number" step="0.01" {...field} />
+                            <Input type="number" step="0.01" {...field} disabled={isLocked} />
                           </FormControl>
                           <FormMessage />
                         </FormItem>
@@ -1808,7 +1814,7 @@ export default function JobDetail() {
                       <FormItem>
                         <FormLabel>Business Name</FormLabel>
                         <FormControl>
-                          <Input {...field} />
+                          <Input {...field} disabled={isLocked} />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -1821,7 +1827,7 @@ export default function JobDetail() {
                       <FormItem>
                         <FormLabel>Contact Name</FormLabel>
                         <FormControl>
-                          <Input {...field} />
+                          <Input {...field} disabled={isLocked} />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -1834,7 +1840,7 @@ export default function JobDetail() {
                       <FormItem>
                         <FormLabel>Contact Phone</FormLabel>
                         <FormControl>
-                          <Input {...field} />
+                          <Input {...field} disabled={isLocked} />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -1847,7 +1853,7 @@ export default function JobDetail() {
                       <FormItem>
                         <FormLabel>Contact Email</FormLabel>
                         <FormControl>
-                          <Input type="email" {...field} />
+                          <Input type="email" {...field} disabled={isLocked} />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -1877,7 +1883,7 @@ export default function JobDetail() {
                   <Button
                     type="button"
                     variant="outline"
-                    disabled={!canGenerateBilling || generateBillingMutation.isPending}
+                    disabled={isLocked || !canGenerateBilling || generateBillingMutation.isPending}
                   >
                     {generateBillingMutation.isPending ? 'Generating...' : 'Generate Invoice & Bill'}
                   </Button>
@@ -1897,7 +1903,7 @@ export default function JobDetail() {
                   </AlertDialogFooter>
                 </AlertDialogContent>
               </AlertDialog>
-              <Button type="submit" disabled={mutation.isPending}>
+              <Button type="submit" disabled={isLocked || mutation.isPending}>
                 Save Changes
               </Button>
             </div>

@@ -35,6 +35,16 @@ export function ContractComplianceSection({
 }: ContractComplianceSectionProps) {
   const { toast } = useToast();
   const [isGenerating, setIsGenerating] = useState(false);
+  const [contractPdfUrl, setContractPdfUrl] = useState<string | null>(
+    interpreter.contract_pdf_url || null
+  );
+
+  // Keep local state in sync with interpreter prop
+  useState(() => {
+    if (interpreter.contract_pdf_url !== contractPdfUrl) {
+      setContractPdfUrl(interpreter.contract_pdf_url || null);
+    }
+  });
 
   const generateContractMutation = useMutation({
     mutationFn: async () => {
@@ -50,6 +60,10 @@ export function ContractComplianceSection({
     },
     onSuccess: (data) => {
       toast({ title: 'Contract PDF generated successfully' });
+      // Update local state immediately with the new URL
+      if (data?.pdf_url) {
+        setContractPdfUrl(data.pdf_url);
+      }
       onContractGenerated();
     },
     onError: (error) => {
@@ -125,12 +139,12 @@ export function ContractComplianceSection({
         )}
 
         {/* Contract PDF Link */}
-        {interpreter.contract_pdf_url && (
+        {contractPdfUrl && (
           <div className="pt-2 border-t">
             <Label className="text-sm text-muted-foreground">Contract PDF</Label>
             <div className="mt-1">
               <a
-                href={interpreter.contract_pdf_url}
+                href={contractPdfUrl}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="inline-flex items-center gap-2 text-sm text-primary hover:underline"

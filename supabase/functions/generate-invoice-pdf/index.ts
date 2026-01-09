@@ -1,9 +1,17 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { jsPDF } from "https://esm.sh/jspdf@2.5.1";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
+
+interface LineItem {
+  description: string;
+  qty: number;
+  rate: number;
+  amount: number;
+}
 
 interface InvoiceData {
   invoiceNumber: string;
@@ -14,12 +22,7 @@ interface InvoiceData {
   facilityCity: string;
   facilityState: string;
   facilityZip: string;
-  lineItems: {
-    description: string;
-    qty: number;
-    rate: number;
-    amount: number;
-  }[];
+  lineItems: LineItem[];
   total: number;
 }
 
@@ -29,157 +32,127 @@ function formatDate(dateStr: string): string {
   return date.toLocaleDateString('en-US', { month: '2-digit', day: '2-digit', year: 'numeric' });
 }
 
-function generateInvoiceHtml(data: InvoiceData): string {
-  const lineItemsHtml = data.lineItems
-    .filter(item => item.amount > 0)
-    .map(item => `
-      <tr>
-        <td style="padding: 12px 8px; border-bottom: 1px solid #e5e7eb;"></td>
-        <td style="padding: 12px 8px; border-bottom: 1px solid #e5e7eb;">${item.description}</td>
-        <td style="padding: 12px 8px; border-bottom: 1px solid #e5e7eb; text-align: right;">${item.qty.toFixed(2)}</td>
-        <td style="padding: 12px 8px; border-bottom: 1px solid #e5e7eb; text-align: right;">${item.rate.toFixed(2)}</td>
-        <td style="padding: 12px 8px; border-bottom: 1px solid #e5e7eb; text-align: right;">${item.amount.toFixed(2)}</td>
-      </tr>
-    `).join('');
+function formatCurrency(amount: number): string {
+  return `$${amount.toFixed(2)}`;
+}
 
-  return `
-    <!DOCTYPE html>
-    <html>
-    <head>
-      <meta charset="UTF-8">
-      <style>
-        body {
-          font-family: Arial, Helvetica, sans-serif;
-          font-size: 14px;
-          color: #1f2937;
-          margin: 0;
-          padding: 40px;
-        }
-        .header {
-          margin-bottom: 30px;
-        }
-        .company-name {
-          font-size: 24px;
-          font-weight: bold;
-          color: #1f2937;
-          margin-bottom: 5px;
-        }
-        .invoice-title {
-          font-size: 18px;
-          color: #6b7280;
-          margin-bottom: 15px;
-        }
-        .company-address {
-          font-size: 12px;
-          color: #6b7280;
-          line-height: 1.5;
-        }
-        .bill-to-section {
-          margin: 30px 0;
-        }
-        .bill-to-title {
-          font-weight: bold;
-          font-size: 14px;
-          margin-bottom: 8px;
-        }
-        .bill-to-content {
-          font-size: 13px;
-          line-height: 1.5;
-        }
-        .invoice-info {
-          text-align: right;
-          font-size: 13px;
-          margin-bottom: 20px;
-        }
-        .invoice-info p {
-          margin: 4px 0;
-        }
-        .please-pay {
-          font-size: 16px;
-          font-weight: bold;
-          color: #1f2937;
-        }
-        table {
-          width: 100%;
-          border-collapse: collapse;
-          margin: 20px 0;
-        }
-        th {
-          background-color: #f9fafb;
-          padding: 12px 8px;
-          text-align: left;
-          font-weight: 600;
-          border-bottom: 2px solid #e5e7eb;
-        }
-        th:nth-child(3), th:nth-child(4), th:nth-child(5) {
-          text-align: right;
-        }
-        .total-row {
-          margin-top: 20px;
-          text-align: right;
-          font-size: 16px;
-          font-weight: bold;
-        }
-        .thank-you {
-          margin-top: 40px;
-          font-size: 14px;
-          color: #6b7280;
-        }
-      </style>
-    </head>
-    <body>
-      <div class="header">
-        <div class="company-name">Effective Communication NY, LLC</div>
-        <div class="invoice-title">Invoice</div>
-        <div class="company-address">
-          195 Crown Ave<br>
-          Staten Island, NY 10312 US<br>
-          admin@ecasl.com
-        </div>
-      </div>
+function generatePdf(data: InvoiceData): Uint8Array {
+  const doc = new jsPDF();
+  const pageWidth = doc.internal.pageSize.getWidth();
+  let y = 20;
 
-      <div style="display: flex; justify-content: space-between;">
-        <div class="bill-to-section">
-          <div class="bill-to-title">BILL TO</div>
-          <div class="bill-to-content">
-            ${data.facilityName}<br>
-            ${data.facilityAddress ? `${data.facilityAddress}<br>` : ''}
-            ${data.facilityCity ? `${data.facilityCity}, ${data.facilityState} ${data.facilityZip}` : ''}
-          </div>
-        </div>
-
-        <div class="invoice-info">
-          <p><strong>DATE:</strong> ${formatDate(data.issuedDate)}</p>
-          <p class="please-pay"><strong>PLEASE PAY:</strong> $${data.total.toFixed(2)}</p>
-          <p><strong>DUE DATE:</strong> ${formatDate(data.dueDate)}</p>
-        </div>
-      </div>
-
-      <table>
-        <thead>
-          <tr>
-            <th style="width: 80px;">DATE</th>
-            <th>DESCRIPTION</th>
-            <th style="width: 80px;">QTY</th>
-            <th style="width: 80px;">RATE</th>
-            <th style="width: 100px;">AMOUNT</th>
-          </tr>
-        </thead>
-        <tbody>
-          ${lineItemsHtml}
-        </tbody>
-      </table>
-
-      <div class="total-row">
-        TOTAL DUE: $${data.total.toFixed(2)}
-      </div>
-
-      <div class="thank-you">
-        THANK YOU.
-      </div>
-    </body>
-    </html>
-  `;
+  // Company Header
+  doc.setFontSize(20);
+  doc.setFont("helvetica", "bold");
+  doc.text("Effective Communication NY, LLC", 14, y);
+  
+  y += 8;
+  doc.setFontSize(14);
+  doc.setFont("helvetica", "normal");
+  doc.setTextColor(100, 100, 100);
+  doc.text("Invoice", 14, y);
+  
+  y += 8;
+  doc.setFontSize(10);
+  doc.text("195 Crown Ave", 14, y);
+  y += 5;
+  doc.text("Staten Island, NY 10312 US", 14, y);
+  y += 5;
+  doc.text("admin@ecasl.com", 14, y);
+  
+  // Invoice Info (right side)
+  doc.setTextColor(0, 0, 0);
+  doc.setFontSize(10);
+  const rightX = pageWidth - 14;
+  doc.text(`DATE: ${formatDate(data.issuedDate)}`, rightX, 36, { align: "right" });
+  
+  doc.setFontSize(12);
+  doc.setFont("helvetica", "bold");
+  doc.text(`PLEASE PAY: ${formatCurrency(data.total)}`, rightX, 44, { align: "right" });
+  
+  doc.setFontSize(10);
+  doc.setFont("helvetica", "normal");
+  doc.text(`DUE DATE: ${formatDate(data.dueDate)}`, rightX, 52, { align: "right" });
+  
+  // Bill To Section
+  y = 70;
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(11);
+  doc.text("BILL TO", 14, y);
+  
+  y += 6;
+  doc.setFont("helvetica", "normal");
+  doc.setFontSize(10);
+  doc.text(data.facilityName, 14, y);
+  
+  if (data.facilityAddress) {
+    y += 5;
+    doc.text(data.facilityAddress, 14, y);
+  }
+  
+  if (data.facilityCity) {
+    y += 5;
+    const cityStateZip = `${data.facilityCity}, ${data.facilityState} ${data.facilityZip}`;
+    doc.text(cityStateZip, 14, y);
+  }
+  
+  // Table Header
+  y = 100;
+  const colWidths = [25, 75, 25, 30, 35];
+  const colX = [14, 39, 114, 139, 169];
+  
+  doc.setFillColor(249, 250, 251);
+  doc.rect(14, y - 5, pageWidth - 28, 10, "F");
+  
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(9);
+  doc.text("DATE", colX[0], y);
+  doc.text("DESCRIPTION", colX[1], y);
+  doc.text("QTY", colX[2], y, { align: "right" });
+  doc.text("RATE", colX[3], y, { align: "right" });
+  doc.text("AMOUNT", colX[4], y, { align: "right" });
+  
+  // Draw header line
+  y += 3;
+  doc.setDrawColor(229, 231, 235);
+  doc.setLineWidth(0.5);
+  doc.line(14, y, pageWidth - 14, y);
+  
+  // Table Rows
+  doc.setFont("helvetica", "normal");
+  y += 8;
+  
+  for (const item of data.lineItems) {
+    if (item.amount <= 0) continue;
+    
+    doc.text("", colX[0], y); // Date column empty as in example
+    doc.text(item.description, colX[1], y);
+    doc.text(item.qty.toFixed(2), colX[2], y, { align: "right" });
+    doc.text(item.rate.toFixed(2), colX[3], y, { align: "right" });
+    doc.text(item.amount.toFixed(2), colX[4], y, { align: "right" });
+    
+    // Row separator
+    y += 3;
+    doc.setDrawColor(229, 231, 235);
+    doc.line(14, y, pageWidth - 14, y);
+    y += 7;
+  }
+  
+  // Total
+  y += 10;
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(11);
+  doc.text(`TOTAL DUE: ${formatCurrency(data.total)}`, rightX, y, { align: "right" });
+  
+  // Thank you
+  y += 20;
+  doc.setFont("helvetica", "normal");
+  doc.setFontSize(10);
+  doc.setTextColor(100, 100, 100);
+  doc.text("THANK YOU.", 14, y);
+  
+  // Return as Uint8Array
+  return doc.output("arraybuffer") as unknown as Uint8Array;
 }
 
 Deno.serve(async (req) => {
@@ -242,11 +215,11 @@ Deno.serve(async (req) => {
       }
     }
 
-    console.log('Invoice:', invoice);
-    console.log('Job:', job);
+    console.log('Invoice:', invoice.invoice_number);
+    console.log('Job:', job?.job_number);
 
     // Build line items from job data
-    const lineItems: InvoiceData['lineItems'] = [];
+    const lineItems: LineItem[] = [];
 
     if (job) {
       // Interpreter Services (hourly)
@@ -368,67 +341,10 @@ Deno.serve(async (req) => {
       total
     };
 
-    // Generate HTML
-    const html = generateInvoiceHtml(invoiceData);
+    console.log('Generating PDF with', lineItems.length, 'line items, total:', total);
 
-    // Use a PDF generation API service
-    // We'll use a simple HTML to PDF approach with jsPDF or similar
-    // For now, we'll convert HTML to PDF using an external API
-    
-    const pdfResponse = await fetch('https://api.html2pdf.app/v1/generate', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        html: html,
-        apiKey: 'free', // Using free tier for demo
-      }),
-    });
-
-    if (!pdfResponse.ok) {
-      // Fallback: store HTML and return a message
-      console.error('PDF generation failed, storing HTML instead');
-      
-      const htmlBlob = new Blob([html], { type: 'text/html' });
-      const fileName = `invoice-${invoice.invoice_number}.html`;
-      
-      const { error: uploadError } = await supabase.storage
-        .from('invoices')
-        .upload(fileName, htmlBlob, {
-          contentType: 'text/html',
-          upsert: true
-        });
-
-      if (uploadError) {
-        console.error('Upload error:', uploadError);
-        return new Response(
-          JSON.stringify({ error: 'Failed to upload file' }),
-          { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-        );
-      }
-
-      const { data: publicUrl } = supabase.storage
-        .from('invoices')
-        .getPublicUrl(fileName);
-
-      // Update invoice with PDF URL
-      await supabase
-        .from('invoices')
-        .update({ pdf_url: publicUrl.publicUrl })
-        .eq('id', invoiceId);
-
-      return new Response(
-        JSON.stringify({ 
-          success: true, 
-          pdfUrl: publicUrl.publicUrl,
-          note: 'Generated as HTML (PDF service unavailable)'
-        }),
-        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
-
-    const pdfBuffer = await pdfResponse.arrayBuffer();
+    // Generate PDF
+    const pdfBuffer = generatePdf(invoiceData);
     const fileName = `invoice-${invoice.invoice_number}.pdf`;
 
     // Upload to Supabase Storage

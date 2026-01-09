@@ -314,9 +314,11 @@ export default function JobDetail() {
         facility_rate_business: number | null;
         facility_rate_after_hours: number | null;
         facility_rate_mileage: number | null;
+        facility_rate_adjustment: number | null;
         interpreter_rate_business: number | null;
         interpreter_rate_after_hours: number | null;
         interpreter_rate_mileage: number | null;
+        interpreter_rate_adjustment: number | null;
         emergency_fee_applied: boolean | null;
         holiday_fee_applied: boolean | null;
         internal_notes: string | null;
@@ -401,9 +403,11 @@ export default function JobDetail() {
         facility_rate_business: job.facility_rate_business || 0,
         facility_rate_after_hours: job.facility_rate_after_hours || 0,
         facility_rate_mileage: job.facility_rate_mileage || 0,
+        facility_rate_adjustment: job.facility_rate_adjustment || 0,
         interpreter_rate_business: job.interpreter_rate_business || 0,
         interpreter_rate_after_hours: job.interpreter_rate_after_hours || 0,
         interpreter_rate_mileage: job.interpreter_rate_mileage || 0,
+        interpreter_rate_adjustment: job.interpreter_rate_adjustment || 0,
         emergency_fee_applied: job.emergency_fee_applied || false,
         holiday_fee_applied: job.holiday_fee_applied || false,
         internal_notes: job.internal_notes || '',

@@ -50,13 +50,14 @@ import {
   CommandList,
 } from '@/components/ui/command';
 import { useToast } from '@/hooks/use-toast';
-import { Check, ChevronsUpDown, ArrowLeft, Mail } from 'lucide-react';
+import { Check, ChevronsUpDown, ArrowLeft, Mail, Pencil } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { format } from 'date-fns';
 import { RatesEditDialog, RateField } from '@/components/jobs/RatesEditDialog';
 import { RateChips } from '@/components/jobs/RateChips';
+import { ContactEditDialog, ContactField } from '@/components/jobs/ContactEditDialog';
 
 // Helper to calculate hours split between business (8am-5pm) and after-hours
 function calculateHoursSplit(startTime: string, endTime: string, minimumHours: number = 2): {
@@ -175,6 +176,7 @@ export default function JobDetail() {
   const [facilityRatesDialogOpen, setFacilityRatesDialogOpen] = useState(false);
   const [interpreterRatesDialogOpen, setInterpreterRatesDialogOpen] = useState(false);
   const [expensesDialogOpen, setExpensesDialogOpen] = useState(false);
+  const [clientContactDialogOpen, setClientContactDialogOpen] = useState(false);
   
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -990,6 +992,13 @@ export default function JobDetail() {
     form.setValue('misc_fee', values.misc_fee);
   };
 
+  const handleClientContactSave = (values: Record<string, string>) => {
+    form.setValue('client_business_name', values.client_business_name);
+    form.setValue('client_contact_name', values.client_contact_name);
+    form.setValue('client_contact_phone', values.client_contact_phone);
+    form.setValue('client_contact_email', values.client_contact_email);
+  };
+
   // Prepare rate fields for dialogs
   const facilityRateFields: RateField[] = [
     { key: 'facility_rate_business', label: 'Business ($/hr)', value: watchedFacilityRateBusiness, suffix: '/hr' },
@@ -1009,6 +1018,19 @@ export default function JobDetail() {
     { key: 'parking', label: 'Parking ($)', value: watchedParking },
     { key: 'tolls', label: 'Tolls ($)', value: watchedTolls },
     { key: 'misc_fee', label: 'Misc Fee ($)', value: watchedMiscFee },
+  ];
+
+  // Watch client contact fields for chips display
+  const watchedClientBusinessName = form.watch('client_business_name') || '';
+  const watchedClientContactName = form.watch('client_contact_name') || '';
+  const watchedClientContactPhone = form.watch('client_contact_phone') || '';
+  const watchedClientContactEmail = form.watch('client_contact_email') || '';
+
+  const clientContactFields: ContactField[] = [
+    { key: 'client_business_name', label: 'Business Name', value: watchedClientBusinessName },
+    { key: 'client_contact_name', label: 'Contact Name', value: watchedClientContactName },
+    { key: 'client_contact_phone', label: 'Phone', value: watchedClientContactPhone },
+    { key: 'client_contact_email', label: 'Email', value: watchedClientContactEmail, type: 'email' },
   ];
 
   return (
@@ -1389,147 +1411,139 @@ export default function JobDetail() {
                 <CardTitle className="text-lg">Location & Contact</CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
-                {/* Location Section */}
-                <div className="space-y-3">
-                  <div className="flex items-center gap-4">
+                {/* Location Type */}
+                <FormField
+                  control={form.control}
+                  name="location_type"
+                  render={({ field }) => (
+                    <FormItem className="space-y-2">
+                      <FormLabel>Location Type</FormLabel>
+                      <Select onValueChange={field.onChange} value={field.value} disabled={isLocked}>
+                        <FormControl>
+                          <SelectTrigger className="w-[160px]" disabled={isLocked}>
+                            <SelectValue />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          <SelectItem value="in_person">In-Person</SelectItem>
+                          <SelectItem value="remote">Remote</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                {/* Address Fields or Video Link */}
+                {watchedLocationType === 'in_person' ? (
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                     <FormField
                       control={form.control}
-                      name="location_type"
+                      name="location_address"
                       render={({ field }) => (
-                        <FormItem className="flex-shrink-0">
-                          <Select onValueChange={field.onChange} value={field.value} disabled={isLocked}>
-                            <FormControl>
-                              <SelectTrigger className="w-[140px]" disabled={isLocked}>
-                                <SelectValue />
-                              </SelectTrigger>
-                            </FormControl>
-                            <SelectContent>
-                              <SelectItem value="in_person">In-Person</SelectItem>
-                              <SelectItem value="remote">Remote</SelectItem>
-                            </SelectContent>
-                          </Select>
-                          <FormMessage />
+                        <FormItem className="md:col-span-2 space-y-2">
+                          <FormLabel>Address</FormLabel>
+                          <FormControl>
+                            <Input {...field} disabled={isLocked} />
+                          </FormControl>
                         </FormItem>
                       )}
                     />
-                    
-                    {watchedLocationType === 'in_person' ? (
-                      <div className="flex-1 grid grid-cols-1 md:grid-cols-4 gap-2">
-                        <FormField
-                          control={form.control}
-                          name="location_address"
-                          render={({ field }) => (
-                            <FormItem className="md:col-span-2">
-                              <FormControl>
-                                <Input placeholder="Address" {...field} disabled={isLocked} />
-                              </FormControl>
-                            </FormItem>
-                          )}
-                        />
-                        <FormField
-                          control={form.control}
-                          name="location_city"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormControl>
-                                <Input placeholder="City" {...field} disabled={isLocked} />
-                              </FormControl>
-                            </FormItem>
-                          )}
-                        />
-                        <div className="flex gap-2">
-                          <FormField
-                            control={form.control}
-                            name="location_state"
-                            render={({ field }) => (
-                              <FormItem className="w-20">
-                                <FormControl>
-                                  <Input placeholder="State" {...field} disabled={isLocked} />
-                                </FormControl>
-                              </FormItem>
-                            )}
-                          />
-                          <FormField
-                            control={form.control}
-                            name="location_zip"
-                            render={({ field }) => (
-                              <FormItem className="flex-1">
-                                <FormControl>
-                                  <Input placeholder="Zip" {...field} disabled={isLocked} />
-                                </FormControl>
-                              </FormItem>
-                            )}
-                          />
-                        </div>
-                      </div>
-                    ) : (
+                    <FormField
+                      control={form.control}
+                      name="location_city"
+                      render={({ field }) => (
+                        <FormItem className="space-y-2">
+                          <FormLabel>City</FormLabel>
+                          <FormControl>
+                            <Input {...field} disabled={isLocked} />
+                          </FormControl>
+                        </FormItem>
+                      )}
+                    />
+                    <div className="grid grid-cols-2 gap-2">
                       <FormField
                         control={form.control}
-                        name="video_call_link"
+                        name="location_state"
                         render={({ field }) => (
-                          <FormItem className="flex-1">
+                          <FormItem className="space-y-2">
+                            <FormLabel>State</FormLabel>
                             <FormControl>
-                              <Input placeholder="Video call link (https://...)" {...field} disabled={isLocked} />
+                              <Input {...field} disabled={isLocked} />
                             </FormControl>
                           </FormItem>
                         )}
                       />
-                    )}
+                      <FormField
+                        control={form.control}
+                        name="location_zip"
+                        render={({ field }) => (
+                          <FormItem className="space-y-2">
+                            <FormLabel>Zip</FormLabel>
+                            <FormControl>
+                              <Input {...field} disabled={isLocked} />
+                            </FormControl>
+                          </FormItem>
+                        )}
+                      />
+                    </div>
                   </div>
-                </div>
+                ) : (
+                  <FormField
+                    control={form.control}
+                    name="video_call_link"
+                    render={({ field }) => (
+                      <FormItem className="space-y-2">
+                        <FormLabel>Video Call Link</FormLabel>
+                        <FormControl>
+                          <Input placeholder="https://..." {...field} disabled={isLocked} />
+                        </FormControl>
+                      </FormItem>
+                    )}
+                  />
+                )}
 
                 <Separator />
 
-                {/* Client Info Section */}
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                  <FormField
-                    control={form.control}
-                    name="client_business_name"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Business Name</FormLabel>
-                        <FormControl>
-                          <Input {...field} disabled={isLocked} />
-                        </FormControl>
-                      </FormItem>
+                {/* Client Info as Chips */}
+                <div className="space-y-1">
+                  <h4 className="text-sm font-medium text-muted-foreground">Client Contact</h4>
+                  <div className="flex flex-wrap gap-2 items-center">
+                    {watchedClientBusinessName && (
+                      <Badge variant="outline" className="font-normal">
+                        {watchedClientBusinessName}
+                      </Badge>
                     )}
-                  />
-                  <FormField
-                    control={form.control}
-                    name="client_contact_name"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Contact Name</FormLabel>
-                        <FormControl>
-                          <Input {...field} disabled={isLocked} />
-                        </FormControl>
-                      </FormItem>
+                    {watchedClientContactName && (
+                      <Badge variant="outline" className="font-normal">
+                        {watchedClientContactName}
+                      </Badge>
                     )}
-                  />
-                  <FormField
-                    control={form.control}
-                    name="client_contact_phone"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Phone</FormLabel>
-                        <FormControl>
-                          <Input {...field} disabled={isLocked} />
-                        </FormControl>
-                      </FormItem>
+                    {watchedClientContactPhone && (
+                      <Badge variant="outline" className="font-normal">
+                        {watchedClientContactPhone}
+                      </Badge>
                     )}
-                  />
-                  <FormField
-                    control={form.control}
-                    name="client_contact_email"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Email</FormLabel>
-                        <FormControl>
-                          <Input type="email" {...field} disabled={isLocked} />
-                        </FormControl>
-                      </FormItem>
+                    {watchedClientContactEmail && (
+                      <Badge variant="outline" className="font-normal">
+                        {watchedClientContactEmail}
+                      </Badge>
                     )}
-                  />
+                    {!watchedClientBusinessName && !watchedClientContactName && !watchedClientContactPhone && !watchedClientContactEmail && (
+                      <span className="text-sm text-muted-foreground">No contact info set</span>
+                    )}
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => setClientContactDialogOpen(true)}
+                      disabled={isLocked}
+                      className="h-7 px-2"
+                    >
+                      <Pencil className="h-3 w-3 mr-1" />
+                      Edit
+                    </Button>
+                  </div>
                 </div>
               </CardContent>
             </Card>
@@ -1776,6 +1790,15 @@ export default function JobDetail() {
         title="Edit Expenses"
         fields={expenseFields}
         onSave={handleExpensesSave}
+        disabled={isLocked}
+      />
+      
+      <ContactEditDialog
+        open={clientContactDialogOpen}
+        onOpenChange={setClientContactDialogOpen}
+        title="Edit Client Contact"
+        fields={clientContactFields}
+        onSave={handleClientContactSave}
         disabled={isLocked}
       />
     </div>

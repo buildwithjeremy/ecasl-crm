@@ -516,6 +516,7 @@ export type Database = {
           facility_billable_total: number | null
           facility_hourly_total: number | null
           facility_id: string
+          facility_rate_adjustment: number | null
           facility_rate_after_hours: number | null
           facility_rate_business: number | null
           facility_rate_mileage: number | null
@@ -526,6 +527,7 @@ export type Database = {
           interpreter_billable_total: number | null
           interpreter_hourly_total: number | null
           interpreter_id: string | null
+          interpreter_rate_adjustment: number | null
           interpreter_rate_after_hours: number | null
           interpreter_rate_business: number | null
           interpreter_rate_mileage: number | null
@@ -574,6 +576,7 @@ export type Database = {
           facility_billable_total?: number | null
           facility_hourly_total?: number | null
           facility_id: string
+          facility_rate_adjustment?: number | null
           facility_rate_after_hours?: number | null
           facility_rate_business?: number | null
           facility_rate_mileage?: number | null
@@ -584,6 +587,7 @@ export type Database = {
           interpreter_billable_total?: number | null
           interpreter_hourly_total?: number | null
           interpreter_id?: string | null
+          interpreter_rate_adjustment?: number | null
           interpreter_rate_after_hours?: number | null
           interpreter_rate_business?: number | null
           interpreter_rate_mileage?: number | null
@@ -634,6 +638,7 @@ export type Database = {
           facility_billable_total?: number | null
           facility_hourly_total?: number | null
           facility_id?: string
+          facility_rate_adjustment?: number | null
           facility_rate_after_hours?: number | null
           facility_rate_business?: number | null
           facility_rate_mileage?: number | null
@@ -644,6 +649,7 @@ export type Database = {
           interpreter_billable_total?: number | null
           interpreter_hourly_total?: number | null
           interpreter_id?: string | null
+          interpreter_rate_adjustment?: number | null
           interpreter_rate_after_hours?: number | null
           interpreter_rate_business?: number | null
           interpreter_rate_mileage?: number | null

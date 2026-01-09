@@ -26,7 +26,7 @@ function generateContractPdf(interpreter: InterpreterData): Uint8Array {
   const margin = 20;
   const contentWidth = pageWidth - margin * 2;
   let y = 20;
-  const lineHeight = 5;
+  const lineHeight = 4.2;
 
   // Header
   doc.setFontSize(16);
@@ -147,8 +147,8 @@ Deno.serve(async (req) => {
     // Generate the PDF
     const pdfBuffer = generateContractPdf(interpreter);
 
-    // Create filename
-    const timestamp = new Date().toISOString().split("T")[0];
+    // Create filename (include time to avoid browser/storage caching)
+    const timestamp = new Date().toISOString().replace(/[:.]/g, "-");
     const fileName = `contracts/${interpreter.id}/contract_${timestamp}.pdf`;
 
     // Upload to storage
@@ -156,7 +156,8 @@ Deno.serve(async (req) => {
       .from("interpreter-contracts")
       .upload(fileName, pdfBuffer, {
         contentType: "application/pdf",
-        upsert: true,
+        cacheControl: "no-cache",
+        upsert: false,
       });
 
     if (uploadError) {

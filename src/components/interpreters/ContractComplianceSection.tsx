@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useMutation } from '@tanstack/react-query';
 import { UseFormReturn } from 'react-hook-form';
 import { supabase } from '@/integrations/supabase/client';
@@ -40,11 +40,9 @@ export function ContractComplianceSection({
   );
 
   // Keep local state in sync with interpreter prop
-  useState(() => {
-    if (interpreter.contract_pdf_url !== contractPdfUrl) {
-      setContractPdfUrl(interpreter.contract_pdf_url || null);
-    }
-  });
+  useEffect(() => {
+    setContractPdfUrl(interpreter.contract_pdf_url || null);
+  }, [interpreter.contract_pdf_url]);
 
   const generateContractMutation = useMutation({
     mutationFn: async () => {

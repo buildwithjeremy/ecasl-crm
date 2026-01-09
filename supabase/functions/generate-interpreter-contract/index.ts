@@ -26,8 +26,7 @@ function generateContractPdf(interpreter: InterpreterData): Uint8Array {
   const margin = 20;
   const contentWidth = pageWidth - margin * 2;
   let y = 20;
-  const lineHeight = 6;
-  const paragraphSpacing = 10;
+  const lineHeight = 5;
 
   // Header
   doc.setFontSize(16);
@@ -86,7 +85,7 @@ function generateContractPdf(interpreter: InterpreterData): Uint8Array {
     }
     
     doc.text(lines, margin, y);
-    y += lines.length * lineHeight + paragraphSpacing;
+    y += lines.length * lineHeight + lineHeight;
   }
 
   // Signature section

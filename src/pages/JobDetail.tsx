@@ -1093,16 +1093,23 @@ export default function JobDetail() {
             <Badge variant="secondary">{statusLabels[job.status]}</Badge>
           )}
 
-          {/* Save button in header */}
+          {/* Save button in header with unsaved indicator */}
           {job && (
-            <Button 
-              type="submit" 
-              form="job-detail-form"
-              disabled={isLocked || mutation.isPending}
-              className="ml-auto"
-            >
-              {mutation.isPending ? 'Saving...' : 'Save Changes'}
-            </Button>
+            <div className="ml-auto flex items-center gap-2">
+              {form.formState.isDirty && (
+                <span className="flex items-center gap-1 text-sm text-muted-foreground">
+                  <span className="h-2 w-2 rounded-full bg-orange-500" />
+                  Unsaved
+                </span>
+              )}
+              <Button 
+                type="submit" 
+                form="job-detail-form"
+                disabled={isLocked || mutation.isPending}
+              >
+                {mutation.isPending ? 'Saving...' : 'Save Changes'}
+              </Button>
+            </div>
           )}
         </div>
       </div>

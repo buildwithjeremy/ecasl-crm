@@ -850,13 +850,116 @@ export default function JobDetail() {
   const generateBillingMutation = useMutation({
     mutationFn: async () => {
       if (!selectedJobId || !job) throw new Error('No job selected');
-      if (!job.interpreter_id) throw new Error('No interpreter assigned to job');
+      
+      // Get current form values to save before generating billing
+      const data = form.getValues();
+      const interpreterId = data.interpreter_id;
+      if (!interpreterId) throw new Error('No interpreter assigned to job');
+      
+      // Calculate totals using hoursSplit like other mutations
+      let facilityHourlyTotal: number | null = null;
+      let facilityBillableTotal: number | null = null;
+      let interpreterHourlyTotal: number | null = null;
+      let interpreterBillableTotal: number | null = null;
+      
+      if (hoursSplit) {
+        const facilityBusinessRate = data.facility_rate_business ?? selectedFacility?.rate_business_hours ?? 0;
+        const facilityAfterHoursRate = data.facility_rate_after_hours ?? selectedFacility?.rate_after_hours ?? 0;
+        const facilityMileageRate = data.facility_rate_mileage ?? selectedFacility?.rate_mileage ?? 0;
+        const interpreterBusinessRate = data.interpreter_rate_business ?? selectedInterpreter?.rate_business_hours ?? 0;
+        const interpreterAfterHoursRate = data.interpreter_rate_after_hours ?? selectedInterpreter?.rate_after_hours ?? 0;
+        const interpreterMileageRate = data.interpreter_rate_mileage ?? selectedInterpreter?.rate_mileage ?? 0;
+        
+        const facilityRateAdjustment = data.facility_rate_adjustment ?? 0;
+        const interpreterRateAdjustment = data.interpreter_rate_adjustment ?? 0;
+        
+        const mileage = data.mileage ?? 0;
+        const travelTimeHours = data.travel_time_hours ?? 0;
+        const parking = data.parking ?? 0;
+        const tolls = data.tolls ?? 0;
+        const miscFee = data.misc_fee ?? 0;
+        
+        const trilingualUplift = job?.trilingual_rate_uplift ?? 0;
+        
+        const adjustedFacilityBusinessRate = facilityBusinessRate + trilingualUplift + facilityRateAdjustment;
+        const adjustedFacilityAfterHoursRate = facilityAfterHoursRate + trilingualUplift + facilityRateAdjustment;
+        const facilityBusinessTotal = hoursSplit.businessHours * adjustedFacilityBusinessRate;
+        const facilityAfterHoursTotal = hoursSplit.afterHours * adjustedFacilityAfterHoursRate;
+        facilityHourlyTotal = facilityBusinessTotal + facilityAfterHoursTotal;
+        const facilityMileageTotal = mileage * facilityMileageRate;
+        const facilityFeesTotal = parking + tolls + miscFee;
+        facilityBillableTotal = facilityHourlyTotal + facilityMileageTotal + facilityFeesTotal;
+        
+        const adjustedInterpreterBusinessRate = interpreterBusinessRate + interpreterRateAdjustment;
+        const adjustedInterpreterAfterHoursRate = interpreterAfterHoursRate + interpreterRateAdjustment;
+        const interpreterBusinessTotal = hoursSplit.businessHours * adjustedInterpreterBusinessRate;
+        const interpreterAfterHoursTotal = hoursSplit.afterHours * adjustedInterpreterAfterHoursRate;
+        interpreterHourlyTotal = interpreterBusinessTotal + interpreterAfterHoursTotal;
+        const interpreterMileageTotal = mileage * interpreterMileageRate;
+        const interpreterTravelTimeRate = hoursSplit.businessHours >= hoursSplit.afterHours 
+          ? adjustedInterpreterBusinessRate 
+          : adjustedInterpreterAfterHoursRate;
+        const interpreterTravelTimeTotal = travelTimeHours * interpreterTravelTimeRate;
+        const interpreterFeesTotal = parking + tolls + miscFee;
+        interpreterBillableTotal = interpreterHourlyTotal + interpreterMileageTotal + interpreterTravelTimeTotal + interpreterFeesTotal;
+      }
+      
+      // Build payload to save form data with status update
+      const payload: Record<string, unknown> = {
+        facility_id: data.facility_id,
+        interpreter_id: interpreterId,
+        deaf_client_name: data.deaf_client_name || null,
+        job_date: data.job_date,
+        start_time: data.start_time,
+        end_time: data.end_time,
+        location_type: data.location_type,
+        location_address: data.location_address || null,
+        location_city: data.location_city || null,
+        location_state: data.location_state || null,
+        location_zip: data.location_zip || null,
+        video_call_link: data.video_call_link || null,
+        status: 'ready_to_bill',
+        opportunity_source: data.opportunity_source || null,
+        billable_hours: data.billable_hours || null,
+        mileage: data.mileage || null,
+        parking: data.parking || null,
+        tolls: data.tolls || null,
+        misc_fee: data.misc_fee || null,
+        travel_time_hours: data.travel_time_hours || null,
+        facility_rate_business: data.facility_rate_business || null,
+        facility_rate_after_hours: data.facility_rate_after_hours || null,
+        facility_rate_mileage: data.facility_rate_mileage || null,
+        facility_rate_adjustment: data.facility_rate_adjustment ?? 0,
+        interpreter_rate_business: data.interpreter_rate_business || null,
+        interpreter_rate_after_hours: data.interpreter_rate_after_hours || null,
+        interpreter_rate_mileage: data.interpreter_rate_mileage || null,
+        interpreter_rate_adjustment: data.interpreter_rate_adjustment ?? 0,
+        emergency_fee_applied: data.emergency_fee_applied || false,
+        holiday_fee_applied: data.holiday_fee_applied || false,
+        internal_notes: data.internal_notes || null,
+        client_business_name: data.client_business_name || null,
+        client_contact_name: data.client_contact_name || null,
+        client_contact_phone: data.client_contact_phone || null,
+        client_contact_email: data.client_contact_email || null,
+        potential_interpreter_ids: data.potential_interpreter_ids || [],
+        facility_hourly_total: facilityHourlyTotal,
+        facility_billable_total: facilityBillableTotal,
+        interpreter_hourly_total: interpreterHourlyTotal,
+        interpreter_billable_total: interpreterBillableTotal,
+      };
+      
+      // Save form data first
+      const { error: saveError } = await supabase
+        .from('jobs')
+        .update(payload as never)
+        .eq('id', selectedJobId);
+      if (saveError) throw saveError;
       
       // Generate invoice for facility
       const { error: invoiceError } = await supabase
         .from('invoices')
         .insert({
-          facility_id: job.facility_id,
+          facility_id: data.facility_id,
           job_id: selectedJobId,
           status: 'draft',
         } as never);
@@ -866,18 +969,11 @@ export default function JobDetail() {
       const { error: billError } = await supabase
         .from('interpreter_bills')
         .insert({
-          interpreter_id: job.interpreter_id,
+          interpreter_id: interpreterId,
           job_id: selectedJobId,
           status: 'queued',
         } as never);
       if (billError) throw billError;
-
-      // Update job status to ready_to_bill
-      const { error: jobError } = await supabase
-        .from('jobs')
-        .update({ status: 'ready_to_bill' } as never)
-        .eq('id', selectedJobId);
-      if (jobError) throw jobError;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['job', selectedJobId] });

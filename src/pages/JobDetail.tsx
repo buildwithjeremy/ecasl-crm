@@ -1203,16 +1203,16 @@ export default function JobDetail() {
                   control={form.control}
                   name="potential_interpreter_ids"
                   render={({ field }) => (
-                    <FormItem className="flex flex-col">
+                    <FormItem className="space-y-2">
                       <FormLabel>Potential Interpreters</FormLabel>
-                      <div className="flex gap-2 items-start flex-wrap">
+                      <div className="grid grid-cols-[1fr_auto] gap-2 items-start">
                         <Popover open={potentialInterpretersOpen} onOpenChange={setPotentialInterpretersOpen}>
                           <PopoverTrigger asChild>
                             <FormControl>
                               <Button
                                 variant="outline"
                                 role="combobox"
-                                className={cn('justify-between h-auto min-h-10 flex-1 min-w-[200px]', selectedPotentialInterpreters.length === 0 && 'text-muted-foreground')}
+                                className={cn('w-full justify-between h-auto min-h-10', selectedPotentialInterpreters.length === 0 && 'text-muted-foreground')}
                                 disabled={isLocked}
                               >
                                 <div className="flex flex-wrap gap-1">
@@ -1269,7 +1269,7 @@ export default function JobDetail() {
                             <Button
                               type="button"
                               variant="outline"
-                              size="sm"
+                              className="h-10 whitespace-nowrap"
                               disabled={isLocked || !canSendOutreach || sendOutreachMutation.isPending}
                             >
                               <Mail className="mr-2 h-4 w-4" />
@@ -1298,20 +1298,20 @@ export default function JobDetail() {
                 />
 
                 {/* Row 4: Selected Interpreter with Confirm */}
-                <div className="flex gap-2 items-end flex-wrap">
-                  <FormField
-                    control={form.control}
-                    name="interpreter_id"
-                    render={({ field }) => (
-                      <FormItem className="flex flex-col flex-1 min-w-[200px]">
-                        <FormLabel>Selected Interpreter</FormLabel>
+                <FormField
+                  control={form.control}
+                  name="interpreter_id"
+                  render={({ field }) => (
+                    <FormItem className="space-y-2">
+                      <FormLabel>Selected Interpreter</FormLabel>
+                      <div className="grid grid-cols-[1fr_auto] gap-2 items-start">
                         <Popover open={interpreterOpen} onOpenChange={setInterpreterOpen}>
                           <PopoverTrigger asChild>
                             <FormControl>
                               <Button
                                 variant="outline"
                                 role="combobox"
-                                className={cn('justify-between', !field.value && 'text-muted-foreground')}
+                                className={cn('w-full justify-between h-10', !field.value && 'text-muted-foreground')}
                                 disabled={isLocked}
                               >
                                 {selectedInterpreter
@@ -1347,39 +1347,39 @@ export default function JobDetail() {
                             </Command>
                           </PopoverContent>
                         </Popover>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  
-                  <AlertDialog>
-                    <AlertDialogTrigger asChild>
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="sm"
-                        disabled={isLocked || !canConfirmInterpreter || confirmInterpreterMutation.isPending}
-                      >
-                        <Check className="mr-2 h-4 w-4" />
-                        {confirmInterpreterMutation.isPending ? 'Confirming...' : 'Confirm Interpreter'}
-                      </Button>
-                    </AlertDialogTrigger>
-                    <AlertDialogContent>
-                      <AlertDialogHeader>
-                        <AlertDialogTitle>Confirm Interpreter?</AlertDialogTitle>
-                        <AlertDialogDescription>
-                          This will assign {selectedInterpreter ? `${selectedInterpreter.first_name} ${selectedInterpreter.last_name}` : 'the interpreter'} to this job, save all changes, and update the job status to "Confirmed".
-                        </AlertDialogDescription>
-                      </AlertDialogHeader>
-                      <AlertDialogFooter>
-                        <AlertDialogCancel>Cancel</AlertDialogCancel>
-                        <AlertDialogAction onClick={() => confirmInterpreterMutation.mutate()}>
-                          Confirm
-                        </AlertDialogAction>
-                      </AlertDialogFooter>
-                    </AlertDialogContent>
-                  </AlertDialog>
-                </div>
+                        
+                        <AlertDialog>
+                          <AlertDialogTrigger asChild>
+                            <Button
+                              type="button"
+                              variant="outline"
+                              className="h-10 whitespace-nowrap"
+                              disabled={isLocked || !canConfirmInterpreter || confirmInterpreterMutation.isPending}
+                            >
+                              <Mail className="mr-2 h-4 w-4" />
+                              {confirmInterpreterMutation.isPending ? 'Confirming...' : 'Confirm Interpreter'}
+                            </Button>
+                          </AlertDialogTrigger>
+                          <AlertDialogContent>
+                            <AlertDialogHeader>
+                              <AlertDialogTitle>Confirm Interpreter?</AlertDialogTitle>
+                              <AlertDialogDescription>
+                                This will assign {selectedInterpreter ? `${selectedInterpreter.first_name} ${selectedInterpreter.last_name}` : 'the interpreter'} to this job, save all changes, and update the job status to "Confirmed".
+                              </AlertDialogDescription>
+                            </AlertDialogHeader>
+                            <AlertDialogFooter>
+                              <AlertDialogCancel>Cancel</AlertDialogCancel>
+                              <AlertDialogAction onClick={() => confirmInterpreterMutation.mutate()}>
+                                Confirm
+                              </AlertDialogAction>
+                            </AlertDialogFooter>
+                          </AlertDialogContent>
+                        </AlertDialog>
+                      </div>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
               </CardContent>
             </Card>
 

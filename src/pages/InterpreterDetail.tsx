@@ -32,8 +32,9 @@ import {
   PopoverTrigger,
 } from '@/components/ui/popover';
 import { useToast } from '@/hooks/use-toast';
-import { ArrowLeft, Check, ChevronsUpDown, Save } from 'lucide-react';
+import { ArrowLeft, Check, ChevronsUpDown } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { Badge } from '@/components/ui/badge';
 import type { Database } from '@/types/database';
 
 type Interpreter = Database['public']['Tables']['interpreters']['Row'];
@@ -66,6 +67,12 @@ const interpreterSchema = z.object({
 });
 
 type FormData = z.infer<typeof interpreterSchema>;
+
+const statusLabels: Record<string, string> = {
+  active: 'Active',
+  inactive: 'Inactive',
+  pending: 'Pending',
+};
 
 export default function InterpreterDetail() {
   const { id } = useParams<{ id: string }>();
@@ -200,6 +207,7 @@ export default function InterpreterDetail() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['interpreters'] });
       queryClient.invalidateQueries({ queryKey: ['interpreter', selectedInterpreterId] });
+      form.reset(form.getValues());
       toast({ title: 'Interpreter updated successfully' });
     },
     onError: (error) => {
@@ -214,38 +222,32 @@ export default function InterpreterDetail() {
   const selectedInterpreter = interpreters?.find(i => i.id === selectedInterpreterId);
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center gap-4">
-        <Button variant="ghost" size="icon" onClick={() => navigate('/interpreters')}>
-          <ArrowLeft className="h-4 w-4" />
-        </Button>
-        <div>
-          <h1 className="text-3xl font-bold text-foreground">Interpreter Details</h1>
-          <p className="text-muted-foreground">View and edit interpreter information</p>
-        </div>
-      </div>
-
-      {/* Interpreter Search/Select */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Select Interpreter</CardTitle>
-        </CardHeader>
-        <CardContent>
+    <div className="space-y-4">
+      {/* Sticky Header */}
+      <div className="sticky top-14 z-10 bg-background py-3 border-b -mx-6 px-6 -mt-6 mb-4">
+        <div className="flex items-center gap-3">
+          <Button variant="ghost" size="icon" onClick={() => navigate('/interpreters')}>
+            <ArrowLeft className="h-4 w-4" />
+          </Button>
+          <h1 className="text-xl font-bold text-foreground">
+            {interpreter ? `${interpreter.first_name} ${interpreter.last_name}` : 'Interpreter Details'}
+          </h1>
+          
+          {/* Compact Interpreter Selector */}
           <Popover open={searchOpen} onOpenChange={setSearchOpen}>
             <PopoverTrigger asChild>
               <Button
                 variant="outline"
                 role="combobox"
-                aria-expanded={searchOpen}
-                className="w-full max-w-md justify-between"
+                className="w-[200px] justify-between text-sm"
               >
                 {selectedInterpreter
                   ? `${selectedInterpreter.first_name} ${selectedInterpreter.last_name}`
-                  : "Search for an interpreter..."}
+                  : 'Select interpreter...'}
                 <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
               </Button>
             </PopoverTrigger>
-            <PopoverContent className="w-full max-w-md p-0">
+            <PopoverContent className="w-[300px] p-0">
               <Command>
                 <CommandInput placeholder="Search interpreters..." />
                 <CommandList>
@@ -262,8 +264,8 @@ export default function InterpreterDetail() {
                       >
                         <Check
                           className={cn(
-                            "mr-2 h-4 w-4",
-                            selectedInterpreterId === i.id ? "opacity-100" : "opacity-0"
+                            'mr-2 h-4 w-4',
+                            selectedInterpreterId === i.id ? 'opacity-100' : 'opacity-0'
                           )}
                         />
                         {i.first_name} {i.last_name}
@@ -274,20 +276,42 @@ export default function InterpreterDetail() {
               </Command>
             </PopoverContent>
           </Popover>
-        </CardContent>
-      </Card>
 
-      {/* Interpreter Details Form */}
+          {interpreter?.status && (
+            <Badge variant="secondary">{statusLabels[interpreter.status]}</Badge>
+          )}
+
+          {/* Save button in header with unsaved indicator */}
+          {interpreter && (
+            <div className="ml-auto flex items-center gap-2">
+              {form.formState.isDirty && (
+                <span className="flex items-center gap-1 text-sm text-muted-foreground">
+                  <span className="h-2 w-2 rounded-full bg-orange-500" />
+                  Unsaved
+                </span>
+              )}
+              <Button 
+                type="submit" 
+                form="interpreter-detail-form"
+                disabled={mutation.isPending}
+              >
+                {mutation.isPending ? 'Saving...' : 'Save Changes'}
+              </Button>
+            </div>
+          )}
+        </div>
+      </div>
+
       {isLoading && selectedInterpreterId && (
         <div className="text-muted-foreground">Loading interpreter details...</div>
       )}
 
       {interpreter && (
-        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+        <form id="interpreter-detail-form" onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
           {/* Personal Information */}
           <Card>
-            <CardHeader>
-              <CardTitle>Personal Information</CardTitle>
+            <CardHeader className="pb-4">
+              <CardTitle className="text-lg">Personal Information</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="grid grid-cols-2 gap-4">
@@ -326,7 +350,7 @@ export default function InterpreterDetail() {
                   <Label htmlFor="status">Status</Label>
                   <Select
                     value={form.watch('status')}
-                    onValueChange={(value) => form.setValue('status', value as 'active' | 'inactive' | 'pending')}
+                    onValueChange={(value) => form.setValue('status', value as 'active' | 'inactive' | 'pending', { shouldDirty: true })}
                   >
                     <SelectTrigger>
                       <SelectValue />
@@ -348,8 +372,8 @@ export default function InterpreterDetail() {
 
           {/* Address */}
           <Card>
-            <CardHeader>
-              <CardTitle>Address</CardTitle>
+            <CardHeader className="pb-4">
+              <CardTitle className="text-lg">Address</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="space-y-2">
@@ -375,8 +399,8 @@ export default function InterpreterDetail() {
 
           {/* Certifications */}
           <Card>
-            <CardHeader>
-              <CardTitle>Certifications</CardTitle>
+            <CardHeader className="pb-4">
+              <CardTitle className="text-lg">Certifications</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="flex gap-6">
@@ -384,7 +408,7 @@ export default function InterpreterDetail() {
                   <Checkbox
                     id="rid_certified"
                     checked={form.watch('rid_certified')}
-                    onCheckedChange={(checked) => form.setValue('rid_certified', !!checked)}
+                    onCheckedChange={(checked) => form.setValue('rid_certified', !!checked, { shouldDirty: true })}
                   />
                   <Label htmlFor="rid_certified">RID Certified</Label>
                 </div>
@@ -392,7 +416,7 @@ export default function InterpreterDetail() {
                   <Checkbox
                     id="nic_certified"
                     checked={form.watch('nic_certified')}
-                    onCheckedChange={(checked) => form.setValue('nic_certified', !!checked)}
+                    onCheckedChange={(checked) => form.setValue('nic_certified', !!checked, { shouldDirty: true })}
                   />
                   <Label htmlFor="nic_certified">NIC Certified</Label>
                 </div>
@@ -406,8 +430,8 @@ export default function InterpreterDetail() {
 
           {/* Rates */}
           <Card>
-            <CardHeader>
-              <CardTitle>Rates (What We Pay)</CardTitle>
+            <CardHeader className="pb-4">
+              <CardTitle className="text-lg">Rates (What We Pay)</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="grid grid-cols-3 gap-4">
@@ -433,7 +457,7 @@ export default function InterpreterDetail() {
                   <Checkbox
                     id="eligible_emergency_fee"
                     checked={form.watch('eligible_emergency_fee')}
-                    onCheckedChange={(checked) => form.setValue('eligible_emergency_fee', !!checked)}
+                    onCheckedChange={(checked) => form.setValue('eligible_emergency_fee', !!checked, { shouldDirty: true })}
                   />
                   <Label htmlFor="eligible_emergency_fee">Eligible for Emergency Fee</Label>
                 </div>
@@ -441,7 +465,7 @@ export default function InterpreterDetail() {
                   <Checkbox
                     id="eligible_holiday_fee"
                     checked={form.watch('eligible_holiday_fee')}
-                    onCheckedChange={(checked) => form.setValue('eligible_holiday_fee', !!checked)}
+                    onCheckedChange={(checked) => form.setValue('eligible_holiday_fee', !!checked, { shouldDirty: true })}
                   />
                   <Label htmlFor="eligible_holiday_fee">Eligible for Holiday Fee</Label>
                 </div>
@@ -449,10 +473,10 @@ export default function InterpreterDetail() {
             </CardContent>
           </Card>
 
-          {/* Payment & Contract */}
+          {/* Payment */}
           <Card>
-            <CardHeader>
-              <CardTitle>Payment & Contract</CardTitle>
+            <CardHeader className="pb-4">
+              <CardTitle className="text-lg">Payment Information</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="grid grid-cols-2 gap-4">
@@ -460,7 +484,7 @@ export default function InterpreterDetail() {
                   <Label htmlFor="payment_method">Payment Method</Label>
                   <Select
                     value={form.watch('payment_method') || ''}
-                    onValueChange={(value) => form.setValue('payment_method', value as 'zelle' | 'check' | null)}
+                    onValueChange={(value) => form.setValue('payment_method', value as 'zelle' | 'check' | null, { shouldDirty: true })}
                   >
                     <SelectTrigger>
                       <SelectValue placeholder="Select method" />
@@ -473,16 +497,24 @@ export default function InterpreterDetail() {
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="payment_details">Payment Details</Label>
-                  <Input id="payment_details" {...form.register('payment_details')} />
+                  <Input id="payment_details" {...form.register('payment_details')} placeholder="Zelle email or mailing address" />
                 </div>
               </div>
+            </CardContent>
+          </Card>
 
+          {/* Contract & Compliance */}
+          <Card>
+            <CardHeader className="pb-4">
+              <CardTitle className="text-lg">Contract & Compliance</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label htmlFor="contract_status">Contract Status</Label>
                   <Select
                     value={form.watch('contract_status')}
-                    onValueChange={(value) => form.setValue('contract_status', value as 'not_sent' | 'sent' | 'signed')}
+                    onValueChange={(value) => form.setValue('contract_status', value as 'not_sent' | 'sent' | 'signed', { shouldDirty: true })}
                   >
                     <SelectTrigger>
                       <SelectValue />
@@ -498,9 +530,9 @@ export default function InterpreterDetail() {
                   <Checkbox
                     id="w9_received"
                     checked={form.watch('w9_received')}
-                    onCheckedChange={(checked) => form.setValue('w9_received', !!checked)}
+                    onCheckedChange={(checked) => form.setValue('w9_received', !!checked, { shouldDirty: true })}
                   />
-                  <Label htmlFor="w9_received">W9 Received</Label>
+                  <Label htmlFor="w9_received">W-9 Received</Label>
                 </div>
               </div>
             </CardContent>
@@ -508,22 +540,22 @@ export default function InterpreterDetail() {
 
           {/* Notes */}
           <Card>
-            <CardHeader>
-              <CardTitle>Notes</CardTitle>
+            <CardHeader className="pb-4">
+              <CardTitle className="text-lg">Notes</CardTitle>
             </CardHeader>
             <CardContent>
               <Textarea id="notes" {...form.register('notes')} rows={4} />
             </CardContent>
           </Card>
-
-          {/* Save Button */}
-          <div className="flex justify-end">
-            <Button type="submit" disabled={mutation.isPending}>
-              <Save className="mr-2 h-4 w-4" />
-              {mutation.isPending ? 'Saving...' : 'Save Changes'}
-            </Button>
-          </div>
         </form>
+      )}
+
+      {!selectedInterpreterId && (
+        <Card>
+          <CardContent className="py-6">
+            <p className="text-muted-foreground">Select an interpreter to view details.</p>
+          </CardContent>
+        </Card>
       )}
     </div>
   );

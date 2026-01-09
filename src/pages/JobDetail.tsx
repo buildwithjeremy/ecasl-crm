@@ -1631,7 +1631,35 @@ export default function JobDetail() {
             {/* Billing Summary Card */}
             <Card>
               <CardHeader className="pb-4">
-                <CardTitle className="text-lg">Billing</CardTitle>
+                <div className="flex items-center justify-between">
+                  <CardTitle className="text-lg">Billing</CardTitle>
+                  <AlertDialog>
+                    <AlertDialogTrigger asChild>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        disabled={isLocked || !canGenerateBilling || generateBillingMutation.isPending}
+                      >
+                        {generateBillingMutation.isPending ? 'Generating...' : 'Generate Invoice & Bill'}
+                      </Button>
+                    </AlertDialogTrigger>
+                    <AlertDialogContent>
+                      <AlertDialogHeader>
+                        <AlertDialogTitle>Generate Invoice & Interpreter Bill?</AlertDialogTitle>
+                        <AlertDialogDescription>
+                          This will create a new invoice for the facility and a new bill for {selectedInterpreter ? `${selectedInterpreter.first_name} ${selectedInterpreter.last_name}` : 'the interpreter'}. The job status will be changed to "Ready to Bill".
+                        </AlertDialogDescription>
+                      </AlertDialogHeader>
+                      <AlertDialogFooter>
+                        <AlertDialogCancel>Cancel</AlertDialogCancel>
+                        <AlertDialogAction onClick={() => generateBillingMutation.mutate()}>
+                          Generate
+                        </AlertDialogAction>
+                      </AlertDialogFooter>
+                    </AlertDialogContent>
+                  </AlertDialog>
+                </div>
               </CardHeader>
               <CardContent className="space-y-4">
                 {/* Facility Rates Chips */}
@@ -1927,33 +1955,6 @@ export default function JobDetail() {
               </CardContent>
             </Card>
 
-            <div className="flex justify-end gap-2">
-              <AlertDialog>
-                <AlertDialogTrigger asChild>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    disabled={isLocked || !canGenerateBilling || generateBillingMutation.isPending}
-                  >
-                    {generateBillingMutation.isPending ? 'Generating...' : 'Generate Invoice & Bill'}
-                  </Button>
-                </AlertDialogTrigger>
-                <AlertDialogContent>
-                  <AlertDialogHeader>
-                    <AlertDialogTitle>Generate Invoice & Interpreter Bill?</AlertDialogTitle>
-                    <AlertDialogDescription>
-                      This will create a new invoice for the facility and a new bill for {selectedInterpreter ? `${selectedInterpreter.first_name} ${selectedInterpreter.last_name}` : 'the interpreter'}. The job status will be changed to "Ready to Bill".
-                    </AlertDialogDescription>
-                  </AlertDialogHeader>
-                  <AlertDialogFooter>
-                    <AlertDialogCancel>Cancel</AlertDialogCancel>
-                    <AlertDialogAction onClick={() => generateBillingMutation.mutate()}>
-                      Generate
-                    </AlertDialogAction>
-                  </AlertDialogFooter>
-                </AlertDialogContent>
-              </AlertDialog>
-            </div>
           </form>
         </Form>
       )}

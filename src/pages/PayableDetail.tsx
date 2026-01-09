@@ -279,9 +279,7 @@ export default function PayableDetail() {
               <div className="space-y-1">
                 <p className="text-sm font-medium text-muted-foreground">Overall Total</p>
                 <p className="text-lg font-semibold text-primary">
-                  {formatCurrency(
-                    (payable.job?.interpreter_hourly_total ?? 0) + (payable.job?.interpreter_billable_total ?? 0)
-                  )}
+                  {formatCurrency(payable.job?.interpreter_billable_total)}
                 </p>
               </div>
             </div>

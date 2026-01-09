@@ -269,8 +269,12 @@ export default function PayableDetail() {
                 <p className="text-lg font-semibold">{formatCurrency(payable.job?.interpreter_hourly_total)}</p>
               </div>
               <div className="space-y-1">
-                <p className="text-sm font-medium text-muted-foreground">Billable Total</p>
-                <p className="text-lg font-semibold">{formatCurrency(payable.job?.interpreter_billable_total)}</p>
+                <p className="text-sm font-medium text-muted-foreground">Travel/Fee Total</p>
+                <p className="text-lg font-semibold">
+                  {formatCurrency(
+                    (payable.job?.interpreter_billable_total ?? 0) - (payable.job?.interpreter_hourly_total ?? 0)
+                  )}
+                </p>
               </div>
               <div className="space-y-1">
                 <p className="text-sm font-medium text-muted-foreground">Overall Total</p>

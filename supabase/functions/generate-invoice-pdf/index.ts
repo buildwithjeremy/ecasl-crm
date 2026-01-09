@@ -144,13 +144,6 @@ function generatePdf(data: InvoiceData): Uint8Array {
   doc.setFontSize(11);
   doc.text(`TOTAL DUE: ${formatCurrency(data.total)}`, rightX, y, { align: "right" });
   
-  // Thank you
-  y += 20;
-  doc.setFont("helvetica", "normal");
-  doc.setFontSize(10);
-  doc.setTextColor(100, 100, 100);
-  doc.text("THANK YOU.", 14, y);
-  
   // Return as Uint8Array
   return doc.output("arraybuffer") as unknown as Uint8Array;
 }

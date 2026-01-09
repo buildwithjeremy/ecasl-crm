@@ -1349,21 +1349,23 @@ export default function JobDetail() {
                               <CommandList>
                                 <CommandEmpty>No interpreter found.</CommandEmpty>
                                 <CommandGroup>
-                                  {interpreters?.map((interpreter) => (
-                                    <CommandItem
-                                      key={interpreter.id}
-                                      value={`${interpreter.first_name} ${interpreter.last_name}`}
-                                      onSelect={() => {
-                                        field.onChange(interpreter.id);
-                                        setInterpreterOpen(false);
-                                      }}
-                                    >
-                                      <Check
-                                        className={cn('mr-2 h-4 w-4', field.value === interpreter.id ? 'opacity-100' : 'opacity-0')}
-                                      />
-                                      {interpreter.first_name} {interpreter.last_name}
-                                    </CommandItem>
-                                  ))}
+                                  {interpreters
+                                    ?.filter((interpreter) => watchedPotentialInterpreterIds?.includes(interpreter.id))
+                                    .map((interpreter) => (
+                                      <CommandItem
+                                        key={interpreter.id}
+                                        value={`${interpreter.first_name} ${interpreter.last_name}`}
+                                        onSelect={() => {
+                                          field.onChange(interpreter.id);
+                                          setInterpreterOpen(false);
+                                        }}
+                                      >
+                                        <Check
+                                          className={cn('mr-2 h-4 w-4', field.value === interpreter.id ? 'opacity-100' : 'opacity-0')}
+                                        />
+                                        {interpreter.first_name} {interpreter.last_name}
+                                      </CommandItem>
+                                    ))}
                                 </CommandGroup>
                               </CommandList>
                             </Command>

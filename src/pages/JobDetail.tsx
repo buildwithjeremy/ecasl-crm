@@ -141,6 +141,8 @@ const formSchema = z.object({
   interpreter_rate_business: z.coerce.number().optional(),
   interpreter_rate_after_hours: z.coerce.number().optional(),
   interpreter_rate_mileage: z.coerce.number().optional(),
+  facility_rate_adjustment: z.coerce.number().optional(),
+  interpreter_rate_adjustment: z.coerce.number().optional(),
   emergency_fee_applied: z.boolean().optional(),
   holiday_fee_applied: z.boolean().optional(),
   internal_notes: z.string().optional(),
@@ -176,6 +178,7 @@ export default function JobDetail() {
   const [facilityRatesDialogOpen, setFacilityRatesDialogOpen] = useState(false);
   const [interpreterRatesDialogOpen, setInterpreterRatesDialogOpen] = useState(false);
   const [expensesDialogOpen, setExpensesDialogOpen] = useState(false);
+  const [rateAdjustmentsDialogOpen, setRateAdjustmentsDialogOpen] = useState(false);
   const [clientContactDialogOpen, setClientContactDialogOpen] = useState(false);
   
   const { toast } = useToast();
@@ -488,6 +491,8 @@ export default function JobDetail() {
   const rawInterpreterRateBusiness = form.watch('interpreter_rate_business');
   const rawInterpreterRateAfterHours = form.watch('interpreter_rate_after_hours');
   const rawInterpreterRateMileage = form.watch('interpreter_rate_mileage');
+  const rawFacilityRateAdjustment = form.watch('facility_rate_adjustment');
+  const rawInterpreterRateAdjustment = form.watch('interpreter_rate_adjustment');
 
   // Convert to safe numbers (handle empty strings, undefined, NaN)
   const toSafeNumber = (val: unknown, fallback: number = 0): number => {
@@ -512,6 +517,8 @@ export default function JobDetail() {
   const watchedInterpreterRateBusiness = toSafeNumber(rawInterpreterRateBusiness);
   const watchedInterpreterRateAfterHours = toSafeNumber(rawInterpreterRateAfterHours);
   const watchedInterpreterRateMileage = toSafeNumber(rawInterpreterRateMileage);
+  const watchedFacilityRateAdjustment = toSafeNumber(rawFacilityRateAdjustment);
+  const watchedInterpreterRateAdjustment = toSafeNumber(rawInterpreterRateAdjustment);
 
   // Calculate billable totals
   const billableTotal = useMemo(() => {
@@ -537,18 +544,26 @@ export default function JobDetail() {
       ? watchedInterpreterRateMileage 
       : (selectedInterpreter?.rate_mileage ?? 0);
     
-    // Determine travel time rate based on which hour type has more hours
-    const interpreterTravelTimeRate = hoursSplit.businessHours >= hoursSplit.afterHours 
-      ? interpreterBusinessRate 
-      : interpreterAfterHoursRate;
+    // Apply rate adjustments to hourly rates (added before multiplying by hours)
+    const adjustedFacilityBusinessRate = facilityBusinessRate + watchedFacilityRateAdjustment;
+    const adjustedFacilityAfterHoursRate = facilityAfterHoursRate + watchedFacilityRateAdjustment;
+    const adjustedInterpreterBusinessRate = interpreterBusinessRate + watchedInterpreterRateAdjustment;
+    const adjustedInterpreterAfterHoursRate = interpreterAfterHoursRate + watchedInterpreterRateAdjustment;
     
-    const facilityBusinessTotal = hoursSplit.businessHours * facilityBusinessRate;
-    const facilityAfterHoursTotal = hoursSplit.afterHours * facilityAfterHoursRate;
+    // Determine travel time rate based on which hour type has more hours (use adjusted rate)
+    const interpreterTravelTimeRate = hoursSplit.businessHours >= hoursSplit.afterHours 
+      ? adjustedInterpreterBusinessRate 
+      : adjustedInterpreterAfterHoursRate;
+    
+    // Facility calculations with adjusted rates
+    const facilityBusinessTotal = hoursSplit.businessHours * adjustedFacilityBusinessRate;
+    const facilityAfterHoursTotal = hoursSplit.afterHours * adjustedFacilityAfterHoursRate;
     const facilityMileageTotal = watchedMileage * facilityMileageRate;
     const facilityFeesTotal = watchedParking + watchedTolls + watchedMiscFee;
     
-    const interpreterBusinessTotal = hoursSplit.businessHours * interpreterBusinessRate;
-    const interpreterAfterHoursTotal = hoursSplit.afterHours * interpreterAfterHoursRate;
+    // Interpreter calculations with adjusted rates
+    const interpreterBusinessTotal = hoursSplit.businessHours * adjustedInterpreterBusinessRate;
+    const interpreterAfterHoursTotal = hoursSplit.afterHours * adjustedInterpreterAfterHoursRate;
     const interpreterMileageTotal = watchedMileage * interpreterMileageRate;
     const interpreterTravelTimeTotal = watchedTravelTime * interpreterTravelTimeRate;
     const interpreterFeesTotal = watchedParking + watchedTolls + watchedMiscFee;
@@ -560,8 +575,9 @@ export default function JobDetail() {
       facilityMileageRate,
       facilityFeesTotal,
       facilityTotal: facilityBusinessTotal + facilityAfterHoursTotal + facilityMileageTotal + facilityFeesTotal,
-      facilityBusinessRate,
-      facilityAfterHoursRate,
+      facilityBusinessRate: adjustedFacilityBusinessRate,
+      facilityAfterHoursRate: adjustedFacilityAfterHoursRate,
+      facilityRateAdjustment: watchedFacilityRateAdjustment,
       interpreterBusinessTotal,
       interpreterAfterHoursTotal,
       interpreterMileageTotal,
@@ -570,15 +586,16 @@ export default function JobDetail() {
       interpreterTravelTimeRate,
       interpreterFeesTotal,
       interpreterTotal: interpreterBusinessTotal + interpreterAfterHoursTotal + interpreterMileageTotal + interpreterTravelTimeTotal + interpreterFeesTotal,
-      interpreterBusinessRate,
-      interpreterAfterHoursRate,
+      interpreterBusinessRate: adjustedInterpreterBusinessRate,
+      interpreterAfterHoursRate: adjustedInterpreterAfterHoursRate,
+      interpreterRateAdjustment: watchedInterpreterRateAdjustment,
       mileage: watchedMileage,
       travelTimeHours: watchedTravelTime,
       parking: watchedParking,
       tolls: watchedTolls,
       miscFee: watchedMiscFee,
     };
-  }, [hoursSplit, selectedFacility, selectedInterpreter, watchedMileage, watchedTravelTime, watchedParking, watchedTolls, watchedMiscFee, rawFacilityRateBusiness, rawFacilityRateAfterHours, rawFacilityRateMileage, rawInterpreterRateBusiness, rawInterpreterRateAfterHours, rawInterpreterRateMileage, watchedFacilityRateBusiness, watchedFacilityRateAfterHours, watchedFacilityRateMileage, watchedInterpreterRateBusiness, watchedInterpreterRateAfterHours, watchedInterpreterRateMileage]);
+  }, [hoursSplit, selectedFacility, selectedInterpreter, watchedMileage, watchedTravelTime, watchedParking, watchedTolls, watchedMiscFee, rawFacilityRateBusiness, rawFacilityRateAfterHours, rawFacilityRateMileage, rawInterpreterRateBusiness, rawInterpreterRateAfterHours, rawInterpreterRateMileage, watchedFacilityRateBusiness, watchedFacilityRateAfterHours, watchedFacilityRateMileage, watchedInterpreterRateBusiness, watchedInterpreterRateAfterHours, watchedInterpreterRateMileage, watchedFacilityRateAdjustment, watchedInterpreterRateAdjustment]);
 
   const mutation = useMutation({
     mutationFn: async (data: FormData) => {
@@ -598,6 +615,10 @@ export default function JobDetail() {
         const interpreterAfterHoursRate = data.interpreter_rate_after_hours ?? selectedInterpreter?.rate_after_hours ?? 0;
         const interpreterMileageRate = data.interpreter_rate_mileage ?? selectedInterpreter?.rate_mileage ?? 0;
         
+        // Get rate adjustments
+        const facilityRateAdjustment = data.facility_rate_adjustment ?? 0;
+        const interpreterRateAdjustment = data.interpreter_rate_adjustment ?? 0;
+        
         const mileage = data.mileage ?? 0;
         const travelTimeHours = data.travel_time_hours ?? 0;
         const parking = data.parking ?? 0;
@@ -607,22 +628,26 @@ export default function JobDetail() {
         // Get trilingual uplift from existing job data
         const trilingualUplift = job?.trilingual_rate_uplift ?? 0;
         
-        // Facility calculations - add trilingual uplift to hourly rates before multiplying
-        const facilityBusinessTotal = hoursSplit.businessHours * (facilityBusinessRate + trilingualUplift);
-        const facilityAfterHoursTotal = hoursSplit.afterHours * (facilityAfterHoursRate + trilingualUplift);
+        // Facility calculations - add trilingual uplift and rate adjustment to hourly rates before multiplying
+        const adjustedFacilityBusinessRate = facilityBusinessRate + trilingualUplift + facilityRateAdjustment;
+        const adjustedFacilityAfterHoursRate = facilityAfterHoursRate + trilingualUplift + facilityRateAdjustment;
+        const facilityBusinessTotal = hoursSplit.businessHours * adjustedFacilityBusinessRate;
+        const facilityAfterHoursTotal = hoursSplit.afterHours * adjustedFacilityAfterHoursRate;
         facilityHourlyTotal = facilityBusinessTotal + facilityAfterHoursTotal;
         const facilityMileageTotal = mileage * facilityMileageRate;
         const facilityFeesTotal = parking + tolls + miscFee;
         facilityBillableTotal = facilityHourlyTotal + facilityMileageTotal + facilityFeesTotal;
         
-        // Interpreter calculations
-        const interpreterBusinessTotal = hoursSplit.businessHours * interpreterBusinessRate;
-        const interpreterAfterHoursTotal = hoursSplit.afterHours * interpreterAfterHoursRate;
+        // Interpreter calculations - add rate adjustment to hourly rates before multiplying
+        const adjustedInterpreterBusinessRate = interpreterBusinessRate + interpreterRateAdjustment;
+        const adjustedInterpreterAfterHoursRate = interpreterAfterHoursRate + interpreterRateAdjustment;
+        const interpreterBusinessTotal = hoursSplit.businessHours * adjustedInterpreterBusinessRate;
+        const interpreterAfterHoursTotal = hoursSplit.afterHours * adjustedInterpreterAfterHoursRate;
         interpreterHourlyTotal = interpreterBusinessTotal + interpreterAfterHoursTotal;
         const interpreterMileageTotal = mileage * interpreterMileageRate;
         const interpreterTravelTimeRate = hoursSplit.businessHours >= hoursSplit.afterHours 
-          ? interpreterBusinessRate 
-          : interpreterAfterHoursRate;
+          ? adjustedInterpreterBusinessRate 
+          : adjustedInterpreterAfterHoursRate;
         const interpreterTravelTimeTotal = travelTimeHours * interpreterTravelTimeRate;
         const interpreterFeesTotal = parking + tolls + miscFee;
         interpreterBillableTotal = interpreterHourlyTotal + interpreterMileageTotal + interpreterTravelTimeTotal + interpreterFeesTotal;
@@ -652,9 +677,11 @@ export default function JobDetail() {
         facility_rate_business: data.facility_rate_business || null,
         facility_rate_after_hours: data.facility_rate_after_hours || null,
         facility_rate_mileage: data.facility_rate_mileage || null,
+        facility_rate_adjustment: data.facility_rate_adjustment ?? 0,
         interpreter_rate_business: data.interpreter_rate_business || null,
         interpreter_rate_after_hours: data.interpreter_rate_after_hours || null,
         interpreter_rate_mileage: data.interpreter_rate_mileage || null,
+        interpreter_rate_adjustment: data.interpreter_rate_adjustment ?? 0,
         emergency_fee_applied: data.emergency_fee_applied || false,
         holiday_fee_applied: data.holiday_fee_applied || false,
         internal_notes: data.internal_notes || null,
@@ -709,6 +736,10 @@ export default function JobDetail() {
         const interpreterAfterHoursRate = data.interpreter_rate_after_hours ?? selectedInterpreter?.rate_after_hours ?? 0;
         const interpreterMileageRate = data.interpreter_rate_mileage ?? selectedInterpreter?.rate_mileage ?? 0;
         
+        // Get rate adjustments
+        const facilityRateAdjustment = data.facility_rate_adjustment ?? 0;
+        const interpreterRateAdjustment = data.interpreter_rate_adjustment ?? 0;
+        
         const mileage = data.mileage ?? 0;
         const travelTimeHours = data.travel_time_hours ?? 0;
         const parking = data.parking ?? 0;
@@ -717,20 +748,26 @@ export default function JobDetail() {
         
         const trilingualUplift = job?.trilingual_rate_uplift ?? 0;
         
-        const facilityBusinessTotal = hoursSplit.businessHours * (facilityBusinessRate + trilingualUplift);
-        const facilityAfterHoursTotal = hoursSplit.afterHours * (facilityAfterHoursRate + trilingualUplift);
+        // Facility calculations with rate adjustment
+        const adjustedFacilityBusinessRate = facilityBusinessRate + trilingualUplift + facilityRateAdjustment;
+        const adjustedFacilityAfterHoursRate = facilityAfterHoursRate + trilingualUplift + facilityRateAdjustment;
+        const facilityBusinessTotal = hoursSplit.businessHours * adjustedFacilityBusinessRate;
+        const facilityAfterHoursTotal = hoursSplit.afterHours * adjustedFacilityAfterHoursRate;
         facilityHourlyTotal = facilityBusinessTotal + facilityAfterHoursTotal;
         const facilityMileageTotal = mileage * facilityMileageRate;
         const facilityFeesTotal = parking + tolls + miscFee;
         facilityBillableTotal = facilityHourlyTotal + facilityMileageTotal + facilityFeesTotal;
         
-        const interpreterBusinessTotal = hoursSplit.businessHours * interpreterBusinessRate;
-        const interpreterAfterHoursTotal = hoursSplit.afterHours * interpreterAfterHoursRate;
+        // Interpreter calculations with rate adjustment
+        const adjustedInterpreterBusinessRate = interpreterBusinessRate + interpreterRateAdjustment;
+        const adjustedInterpreterAfterHoursRate = interpreterAfterHoursRate + interpreterRateAdjustment;
+        const interpreterBusinessTotal = hoursSplit.businessHours * adjustedInterpreterBusinessRate;
+        const interpreterAfterHoursTotal = hoursSplit.afterHours * adjustedInterpreterAfterHoursRate;
         interpreterHourlyTotal = interpreterBusinessTotal + interpreterAfterHoursTotal;
         const interpreterMileageTotal = mileage * interpreterMileageRate;
         const interpreterTravelTimeRate = hoursSplit.businessHours >= hoursSplit.afterHours 
-          ? interpreterBusinessRate 
-          : interpreterAfterHoursRate;
+          ? adjustedInterpreterBusinessRate 
+          : adjustedInterpreterAfterHoursRate;
         const interpreterTravelTimeTotal = travelTimeHours * interpreterTravelTimeRate;
         const interpreterFeesTotal = parking + tolls + miscFee;
         interpreterBillableTotal = interpreterHourlyTotal + interpreterMileageTotal + interpreterTravelTimeTotal + interpreterFeesTotal;
@@ -760,9 +797,11 @@ export default function JobDetail() {
         facility_rate_business: data.facility_rate_business || null,
         facility_rate_after_hours: data.facility_rate_after_hours || null,
         facility_rate_mileage: data.facility_rate_mileage || null,
+        facility_rate_adjustment: data.facility_rate_adjustment ?? 0,
         interpreter_rate_business: data.interpreter_rate_business || null,
         interpreter_rate_after_hours: data.interpreter_rate_after_hours || null,
         interpreter_rate_mileage: data.interpreter_rate_mileage || null,
+        interpreter_rate_adjustment: data.interpreter_rate_adjustment ?? 0,
         emergency_fee_applied: data.emergency_fee_applied || false,
         holiday_fee_applied: data.holiday_fee_applied || false,
         internal_notes: data.internal_notes || null,
@@ -896,6 +935,10 @@ export default function JobDetail() {
         const interpreterAfterHoursRate = data.interpreter_rate_after_hours ?? selectedInterpreter?.rate_after_hours ?? 0;
         const interpreterMileageRate = data.interpreter_rate_mileage ?? selectedInterpreter?.rate_mileage ?? 0;
         
+        // Get rate adjustments
+        const facilityRateAdjustment = data.facility_rate_adjustment ?? 0;
+        const interpreterRateAdjustment = data.interpreter_rate_adjustment ?? 0;
+        
         const mileage = data.mileage ?? 0;
         const travelTimeHours = data.travel_time_hours ?? 0;
         const parking = data.parking ?? 0;
@@ -904,20 +947,26 @@ export default function JobDetail() {
         
         const trilingualUplift = job?.trilingual_rate_uplift ?? 0;
         
-        const facilityBusinessTotal = hoursSplit.businessHours * (facilityBusinessRate + trilingualUplift);
-        const facilityAfterHoursTotal = hoursSplit.afterHours * (facilityAfterHoursRate + trilingualUplift);
+        // Facility calculations with rate adjustment
+        const adjustedFacilityBusinessRate = facilityBusinessRate + trilingualUplift + facilityRateAdjustment;
+        const adjustedFacilityAfterHoursRate = facilityAfterHoursRate + trilingualUplift + facilityRateAdjustment;
+        const facilityBusinessTotal = hoursSplit.businessHours * adjustedFacilityBusinessRate;
+        const facilityAfterHoursTotal = hoursSplit.afterHours * adjustedFacilityAfterHoursRate;
         facilityHourlyTotal = facilityBusinessTotal + facilityAfterHoursTotal;
         const facilityMileageTotal = mileage * facilityMileageRate;
         const facilityFeesTotal = parking + tolls + miscFee;
         facilityBillableTotal = facilityHourlyTotal + facilityMileageTotal + facilityFeesTotal;
         
-        const interpreterBusinessTotal = hoursSplit.businessHours * interpreterBusinessRate;
-        const interpreterAfterHoursTotal = hoursSplit.afterHours * interpreterAfterHoursRate;
+        // Interpreter calculations with rate adjustment
+        const adjustedInterpreterBusinessRate = interpreterBusinessRate + interpreterRateAdjustment;
+        const adjustedInterpreterAfterHoursRate = interpreterAfterHoursRate + interpreterRateAdjustment;
+        const interpreterBusinessTotal = hoursSplit.businessHours * adjustedInterpreterBusinessRate;
+        const interpreterAfterHoursTotal = hoursSplit.afterHours * adjustedInterpreterAfterHoursRate;
         interpreterHourlyTotal = interpreterBusinessTotal + interpreterAfterHoursTotal;
         const interpreterMileageTotal = mileage * interpreterMileageRate;
         const interpreterTravelTimeRate = hoursSplit.businessHours >= hoursSplit.afterHours 
-          ? interpreterBusinessRate 
-          : interpreterAfterHoursRate;
+          ? adjustedInterpreterBusinessRate 
+          : adjustedInterpreterAfterHoursRate;
         const interpreterTravelTimeTotal = travelTimeHours * interpreterTravelTimeRate;
         const interpreterFeesTotal = parking + tolls + miscFee;
         interpreterBillableTotal = interpreterHourlyTotal + interpreterMileageTotal + interpreterTravelTimeTotal + interpreterFeesTotal;
@@ -947,9 +996,11 @@ export default function JobDetail() {
         facility_rate_business: data.facility_rate_business || null,
         facility_rate_after_hours: data.facility_rate_after_hours || null,
         facility_rate_mileage: data.facility_rate_mileage || null,
+        facility_rate_adjustment: data.facility_rate_adjustment ?? 0,
         interpreter_rate_business: data.interpreter_rate_business || null,
         interpreter_rate_after_hours: data.interpreter_rate_after_hours || null,
         interpreter_rate_mileage: data.interpreter_rate_mileage || null,
+        interpreter_rate_adjustment: data.interpreter_rate_adjustment ?? 0,
         emergency_fee_applied: data.emergency_fee_applied || false,
         holiday_fee_applied: data.holiday_fee_applied || false,
         internal_notes: data.internal_notes || null,
@@ -1039,6 +1090,16 @@ export default function JobDetail() {
     { key: 'tolls', label: 'Tolls ($)', value: watchedTolls },
     { key: 'misc_fee', label: 'Misc Fee ($)', value: watchedMiscFee },
   ];
+
+  const rateAdjustmentFields: RateField[] = [
+    { key: 'facility_rate_adjustment', label: 'Facility Adjustment ($/hr)', value: watchedFacilityRateAdjustment, suffix: '/hr', step: '0.01' },
+    { key: 'interpreter_rate_adjustment', label: 'Interpreter Adjustment ($/hr)', value: watchedInterpreterRateAdjustment, suffix: '/hr', step: '0.01' },
+  ];
+
+  const handleRateAdjustmentsSave = (values: Record<string, number>) => {
+    form.setValue('facility_rate_adjustment', values.facility_rate_adjustment);
+    form.setValue('interpreter_rate_adjustment', values.interpreter_rate_adjustment);
+  };
 
   // Watch client contact fields for chips display
   const watchedClientBusinessName = form.watch('client_business_name') || '';
@@ -1643,6 +1704,19 @@ export default function JobDetail() {
                   />
                 </div>
 
+                {/* Rate Adjustments Chips */}
+                <div className="space-y-1">
+                  <h4 className="text-sm font-medium text-muted-foreground">Rate Adjustments</h4>
+                  <RateChips
+                    rates={[
+                      { label: 'Facility Adj', value: watchedFacilityRateAdjustment, suffix: '/hr' },
+                      { label: 'Interpreter Adj', value: watchedInterpreterRateAdjustment, suffix: '/hr' },
+                    ]}
+                    onEditClick={() => setRateAdjustmentsDialogOpen(true)}
+                    disabled={isLocked}
+                  />
+                </div>
+
                 {/* Billable Calculation */}
                 {hoursSplit && billableTotal && (
                   <>
@@ -1821,6 +1895,15 @@ export default function JobDetail() {
         title="Edit Interpreter Rates"
         fields={interpreterRateFields}
         onSave={handleInterpreterRatesSave}
+        disabled={isLocked}
+      />
+      
+      <RatesEditDialog
+        open={rateAdjustmentsDialogOpen}
+        onOpenChange={setRateAdjustmentsDialogOpen}
+        title="Edit Rate Adjustments"
+        fields={rateAdjustmentFields}
+        onSave={handleRateAdjustmentsSave}
         disabled={isLocked}
       />
       

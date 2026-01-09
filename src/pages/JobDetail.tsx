@@ -1128,12 +1128,12 @@ export default function JobDetail() {
                 </div>
 
                 {/* Row 2: Facility & Deaf Client */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 items-end">
                   <FormField
                     control={form.control}
                     name="facility_id"
                     render={({ field }) => (
-                      <FormItem className="flex flex-col">
+                      <FormItem className="space-y-2">
                         <FormLabel>Facility</FormLabel>
                         <Popover open={facilityOpen} onOpenChange={setFacilityOpen}>
                           <PopoverTrigger asChild>
@@ -1141,7 +1141,7 @@ export default function JobDetail() {
                               <Button
                                 variant="outline"
                                 role="combobox"
-                                className={cn('justify-between', !field.value && 'text-muted-foreground')}
+                                className={cn('w-full justify-between', !field.value && 'text-muted-foreground')}
                                 disabled={isLocked}
                               >
                                 {selectedFacility?.name || 'Select facility...'}
@@ -1187,7 +1187,7 @@ export default function JobDetail() {
                     control={form.control}
                     name="deaf_client_name"
                     render={({ field }) => (
-                      <FormItem>
+                      <FormItem className="space-y-2">
                         <FormLabel>Deaf Client Name</FormLabel>
                         <FormControl>
                           <Input {...field} disabled={isLocked} />

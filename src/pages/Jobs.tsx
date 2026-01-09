@@ -3,10 +3,12 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Plus, Search } from 'lucide-react';
+import { Plus, Search, List, CalendarDays } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { JobDialog } from '@/components/jobs/JobDialog';
 import { JobsTable } from '@/components/jobs/JobsTable';
+import { JobsCalendar } from '@/components/jobs/JobsCalendar';
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import type { Database } from '@/types/database';
 
 type Job = Database['public']['Tables']['jobs']['Row'];
@@ -15,6 +17,7 @@ export default function Jobs() {
   const [search, setSearch] = useState('');
   const [dialogOpen, setDialogOpen] = useState(false);
   const [selectedJob, setSelectedJob] = useState<Job | null>(null);
+  const [viewMode, setViewMode] = useState<'table' | 'calendar'>('table');
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
@@ -83,7 +86,7 @@ export default function Jobs() {
         </Button>
       </div>
 
-      <div className="flex items-center gap-4">
+      <div className="flex items-center justify-between gap-4">
         <div className="relative flex-1 max-w-sm">
           <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
           <Input
@@ -93,14 +96,30 @@ export default function Jobs() {
             className="pl-10"
           />
         </div>
+        <Tabs value={viewMode} onValueChange={(v) => setViewMode(v as 'table' | 'calendar')}>
+          <TabsList>
+            <TabsTrigger value="table" className="gap-2">
+              <List className="h-4 w-4" />
+              Table
+            </TabsTrigger>
+            <TabsTrigger value="calendar" className="gap-2">
+              <CalendarDays className="h-4 w-4" />
+              Calendar
+            </TabsTrigger>
+          </TabsList>
+        </Tabs>
       </div>
 
-      <JobsTable
-        jobs={jobs || []}
-        isLoading={isLoading}
-        onEdit={handleEdit}
-        onDelete={handleDelete}
-      />
+      {viewMode === 'table' ? (
+        <JobsTable
+          jobs={jobs || []}
+          isLoading={isLoading}
+          onEdit={handleEdit}
+          onDelete={handleDelete}
+        />
+      ) : (
+        <JobsCalendar jobs={jobs || []} isLoading={isLoading} />
+      )}
 
       <JobDialog
         open={dialogOpen}

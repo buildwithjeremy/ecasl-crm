@@ -320,6 +320,26 @@ export default function InvoiceDetail() {
               </div>
             </CardHeader>
             <CardContent>
+              {/* Totals Summary */}
+              {job && (
+                <div className="mb-6 pb-6 border-b border-border">
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-6 bg-muted/50 rounded-lg p-4">
+                    <div className="space-y-1">
+                      <p className="text-sm font-medium text-muted-foreground">Hourly Total</p>
+                      <p className="text-lg font-semibold">{formatCurrency(hourlyTotal)}</p>
+                    </div>
+                    <div className="space-y-1">
+                      <p className="text-sm font-medium text-muted-foreground">Travel/Fee Total</p>
+                      <p className="text-lg font-semibold">{formatCurrency(travelFeeTotal)}</p>
+                    </div>
+                    <div className="space-y-1">
+                      <p className="text-sm font-medium text-muted-foreground">Overall Total</p>
+                      <p className="text-lg font-semibold text-primary">{formatCurrency(overallTotal)}</p>
+                    </div>
+                  </div>
+                </div>
+              )}
+
               <Form {...form}>
                 <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -434,23 +454,6 @@ export default function InvoiceDetail() {
                 <CardTitle>Job Details - {job.job_number}</CardTitle>
               </CardHeader>
               <CardContent>
-                {/* Totals Summary */}
-                <div className="mb-6 pb-6 border-b border-border">
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-6 bg-muted/50 rounded-lg p-4">
-                    <div className="space-y-1">
-                      <p className="text-sm font-medium text-muted-foreground">Hourly Total</p>
-                      <p className="text-lg font-semibold">{formatCurrency(hourlyTotal)}</p>
-                    </div>
-                    <div className="space-y-1">
-                      <p className="text-sm font-medium text-muted-foreground">Travel/Fee Total</p>
-                      <p className="text-lg font-semibold">{formatCurrency(travelFeeTotal)}</p>
-                    </div>
-                    <div className="space-y-1">
-                      <p className="text-sm font-medium text-muted-foreground">Overall Total</p>
-                      <p className="text-lg font-semibold text-primary">{formatCurrency(overallTotal)}</p>
-                    </div>
-                  </div>
-                </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                   {/* Facility Info */}

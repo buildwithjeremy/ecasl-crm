@@ -293,6 +293,7 @@ export default function JobDetail() {
         client_contact_phone: string | null;
         client_contact_email: string | null;
         potential_interpreter_ids: string[] | null;
+        trilingual_rate_uplift: number | null;
       } | null;
     },
     enabled: !!selectedJobId,
@@ -454,9 +455,12 @@ export default function JobDetail() {
         const tolls = data.tolls ?? 0;
         const miscFee = data.misc_fee ?? 0;
         
-        // Facility calculations
-        const facilityBusinessTotal = hoursSplit.businessHours * facilityBusinessRate;
-        const facilityAfterHoursTotal = hoursSplit.afterHours * facilityAfterHoursRate;
+        // Get trilingual uplift from existing job data
+        const trilingualUplift = job?.trilingual_rate_uplift ?? 0;
+        
+        // Facility calculations - add trilingual uplift to hourly rates before multiplying
+        const facilityBusinessTotal = hoursSplit.businessHours * (facilityBusinessRate + trilingualUplift);
+        const facilityAfterHoursTotal = hoursSplit.afterHours * (facilityAfterHoursRate + trilingualUplift);
         facilityHourlyTotal = facilityBusinessTotal + facilityAfterHoursTotal;
         const facilityMileageTotal = mileage * facilityMileageRate;
         const facilityFeesTotal = parking + tolls + miscFee;

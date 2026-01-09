@@ -222,12 +222,13 @@ Deno.serve(async (req) => {
     const lineItems: LineItem[] = [];
 
     if (job) {
-      // Interpreter Services (hourly)
+      // Interpreter Services (hourly) - add trilingual uplift to hourly rate
       const billableHours = job.billable_hours || 0;
-      const hourlyRate = job.facility_rate_business || 0;
+      const trilingualUplift = job.trilingual_rate_uplift || 0;
+      const hourlyRate = (job.facility_rate_business || 0) + trilingualUplift;
       if (billableHours > 0 && hourlyRate > 0) {
         lineItems.push({
-          description: 'Interpreter Services',
+          description: trilingualUplift > 0 ? 'Interpreter Services (incl. Trilingual)' : 'Interpreter Services',
           qty: billableHours,
           rate: hourlyRate,
           amount: billableHours * hourlyRate
@@ -311,16 +312,7 @@ Deno.serve(async (req) => {
         });
       }
 
-      // Trilingual Rate Uplift
-      const trilingualUplift = job.trilingual_rate_uplift || 0;
-      if (trilingualUplift > 0) {
-        lineItems.push({
-          description: 'Trilingual Rate Uplift',
-          qty: 1,
-          rate: trilingualUplift,
-          amount: trilingualUplift
-        });
-      }
+      // Note: Trilingual uplift is now included in the hourly rate above
     }
 
     // Calculate total

@@ -266,7 +266,9 @@ export default function InvoiceDetail() {
   // Calculate derived values
   const mileageTotal = (job?.mileage || 0) * (job?.facility_rate_mileage || 0);
   const travelTimeTotal = (job?.travel_time_hours || 0) * (job?.travel_time_rate || 0);
-  const facilityHourlyTotal = (job?.billable_hours || 0) * (job?.facility_rate_business || 0);
+  // Add trilingual uplift to hourly rate before multiplying by billable hours
+  const trilingualUplift = job?.trilingual_rate_uplift || 0;
+  const facilityHourlyTotal = (job?.billable_hours || 0) * ((job?.facility_rate_business || 0) + trilingualUplift);
   const emergencyFee = job?.emergency_fee_applied ? (job.facility?.emergency_fee || 0) : 0;
   const holidayFee = job?.holiday_fee_applied ? (job.facility?.holiday_fee || 0) : 0;
   

@@ -246,7 +246,9 @@ export default function FacilityDetail() {
                 role="combobox"
                 className="w-[200px] justify-between text-sm"
               >
-                {selectedFacility?.name || 'Select facility...'}
+                <span className="truncate">
+                  {selectedFacility?.name || 'Select facility...'}
+                </span>
                 <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
               </Button>
             </PopoverTrigger>
@@ -279,10 +281,6 @@ export default function FacilityDetail() {
               </Command>
             </PopoverContent>
           </Popover>
-
-          {facility?.status && (
-            <Badge variant="secondary">{statusLabels[facility.status]}</Badge>
-          )}
 
           {/* Save button in header with unsaved indicator */}
           {facility && (

@@ -19,6 +19,7 @@ import {
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
 import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import {
@@ -178,7 +179,7 @@ export default function JobDetail() {
   const [facilityRatesDialogOpen, setFacilityRatesDialogOpen] = useState(false);
   const [interpreterRatesDialogOpen, setInterpreterRatesDialogOpen] = useState(false);
   const [expensesDialogOpen, setExpensesDialogOpen] = useState(false);
-  const [rateAdjustmentsDialogOpen, setRateAdjustmentsDialogOpen] = useState(false);
+  
   const [clientContactDialogOpen, setClientContactDialogOpen] = useState(false);
   
   const { toast } = useToast();
@@ -1091,16 +1092,6 @@ export default function JobDetail() {
     { key: 'misc_fee', label: 'Misc Fee ($)', value: watchedMiscFee },
   ];
 
-  const rateAdjustmentFields: RateField[] = [
-    { key: 'facility_rate_adjustment', label: 'Facility Adjustment ($/hr)', value: watchedFacilityRateAdjustment, suffix: '/hr', step: '0.01' },
-    { key: 'interpreter_rate_adjustment', label: 'Interpreter Adjustment ($/hr)', value: watchedInterpreterRateAdjustment, suffix: '/hr', step: '0.01' },
-  ];
-
-  const handleRateAdjustmentsSave = (values: Record<string, number>) => {
-    form.setValue('facility_rate_adjustment', values.facility_rate_adjustment);
-    form.setValue('interpreter_rate_adjustment', values.interpreter_rate_adjustment);
-  };
-
   // Watch client contact fields for chips display
   const watchedClientBusinessName = form.watch('client_business_name') || '';
   const watchedClientContactName = form.watch('client_contact_name') || '';
@@ -1704,17 +1695,47 @@ export default function JobDetail() {
                   />
                 </div>
 
-                {/* Rate Adjustments Chips */}
-                <div className="space-y-1">
+                {/* Rate Adjustments Inline */}
+                <div className="space-y-2">
                   <h4 className="text-sm font-medium text-muted-foreground">Rate Adjustments</h4>
-                  <RateChips
-                    rates={[
-                      { label: 'Facility Adj', value: watchedFacilityRateAdjustment, suffix: '/hr' },
-                      { label: 'Interpreter Adj', value: watchedInterpreterRateAdjustment, suffix: '/hr' },
-                    ]}
-                    onEditClick={() => setRateAdjustmentsDialogOpen(true)}
-                    disabled={isLocked}
-                  />
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-1">
+                      <Label htmlFor="facility_rate_adjustment" className="text-xs">Facility ($/hr)</Label>
+                      <Input
+                        id="facility_rate_adjustment"
+                        type="text"
+                        inputMode="decimal"
+                        {...form.register('facility_rate_adjustment', {
+                          setValueAs: (v) => {
+                            if (v === '' || v === '-' || v === '-.') return v;
+                            const num = parseFloat(v);
+                            return isNaN(num) ? 0 : num;
+                          }
+                        })}
+                        disabled={isLocked}
+                        placeholder="0.00"
+                        className="h-8"
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <Label htmlFor="interpreter_rate_adjustment" className="text-xs">Interpreter ($/hr)</Label>
+                      <Input
+                        id="interpreter_rate_adjustment"
+                        type="text"
+                        inputMode="decimal"
+                        {...form.register('interpreter_rate_adjustment', {
+                          setValueAs: (v) => {
+                            if (v === '' || v === '-' || v === '-.') return v;
+                            const num = parseFloat(v);
+                            return isNaN(num) ? 0 : num;
+                          }
+                        })}
+                        disabled={isLocked}
+                        placeholder="0.00"
+                        className="h-8"
+                      />
+                    </div>
+                  </div>
                 </div>
 
                 {/* Billable Calculation */}
@@ -1898,14 +1919,6 @@ export default function JobDetail() {
         disabled={isLocked}
       />
       
-      <RatesEditDialog
-        open={rateAdjustmentsDialogOpen}
-        onOpenChange={setRateAdjustmentsDialogOpen}
-        title="Edit Rate Adjustments"
-        fields={rateAdjustmentFields}
-        onSave={handleRateAdjustmentsSave}
-        disabled={isLocked}
-      />
       
       <RatesEditDialog
         open={expensesDialogOpen}

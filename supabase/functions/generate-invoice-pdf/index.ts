@@ -222,16 +222,60 @@ Deno.serve(async (req) => {
     const lineItems: LineItem[] = [];
 
     if (job) {
-      // Interpreter Services (hourly) - add trilingual uplift to hourly rate
+      // Interpreter Services (hourly) - add trilingual uplift and rate adjustment to hourly rate
       const billableHours = job.billable_hours || 0;
       const trilingualUplift = job.trilingual_rate_uplift || 0;
-      const hourlyRate = (job.facility_rate_business || 0) + trilingualUplift;
-      if (billableHours > 0 && hourlyRate > 0) {
+      const facilityRateAdjustment = job.facility_rate_adjustment || 0;
+      const baseBusinessRate = job.facility_rate_business || 0;
+      const baseAfterHoursRate = job.facility_rate_after_hours || 0;
+      
+      // Adjusted rates include trilingual uplift and rate adjustment
+      const adjustedBusinessRate = baseBusinessRate + trilingualUplift + facilityRateAdjustment;
+      const adjustedAfterHoursRate = baseAfterHoursRate + trilingualUplift + facilityRateAdjustment;
+      
+      // Calculate hours worked at each rate
+      const businessHoursWorked = job.business_hours_worked || 0;
+      const afterHoursWorked = job.after_hours_worked || 0;
+      
+      // Add business hours line item if applicable
+      if (businessHoursWorked > 0 && adjustedBusinessRate > 0) {
+        let description = 'Interpreter Services (Business Hours)';
+        if (trilingualUplift > 0 || facilityRateAdjustment > 0) {
+          description = 'Interpreter Services (Business Hours, adjusted)';
+        }
         lineItems.push({
-          description: trilingualUplift > 0 ? 'Interpreter Services (incl. Trilingual)' : 'Interpreter Services',
+          description,
+          qty: businessHoursWorked,
+          rate: adjustedBusinessRate,
+          amount: businessHoursWorked * adjustedBusinessRate
+        });
+      }
+      
+      // Add after hours line item if applicable
+      if (afterHoursWorked > 0 && adjustedAfterHoursRate > 0) {
+        let description = 'Interpreter Services (After Hours)';
+        if (trilingualUplift > 0 || facilityRateAdjustment > 0) {
+          description = 'Interpreter Services (After Hours, adjusted)';
+        }
+        lineItems.push({
+          description,
+          qty: afterHoursWorked,
+          rate: adjustedAfterHoursRate,
+          amount: afterHoursWorked * adjustedAfterHoursRate
+        });
+      }
+      
+      // Fallback: if no hours split data, use billable_hours with business rate
+      if (businessHoursWorked === 0 && afterHoursWorked === 0 && billableHours > 0 && adjustedBusinessRate > 0) {
+        let description = 'Interpreter Services';
+        if (trilingualUplift > 0 || facilityRateAdjustment > 0) {
+          description = 'Interpreter Services (adjusted)';
+        }
+        lineItems.push({
+          description,
           qty: billableHours,
-          rate: hourlyRate,
-          amount: billableHours * hourlyRate
+          rate: adjustedBusinessRate,
+          amount: billableHours * adjustedBusinessRate
         });
       }
 

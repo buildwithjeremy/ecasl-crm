@@ -705,6 +705,7 @@ export default function JobDetail() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['job', selectedJobId] });
       queryClient.invalidateQueries({ queryKey: ['jobs'] });
+      form.reset(form.getValues());
       toast({ title: 'Job updated successfully' });
     },
     onError: (error) => {
@@ -826,7 +827,8 @@ export default function JobDetail() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['job', selectedJobId] });
       queryClient.invalidateQueries({ queryKey: ['jobs'] });
-      form.setValue('status', 'outreach_in_progress' as const);
+      const currentValues = form.getValues();
+      form.reset({ ...currentValues, status: 'outreach_in_progress' as const });
       toast({
         title: 'Outreach Started',
         description: 'Job saved and status updated to Outreach In Progress. Email functionality coming soon.',
@@ -980,7 +982,8 @@ export default function JobDetail() {
       queryClient.invalidateQueries({ queryKey: ['jobs'] });
       queryClient.invalidateQueries({ queryKey: ['invoices'] });
       queryClient.invalidateQueries({ queryKey: ['interpreter-bills'] });
-      form.setValue('status', 'ready_to_bill' as const);
+      const currentValues = form.getValues();
+      form.reset({ ...currentValues, status: 'ready_to_bill' as const });
       toast({
         title: 'Billing Generated',
         description: 'Invoice and interpreter bill have been created. Job status updated to Ready to Bill.',
@@ -1123,8 +1126,8 @@ export default function JobDetail() {
     onSuccess: (newBillableHours) => {
       queryClient.invalidateQueries({ queryKey: ['job', selectedJobId] });
       queryClient.invalidateQueries({ queryKey: ['jobs'] });
-      form.setValue('status', 'confirmed' as const);
-      form.setValue('billable_hours', newBillableHours);
+      const currentValues = form.getValues();
+      form.reset({ ...currentValues, status: 'confirmed' as const, billable_hours: newBillableHours });
       toast({
         title: 'Interpreter Confirmed',
         description: 'Job saved and status updated to Confirmed. Confirmation email functionality coming soon.',

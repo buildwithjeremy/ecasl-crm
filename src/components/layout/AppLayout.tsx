@@ -27,11 +27,11 @@ export function AppLayout({ children }: AppLayoutProps) {
     <SidebarProvider>
       <div className="min-h-screen flex w-full">
         <AppSidebar />
-        <main className="flex-1 flex flex-col">
-          <header className="h-14 flex items-center border-b border-border px-4 bg-card">
+        <main className="flex-1 flex flex-col overflow-hidden">
+          <header className="h-14 flex items-center border-b border-border px-4 bg-card shrink-0">
             <SidebarTrigger />
           </header>
-          <div className="flex-1 p-6 bg-background overflow-auto">
+          <div className="flex-1 p-6 bg-background overflow-y-auto">
             {children}
           </div>
         </main>

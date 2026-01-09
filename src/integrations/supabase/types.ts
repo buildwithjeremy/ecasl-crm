@@ -284,6 +284,7 @@ export type Database = {
         Row: {
           address: string | null
           city: string | null
+          contract_pdf_url: string | null
           contract_signed_date: string | null
           contract_status: Database["public"]["Enums"]["contract_status"] | null
           created_at: string | null
@@ -315,6 +316,7 @@ export type Database = {
         Insert: {
           address?: string | null
           city?: string | null
+          contract_pdf_url?: string | null
           contract_signed_date?: string | null
           contract_status?:
             | Database["public"]["Enums"]["contract_status"]
@@ -348,6 +350,7 @@ export type Database = {
         Update: {
           address?: string | null
           city?: string | null
+          contract_pdf_url?: string | null
           contract_signed_date?: string | null
           contract_status?:
             | Database["public"]["Enums"]["contract_status"]

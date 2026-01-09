@@ -555,28 +555,66 @@ export default function JobDetail() {
     return calculateHoursSplit(watchedStartTime, watchedEndTime, minimumHours);
   }, [watchedStartTime, watchedEndTime, selectedFacility?.minimum_billable_hours]);
 
-  // Watch expense fields for calculation reactivity
-  const watchedMileage = form.watch('mileage') ?? 0;
-  const watchedTravelTime = form.watch('travel_time_hours') ?? 0;
-  const watchedParking = form.watch('parking') ?? 0;
-  const watchedTolls = form.watch('tolls') ?? 0;
-  const watchedMiscFee = form.watch('misc_fee') ?? 0;
-  const watchedFacilityRateBusiness = form.watch('facility_rate_business');
-  const watchedFacilityRateAfterHours = form.watch('facility_rate_after_hours');
-  const watchedFacilityRateMileage = form.watch('facility_rate_mileage');
-  const watchedInterpreterRateBusiness = form.watch('interpreter_rate_business');
-  const watchedInterpreterRateAfterHours = form.watch('interpreter_rate_after_hours');
-  const watchedInterpreterRateMileage = form.watch('interpreter_rate_mileage');
+  // Watch expense fields for calculation reactivity - ensure numeric values
+  const rawMileage = form.watch('mileage');
+  const rawTravelTime = form.watch('travel_time_hours');
+  const rawParking = form.watch('parking');
+  const rawTolls = form.watch('tolls');
+  const rawMiscFee = form.watch('misc_fee');
+  const rawFacilityRateBusiness = form.watch('facility_rate_business');
+  const rawFacilityRateAfterHours = form.watch('facility_rate_after_hours');
+  const rawFacilityRateMileage = form.watch('facility_rate_mileage');
+  const rawInterpreterRateBusiness = form.watch('interpreter_rate_business');
+  const rawInterpreterRateAfterHours = form.watch('interpreter_rate_after_hours');
+  const rawInterpreterRateMileage = form.watch('interpreter_rate_mileage');
+
+  // Convert to safe numbers (handle empty strings, undefined, NaN)
+  const toSafeNumber = (val: unknown, fallback: number = 0): number => {
+    if (val === undefined || val === null || val === '') return fallback;
+    const num = Number(val);
+    return isNaN(num) ? fallback : num;
+  };
+
+  // Check if a value was explicitly provided (not empty/undefined)
+  const hasValue = (val: unknown): boolean => {
+    return val !== undefined && val !== null && val !== '' && !isNaN(Number(val));
+  };
+
+  const watchedMileage = toSafeNumber(rawMileage);
+  const watchedTravelTime = toSafeNumber(rawTravelTime);
+  const watchedParking = toSafeNumber(rawParking);
+  const watchedTolls = toSafeNumber(rawTolls);
+  const watchedMiscFee = toSafeNumber(rawMiscFee);
+  const watchedFacilityRateBusiness = toSafeNumber(rawFacilityRateBusiness);
+  const watchedFacilityRateAfterHours = toSafeNumber(rawFacilityRateAfterHours);
+  const watchedFacilityRateMileage = toSafeNumber(rawFacilityRateMileage);
+  const watchedInterpreterRateBusiness = toSafeNumber(rawInterpreterRateBusiness);
+  const watchedInterpreterRateAfterHours = toSafeNumber(rawInterpreterRateAfterHours);
+  const watchedInterpreterRateMileage = toSafeNumber(rawInterpreterRateMileage);
 
   // Calculate billable totals
   const billableTotal = useMemo(() => {
     if (!hoursSplit) return null;
-    const facilityBusinessRate = watchedFacilityRateBusiness ?? selectedFacility?.rate_business_hours ?? 0;
-    const facilityAfterHoursRate = watchedFacilityRateAfterHours ?? selectedFacility?.rate_after_hours ?? 0;
-    const facilityMileageRate = watchedFacilityRateMileage ?? selectedFacility?.rate_mileage ?? 0;
-    const interpreterBusinessRate = watchedInterpreterRateBusiness ?? selectedInterpreter?.rate_business_hours ?? 0;
-    const interpreterAfterHoursRate = watchedInterpreterRateAfterHours ?? selectedInterpreter?.rate_after_hours ?? 0;
-    const interpreterMileageRate = watchedInterpreterRateMileage ?? selectedInterpreter?.rate_mileage ?? 0;
+    
+    // Use watched values if set, otherwise fall back to facility/interpreter defaults
+    const facilityBusinessRate = hasValue(rawFacilityRateBusiness) 
+      ? watchedFacilityRateBusiness 
+      : (selectedFacility?.rate_business_hours ?? 0);
+    const facilityAfterHoursRate = hasValue(rawFacilityRateAfterHours)
+      ? watchedFacilityRateAfterHours 
+      : (selectedFacility?.rate_after_hours ?? 0);
+    const facilityMileageRate = hasValue(rawFacilityRateMileage)
+      ? watchedFacilityRateMileage 
+      : (selectedFacility?.rate_mileage ?? 0);
+    const interpreterBusinessRate = hasValue(rawInterpreterRateBusiness)
+      ? watchedInterpreterRateBusiness 
+      : (selectedInterpreter?.rate_business_hours ?? 0);
+    const interpreterAfterHoursRate = hasValue(rawInterpreterRateAfterHours)
+      ? watchedInterpreterRateAfterHours 
+      : (selectedInterpreter?.rate_after_hours ?? 0);
+    const interpreterMileageRate = hasValue(rawInterpreterRateMileage)
+      ? watchedInterpreterRateMileage 
+      : (selectedInterpreter?.rate_mileage ?? 0);
     
     // Determine travel time rate based on which hour type has more hours
     const interpreterTravelTimeRate = hoursSplit.businessHours >= hoursSplit.afterHours 
@@ -619,7 +657,7 @@ export default function JobDetail() {
       tolls: watchedTolls,
       miscFee: watchedMiscFee,
     };
-  }, [hoursSplit, selectedFacility, selectedInterpreter, watchedMileage, watchedTravelTime, watchedParking, watchedTolls, watchedMiscFee, watchedFacilityRateBusiness, watchedFacilityRateAfterHours, watchedFacilityRateMileage, watchedInterpreterRateBusiness, watchedInterpreterRateAfterHours, watchedInterpreterRateMileage]);
+  }, [hoursSplit, selectedFacility, selectedInterpreter, watchedMileage, watchedTravelTime, watchedParking, watchedTolls, watchedMiscFee, rawFacilityRateBusiness, rawFacilityRateAfterHours, rawFacilityRateMileage, rawInterpreterRateBusiness, rawInterpreterRateAfterHours, rawInterpreterRateMileage, watchedFacilityRateBusiness, watchedFacilityRateAfterHours, watchedFacilityRateMileage, watchedInterpreterRateBusiness, watchedInterpreterRateAfterHours, watchedInterpreterRateMileage]);
 
   const sendOutreachMutation = useMutation({
     mutationFn: async () => {

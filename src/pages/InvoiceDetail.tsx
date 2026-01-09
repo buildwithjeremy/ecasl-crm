@@ -301,9 +301,11 @@ export default function InvoiceDetail() {
                 role="combobox"
                 className="w-[220px] justify-between text-sm"
               >
-                {selectedInvoice
-                  ? `${selectedInvoice.invoice_number} - ${selectedInvoice.facility?.name || 'N/A'}`
-                  : 'Select invoice...'}
+                <span className="truncate">
+                  {selectedInvoice
+                    ? `${selectedInvoice.invoice_number} - ${selectedInvoice.facility?.name || 'N/A'}`
+                    : 'Select invoice...'}
+                </span>
                 <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
               </Button>
             </PopoverTrigger>
@@ -336,12 +338,6 @@ export default function InvoiceDetail() {
               </Command>
             </PopoverContent>
           </Popover>
-
-          {invoice?.status && (
-            <Badge variant={invoice.status === 'paid' ? 'outline' : invoice.status === 'submitted' ? 'default' : 'secondary'}>
-              {statusDisplayMap[invoice.status]}
-            </Badge>
-          )}
 
           {/* Save button in header with unsaved indicator */}
           {invoice && (

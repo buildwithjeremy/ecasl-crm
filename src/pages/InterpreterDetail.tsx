@@ -241,9 +241,11 @@ export default function InterpreterDetail() {
                 role="combobox"
                 className="w-[200px] justify-between text-sm"
               >
-                {selectedInterpreter
-                  ? `${selectedInterpreter.first_name} ${selectedInterpreter.last_name}`
-                  : 'Select interpreter...'}
+                <span className="truncate">
+                  {selectedInterpreter
+                    ? `${selectedInterpreter.first_name} ${selectedInterpreter.last_name}`
+                    : 'Select interpreter...'}
+                </span>
                 <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
               </Button>
             </PopoverTrigger>
@@ -276,10 +278,6 @@ export default function InterpreterDetail() {
               </Command>
             </PopoverContent>
           </Popover>
-
-          {interpreter?.status && (
-            <Badge variant="secondary">{statusLabels[interpreter.status]}</Badge>
-          )}
 
           {/* Save button in header with unsaved indicator */}
           {interpreter && (

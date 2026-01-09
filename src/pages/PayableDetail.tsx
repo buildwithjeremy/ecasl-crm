@@ -191,9 +191,11 @@ export default function PayableDetail() {
                 role="combobox"
                 className="w-[260px] justify-between text-sm"
               >
-                {selectedPayable
-                  ? `${selectedPayable.bill_number || 'N/A'} - ${selectedPayable.interpreter?.first_name} ${selectedPayable.interpreter?.last_name}`
-                  : 'Select payable...'}
+                <span className="truncate">
+                  {selectedPayable
+                    ? `${selectedPayable.bill_number || 'N/A'} - ${selectedPayable.interpreter?.first_name} ${selectedPayable.interpreter?.last_name}`
+                    : 'Select payable...'}
+                </span>
                 <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
               </Button>
             </PopoverTrigger>
@@ -226,12 +228,6 @@ export default function PayableDetail() {
               </Command>
             </PopoverContent>
           </Popover>
-
-          {payable?.status && (
-            <Badge variant={payable.status === 'paid' ? 'outline' : 'secondary'}>
-              {statusDisplayMap[payable.status]}
-            </Badge>
-          )}
 
           {/* Save button in header with unsaved indicator */}
           {payable && (

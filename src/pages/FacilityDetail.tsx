@@ -34,7 +34,7 @@ import {
 import { useToast } from '@/hooks/use-toast';
 import { ArrowLeft, Check, ChevronsUpDown } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { Badge } from '@/components/ui/badge';
+import { FacilityContractSection } from '@/components/facilities/FacilityContractSection';
 import type { Database } from '@/types/database';
 
 type Facility = Database['public']['Tables']['facilities']['Row'];
@@ -505,30 +505,14 @@ export default function FacilityDetail() {
             </CardContent>
           </Card>
 
-          {/* Contract Status */}
-          <Card>
-            <CardHeader className="pb-4">
-              <CardTitle className="text-lg">Contract</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-2 max-w-xs">
-                <Label htmlFor="contract_status">Contract Status</Label>
-                <Select
-                  value={form.watch('contract_status')}
-                  onValueChange={(value) => form.setValue('contract_status', value as 'not_sent' | 'sent' | 'signed', { shouldDirty: true })}
-                >
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="not_sent">Not Sent</SelectItem>
-                    <SelectItem value="sent">Sent</SelectItem>
-                    <SelectItem value="signed">Signed</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-            </CardContent>
-          </Card>
+          {/* Contract Section with PDF Generation */}
+          <FacilityContractSection
+            form={form}
+            facility={{ id: facility.id, contract_pdf_url: (facility as any).contract_pdf_url }}
+            onContractGenerated={() => {
+              queryClient.invalidateQueries({ queryKey: ['facility', selectedFacilityId] });
+            }}
+          />
 
           {/* Notes */}
           <Card>

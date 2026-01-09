@@ -110,6 +110,7 @@ export type Database = {
           billing_name: string | null
           billing_state: string | null
           billing_zip: string | null
+          contract_pdf_url: string | null
           contract_signed_date: string | null
           contract_status: Database["public"]["Enums"]["contract_status"] | null
           contractor: boolean | null
@@ -143,6 +144,7 @@ export type Database = {
           billing_name?: string | null
           billing_state?: string | null
           billing_zip?: string | null
+          contract_pdf_url?: string | null
           contract_signed_date?: string | null
           contract_status?:
             | Database["public"]["Enums"]["contract_status"]
@@ -178,6 +180,7 @@ export type Database = {
           billing_name?: string | null
           billing_state?: string | null
           billing_zip?: string | null
+          contract_pdf_url?: string | null
           contract_signed_date?: string | null
           contract_status?:
             | Database["public"]["Enums"]["contract_status"]

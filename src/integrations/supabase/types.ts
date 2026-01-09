@@ -503,9 +503,6 @@ export type Database = {
           actual_start_time: string | null
           after_hours_worked: number | null
           billable_hours: number | null
-          billing_hours_type:
-            | Database["public"]["Enums"]["billing_hours_type"]
-            | null
           business_hours_worked: number | null
           client_business_name: string | null
           client_contact_email: string | null
@@ -564,9 +561,6 @@ export type Database = {
           actual_start_time?: string | null
           after_hours_worked?: number | null
           billable_hours?: number | null
-          billing_hours_type?:
-            | Database["public"]["Enums"]["billing_hours_type"]
-            | null
           business_hours_worked?: number | null
           client_business_name?: string | null
           client_contact_email?: string | null
@@ -627,9 +621,6 @@ export type Database = {
           actual_start_time?: string | null
           after_hours_worked?: number | null
           billable_hours?: number | null
-          billing_hours_type?:
-            | Database["public"]["Enums"]["billing_hours_type"]
-            | null
           business_hours_worked?: number | null
           client_business_name?: string | null
           client_contact_email?: string | null
@@ -764,7 +755,6 @@ export type Database = {
     Enums: {
       app_role: "admin" | "gsa_contributor" | "bookkeeper"
       bill_status: "queued" | "paid"
-      billing_hours_type: "business" | "after_hours" | "emergency"
       contract_status: "not_sent" | "sent" | "signed"
       facility_status: "active" | "inactive" | "pending"
       interpreter_status: "active" | "inactive" | "pending"
@@ -916,7 +906,6 @@ export const Constants = {
     Enums: {
       app_role: ["admin", "gsa_contributor", "bookkeeper"],
       bill_status: ["queued", "paid"],
-      billing_hours_type: ["business", "after_hours", "emergency"],
       contract_status: ["not_sent", "sent", "signed"],
       facility_status: ["active", "inactive", "pending"],
       interpreter_status: ["active", "inactive", "pending"],

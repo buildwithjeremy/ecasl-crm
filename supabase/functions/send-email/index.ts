@@ -99,8 +99,9 @@ const handler = async (req: Request): Promise<Response> => {
     if (template_variables) {
       for (const [key, value] of Object.entries(template_variables)) {
         const placeholder = `{{${key}}}`;
-        processedSubject = processedSubject.replace(new RegExp(placeholder, 'g'), value);
-        processedBody = processedBody.replace(new RegExp(placeholder, 'g'), value);
+        // Use split/join for safe string replacement (avoids regex special char issues)
+        processedSubject = processedSubject.split(placeholder).join(value);
+        processedBody = processedBody.split(placeholder).join(value);
       }
     }
 

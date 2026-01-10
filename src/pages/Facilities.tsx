@@ -19,8 +19,6 @@ const sortOptions: SortOption[] = [
   { value: 'status-desc', label: 'Status (Z-A)' },
   { value: 'created_at-desc', label: 'Created (Newest)' },
   { value: 'created_at-asc', label: 'Created (Oldest)' },
-  { value: 'net_terms-asc', label: 'Net Terms (Low-High)' },
-  { value: 'net_terms-desc', label: 'Net Terms (High-Low)' },
 ];
 
 export default function Facilities() {

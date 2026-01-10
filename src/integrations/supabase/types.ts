@@ -118,11 +118,9 @@ export type Database = {
           emergency_fee: number | null
           holiday_fee: number | null
           id: string
-          invoice_prefix: string | null
           is_gsa: boolean | null
           minimum_billable_hours: number | null
           name: string
-          net_terms: number | null
           notes: string | null
           physical_address: string | null
           physical_city: string | null
@@ -154,11 +152,9 @@ export type Database = {
           emergency_fee?: number | null
           holiday_fee?: number | null
           id?: string
-          invoice_prefix?: string | null
           is_gsa?: boolean | null
           minimum_billable_hours?: number | null
           name: string
-          net_terms?: number | null
           notes?: string | null
           physical_address?: string | null
           physical_city?: string | null
@@ -190,11 +186,9 @@ export type Database = {
           emergency_fee?: number | null
           holiday_fee?: number | null
           id?: string
-          invoice_prefix?: string | null
           is_gsa?: boolean | null
           minimum_billable_hours?: number | null
           name?: string
-          net_terms?: number | null
           notes?: string | null
           physical_address?: string | null
           physical_city?: string | null

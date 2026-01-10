@@ -60,9 +60,7 @@ const facilitySchema = z.object({
   minimum_billable_hours: z.coerce.number().default(2),
   emergency_fee: z.coerce.number().optional(),
   holiday_fee: z.coerce.number().optional(),
-  invoice_prefix: z.string().optional(),
   billing_code: z.string().optional(),
-  net_terms: z.coerce.number().default(30),
   contract_status: z.enum(['not_sent', 'sent', 'signed']),
   is_gsa: z.boolean(),
   contractor: z.boolean(),
@@ -120,7 +118,6 @@ export default function FacilityDetail() {
       name: '',
       status: 'pending',
       minimum_billable_hours: 2,
-      net_terms: 30,
       contract_status: 'not_sent',
       is_gsa: false,
       contractor: false,
@@ -158,9 +155,7 @@ export default function FacilityDetail() {
         minimum_billable_hours: facility.minimum_billable_hours || 2,
         emergency_fee: facility.emergency_fee || undefined,
         holiday_fee: facility.holiday_fee || undefined,
-        invoice_prefix: facility.invoice_prefix || '',
         billing_code: facility.billing_code || '',
-        net_terms: facility.net_terms || 30,
         contract_status: facility.contract_status || 'not_sent',
         is_gsa: facility.is_gsa || false,
         contractor: facility.contractor ?? false,
@@ -194,9 +189,7 @@ export default function FacilityDetail() {
         minimum_billable_hours: data.minimum_billable_hours,
         emergency_fee: data.emergency_fee || null,
         holiday_fee: data.holiday_fee || null,
-        invoice_prefix: data.invoice_prefix || null,
         billing_code: data.billing_code || null,
-        net_terms: data.net_terms,
         contract_status: data.contract_status,
         is_gsa: data.is_gsa,
         contractor: data.contractor,
@@ -488,18 +481,10 @@ export default function FacilityDetail() {
               <CardTitle className="text-lg">Billing Settings</CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="grid grid-cols-3 gap-4">
+              <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label htmlFor="invoice_prefix">Invoice Prefix</Label>
-                  <Input id="invoice_prefix" {...form.register('invoice_prefix')} />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="billing_code">Billing Code</Label>
+                  <Label htmlFor="billing_code">Billing Code/PO Number</Label>
                   <Input id="billing_code" {...form.register('billing_code')} />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="net_terms">Net Terms (days)</Label>
-                  <Input id="net_terms" type="number" {...form.register('net_terms')} />
                 </div>
               </div>
             </CardContent>

@@ -49,12 +49,11 @@ import {
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
 import { useToast } from '@/hooks/use-toast';
-import { Check, ChevronsUpDown, ArrowLeft, FileText, Loader2, Trash2 } from 'lucide-react';
+import { Check, ChevronsUpDown, ArrowLeft, FileText, Loader2, Trash2, Send, DollarSign } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Badge } from '@/components/ui/badge';
 
 const formSchema = z.object({
-  status: z.enum(['draft', 'submitted', 'paid']),
   issued_date: z.string().optional(),
   due_date: z.string().optional(),
   paid_date: z.string().optional(),
@@ -120,7 +119,6 @@ export default function InvoiceDetail() {
   const form = useForm<FormData>({
     resolver: zodResolver(formSchema),
     defaultValues: {
-      status: 'draft',
       issued_date: '',
       due_date: '',
       paid_date: '',
@@ -193,7 +191,6 @@ export default function InvoiceDetail() {
   useEffect(() => {
     if (invoice) {
       form.reset({
-        status: invoice.status || 'draft',
         issued_date: invoice.issued_date || '',
         due_date: invoice.due_date || '',
         paid_date: invoice.paid_date || '',
@@ -209,7 +206,6 @@ export default function InvoiceDetail() {
       const { error } = await supabase
         .from('invoices')
         .update({
-          status: data.status,
           issued_date: data.issued_date || null,
           due_date: data.due_date || null,
           paid_date: data.paid_date || null,
@@ -226,6 +222,29 @@ export default function InvoiceDetail() {
     },
     onError: (error) => {
       toast({ title: 'Error updating invoice', description: error.message, variant: 'destructive' });
+    },
+  });
+
+  const statusMutation = useMutation({
+    mutationFn: async (newStatus: 'submitted' | 'paid') => {
+      if (!selectedInvoiceId) return;
+      const updateData: Record<string, unknown> = { status: newStatus };
+      if (newStatus === 'paid') {
+        updateData.paid_date = new Date().toISOString().split('T')[0];
+      }
+      const { error } = await supabase
+        .from('invoices')
+        .update(updateData as never)
+        .eq('id', selectedInvoiceId);
+      if (error) throw error;
+    },
+    onSuccess: (_, newStatus) => {
+      queryClient.invalidateQueries({ queryKey: ['invoice', selectedInvoiceId] });
+      queryClient.invalidateQueries({ queryKey: ['invoices'] });
+      toast({ title: `Invoice marked as ${newStatus === 'submitted' ? 'Sent' : 'Paid'}` });
+    },
+    onError: (error) => {
+      toast({ title: 'Error updating status', description: error.message, variant: 'destructive' });
     },
   });
 
@@ -432,56 +451,64 @@ export default function InvoiceDetail() {
           {/* Invoice Details Form */}
           <Card>
             <CardHeader className="pb-4">
-                <div className="flex items-center justify-between">
-                <CardTitle className="text-lg">Invoice Details</CardTitle>
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={handleGeneratePdf}
-                  disabled={isGeneratingPdf || !job}
-                  size="sm"
-                >
-                  {isGeneratingPdf ? (
-                    <>
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      Generating...
-                    </>
-                  ) : (
-                    <>
-                      <FileText className="mr-2 h-4 w-4" />
-                      Generate PDF
-                    </>
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <CardTitle className="text-lg">Invoice Details</CardTitle>
+                  <Badge variant={invoice.status === 'paid' ? 'default' : invoice.status === 'submitted' ? 'secondary' : 'outline'}>
+                    {statusDisplayMap[invoice.status || 'draft']}
+                  </Badge>
+                </div>
+                <div className="flex items-center gap-2">
+                  {invoice.status === 'draft' && (
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={() => statusMutation.mutate('submitted')}
+                      disabled={statusMutation.isPending}
+                      size="sm"
+                    >
+                      <Send className="mr-2 h-4 w-4" />
+                      Mark as Sent
+                    </Button>
                   )}
-                </Button>
+                  {(invoice.status === 'draft' || invoice.status === 'submitted') && (
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={() => statusMutation.mutate('paid')}
+                      disabled={statusMutation.isPending}
+                      size="sm"
+                    >
+                      <DollarSign className="mr-2 h-4 w-4" />
+                      Mark as Paid
+                    </Button>
+                  )}
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={handleGeneratePdf}
+                    disabled={isGeneratingPdf || !job}
+                    size="sm"
+                  >
+                    {isGeneratingPdf ? (
+                      <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        Generating...
+                      </>
+                    ) : (
+                      <>
+                        <FileText className="mr-2 h-4 w-4" />
+                        Generate PDF
+                      </>
+                    )}
+                  </Button>
+                </div>
               </div>
             </CardHeader>
             <CardContent>
               <Form {...form}>
                 <form id="invoice-detail-form" onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    <FormField
-                      control={form.control}
-                      name="status"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Status</FormLabel>
-                          <Select onValueChange={field.onChange} value={field.value}>
-                            <FormControl>
-                              <SelectTrigger>
-                                <SelectValue placeholder="Select status" />
-                              </SelectTrigger>
-                            </FormControl>
-                            <SelectContent>
-                              <SelectItem value="draft">Created</SelectItem>
-                              <SelectItem value="submitted">Sent</SelectItem>
-                              <SelectItem value="paid">Paid</SelectItem>
-                            </SelectContent>
-                          </Select>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-
                     <FormField
                       control={form.control}
                       name="issued_date"

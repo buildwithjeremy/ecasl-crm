@@ -32,20 +32,20 @@ type FacilityUpdate = Database['public']['Tables']['facilities']['Update'];
 const facilitySchema = z.object({
   name: z.string().min(1, 'Name is required'),
   billing_name: z.string().optional(),
-  billing_address: z.string().optional(),
-  billing_city: z.string().optional(),
-  billing_state: z.string().optional(),
-  billing_zip: z.string().optional(),
-  physical_address: z.string().optional(),
-  physical_city: z.string().optional(),
-  physical_state: z.string().optional(),
-  physical_zip: z.string().optional(),
-  admin_contact_name: z.string().optional(),
-  admin_contact_phone: z.string().optional(),
-  admin_contact_email: z.string().email().optional().or(z.literal('')),
+  billing_address: z.string().min(1, 'Address is required'),
+  billing_city: z.string().min(1, 'City is required'),
+  billing_state: z.string().min(1, 'State is required'),
+  billing_zip: z.string().min(1, 'Zip is required'),
+  physical_address: z.string().min(1, 'Address is required'),
+  physical_city: z.string().min(1, 'City is required'),
+  physical_state: z.string().min(1, 'State is required'),
+  physical_zip: z.string().min(1, 'Zip is required'),
+  admin_contact_name: z.string().min(1, 'Name is required'),
+  admin_contact_phone: z.string().min(1, 'Phone is required'),
+  admin_contact_email: z.string().email('Valid email is required'),
   status: z.enum(['active', 'inactive', 'pending']),
-  rate_business_hours: z.coerce.number().optional(),
-  rate_after_hours: z.coerce.number().optional(),
+  rate_business_hours: z.coerce.number().min(0.01, 'Business rate is required'),
+  rate_after_hours: z.coerce.number().min(0.01, 'After hours rate is required'),
   rate_mileage: z.coerce.number().optional(),
   minimum_billable_hours: z.coerce.number().default(2),
   emergency_fee: z.coerce.number().optional(),
@@ -75,6 +75,7 @@ export function FacilityDialog({ open, onOpenChange, facility }: FacilityDialogP
       name: '',
       status: 'pending',
       minimum_billable_hours: 2,
+      rate_mileage: 0.7,
       contract_status: 'not_sent',
       is_gsa: false,
       contractor: false,
@@ -115,6 +116,7 @@ export function FacilityDialog({ open, onOpenChange, facility }: FacilityDialogP
         name: '',
         status: 'pending',
         minimum_billable_hours: 2,
+        rate_mileage: 0.7,
         contract_status: 'not_sent',
         is_gsa: false,
         contractor: false,
@@ -197,29 +199,33 @@ export function FacilityDialog({ open, onOpenChange, facility }: FacilityDialogP
                   <p className="text-sm text-destructive">{form.formState.errors.name.message}</p>
                 )}
               </div>
-              <div className="space-y-2">
-                <Label htmlFor="billing_name">Billing Name</Label>
-                <Input id="billing_name" {...form.register('billing_name')} />
-              </div>
+              {facility && (
+                <div className="space-y-2">
+                  <Label htmlFor="billing_name">Billing Name</Label>
+                  <Input id="billing_name" {...form.register('billing_name')} />
+                </div>
+              )}
             </div>
 
             <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="status">Status</Label>
-                <Select
-                  value={form.watch('status')}
-                  onValueChange={(value) => form.setValue('status', value as 'active' | 'inactive' | 'pending')}
-                >
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="active">Active</SelectItem>
-                    <SelectItem value="inactive">Inactive</SelectItem>
-                    <SelectItem value="pending">Pending</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
+              {facility && (
+                <div className="space-y-2">
+                  <Label htmlFor="status">Status</Label>
+                  <Select
+                    value={form.watch('status')}
+                    onValueChange={(value) => form.setValue('status', value as 'active' | 'inactive' | 'pending')}
+                  >
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="active">Active</SelectItem>
+                      <SelectItem value="inactive">Inactive</SelectItem>
+                      <SelectItem value="pending">Pending</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
               <div className="flex items-center space-x-2 pt-6">
                 <Checkbox
                   id="is_gsa"
@@ -244,16 +250,25 @@ export function FacilityDialog({ open, onOpenChange, facility }: FacilityDialogP
             <h3 className="font-semibold">Admin Contact</h3>
             <div className="grid grid-cols-3 gap-4">
               <div className="space-y-2">
-                <Label htmlFor="admin_contact_name">Name</Label>
+                <Label htmlFor="admin_contact_name">Name *</Label>
                 <Input id="admin_contact_name" {...form.register('admin_contact_name')} />
+                {form.formState.errors.admin_contact_name && (
+                  <p className="text-sm text-destructive">{form.formState.errors.admin_contact_name.message}</p>
+                )}
               </div>
               <div className="space-y-2">
-                <Label htmlFor="admin_contact_phone">Phone</Label>
+                <Label htmlFor="admin_contact_phone">Phone *</Label>
                 <Input id="admin_contact_phone" {...form.register('admin_contact_phone')} />
+                {form.formState.errors.admin_contact_phone && (
+                  <p className="text-sm text-destructive">{form.formState.errors.admin_contact_phone.message}</p>
+                )}
               </div>
               <div className="space-y-2">
-                <Label htmlFor="admin_contact_email">Email</Label>
+                <Label htmlFor="admin_contact_email">Email *</Label>
                 <Input id="admin_contact_email" type="email" {...form.register('admin_contact_email')} />
+                {form.formState.errors.admin_contact_email && (
+                  <p className="text-sm text-destructive">{form.formState.errors.admin_contact_email.message}</p>
+                )}
               </div>
             </div>
           </div>
@@ -262,21 +277,33 @@ export function FacilityDialog({ open, onOpenChange, facility }: FacilityDialogP
           <div className="space-y-4">
             <h3 className="font-semibold">Billing Address</h3>
             <div className="space-y-2">
-              <Label htmlFor="billing_address">Address</Label>
+              <Label htmlFor="billing_address">Address *</Label>
               <Input id="billing_address" {...form.register('billing_address')} />
+              {form.formState.errors.billing_address && (
+                <p className="text-sm text-destructive">{form.formState.errors.billing_address.message}</p>
+              )}
             </div>
             <div className="grid grid-cols-3 gap-4">
               <div className="space-y-2">
-                <Label htmlFor="billing_city">City</Label>
+                <Label htmlFor="billing_city">City *</Label>
                 <Input id="billing_city" {...form.register('billing_city')} />
+                {form.formState.errors.billing_city && (
+                  <p className="text-sm text-destructive">{form.formState.errors.billing_city.message}</p>
+                )}
               </div>
               <div className="space-y-2">
-                <Label htmlFor="billing_state">State</Label>
+                <Label htmlFor="billing_state">State *</Label>
                 <Input id="billing_state" {...form.register('billing_state')} />
+                {form.formState.errors.billing_state && (
+                  <p className="text-sm text-destructive">{form.formState.errors.billing_state.message}</p>
+                )}
               </div>
               <div className="space-y-2">
-                <Label htmlFor="billing_zip">Zip</Label>
+                <Label htmlFor="billing_zip">Zip *</Label>
                 <Input id="billing_zip" {...form.register('billing_zip')} />
+                {form.formState.errors.billing_zip && (
+                  <p className="text-sm text-destructive">{form.formState.errors.billing_zip.message}</p>
+                )}
               </div>
             </div>
           </div>
@@ -285,21 +312,33 @@ export function FacilityDialog({ open, onOpenChange, facility }: FacilityDialogP
           <div className="space-y-4">
             <h3 className="font-semibold">Physical Address (for Job Locations)</h3>
             <div className="space-y-2">
-              <Label htmlFor="physical_address">Address</Label>
+              <Label htmlFor="physical_address">Address *</Label>
               <Input id="physical_address" {...form.register('physical_address')} />
+              {form.formState.errors.physical_address && (
+                <p className="text-sm text-destructive">{form.formState.errors.physical_address.message}</p>
+              )}
             </div>
             <div className="grid grid-cols-3 gap-4">
               <div className="space-y-2">
-                <Label htmlFor="physical_city">City</Label>
+                <Label htmlFor="physical_city">City *</Label>
                 <Input id="physical_city" {...form.register('physical_city')} />
+                {form.formState.errors.physical_city && (
+                  <p className="text-sm text-destructive">{form.formState.errors.physical_city.message}</p>
+                )}
               </div>
               <div className="space-y-2">
-                <Label htmlFor="physical_state">State</Label>
+                <Label htmlFor="physical_state">State *</Label>
                 <Input id="physical_state" {...form.register('physical_state')} />
+                {form.formState.errors.physical_state && (
+                  <p className="text-sm text-destructive">{form.formState.errors.physical_state.message}</p>
+                )}
               </div>
               <div className="space-y-2">
-                <Label htmlFor="physical_zip">Zip</Label>
+                <Label htmlFor="physical_zip">Zip *</Label>
                 <Input id="physical_zip" {...form.register('physical_zip')} />
+                {form.formState.errors.physical_zip && (
+                  <p className="text-sm text-destructive">{form.formState.errors.physical_zip.message}</p>
+                )}
               </div>
             </div>
           </div>
@@ -309,12 +348,18 @@ export function FacilityDialog({ open, onOpenChange, facility }: FacilityDialogP
             <h3 className="font-semibold">Rates (What We Charge)</h3>
             <div className="grid grid-cols-3 gap-4">
               <div className="space-y-2">
-                <Label htmlFor="rate_business_hours">Business Hours ($/hr)</Label>
+                <Label htmlFor="rate_business_hours">Business Hours ($/hr) *</Label>
                 <Input id="rate_business_hours" type="number" step="0.01" {...form.register('rate_business_hours')} />
+                {form.formState.errors.rate_business_hours && (
+                  <p className="text-sm text-destructive">{form.formState.errors.rate_business_hours.message}</p>
+                )}
               </div>
               <div className="space-y-2">
-                <Label htmlFor="rate_after_hours">After Hours ($/hr)</Label>
+                <Label htmlFor="rate_after_hours">After Hours ($/hr) *</Label>
                 <Input id="rate_after_hours" type="number" step="0.01" {...form.register('rate_after_hours')} />
+                {form.formState.errors.rate_after_hours && (
+                  <p className="text-sm text-destructive">{form.formState.errors.rate_after_hours.message}</p>
+                )}
               </div>
               <div className="space-y-2">
                 <Label htmlFor="rate_mileage">Mileage ($/mile)</Label>
@@ -346,22 +391,24 @@ export function FacilityDialog({ open, onOpenChange, facility }: FacilityDialogP
                 <Input id="billing_code" {...form.register('billing_code')} />
               </div>
             </div>
-            <div className="space-y-2">
-              <Label htmlFor="contract_status">Contract Status</Label>
-              <Select
-                value={form.watch('contract_status')}
-                onValueChange={(value) => form.setValue('contract_status', value as 'not_sent' | 'sent' | 'signed')}
-              >
-                <SelectTrigger className="w-[200px]">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="not_sent">Not Sent</SelectItem>
-                  <SelectItem value="sent">Sent</SelectItem>
-                  <SelectItem value="signed">Signed</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
+            {facility && (
+              <div className="space-y-2">
+                <Label htmlFor="contract_status">Contract Status</Label>
+                <Select
+                  value={form.watch('contract_status')}
+                  onValueChange={(value) => form.setValue('contract_status', value as 'not_sent' | 'sent' | 'signed')}
+                >
+                  <SelectTrigger className="w-[200px]">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="not_sent">Not Sent</SelectItem>
+                    <SelectItem value="sent">Sent</SelectItem>
+                    <SelectItem value="signed">Signed</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
           </div>
 
           {/* Notes */}

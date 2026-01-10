@@ -1,11 +1,10 @@
 import { useState } from 'react';
-import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useNavigate } from 'react-router-dom';
+import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Plus, Search } from 'lucide-react';
-import { useToast } from '@/hooks/use-toast';
-import { FacilityDialog } from '@/components/facilities/FacilityDialog';
 import { FacilitiesTable } from '@/components/facilities/FacilitiesTable';
 import { FilterDropdown, FilterOption } from '@/components/ui/filter-dropdown';
 import { useTableSort } from '@/hooks/use-table-sort';
@@ -31,9 +30,8 @@ const contractStatusOptions: FilterOption[] = [
 ];
 
 export default function Facilities() {
+  const navigate = useNavigate();
   const [search, setSearch] = useState('');
-  const [dialogOpen, setDialogOpen] = useState(false);
-  const [selectedFacility, setSelectedFacility] = useState<Facility | null>(null);
   
   // Filters
   const [statusFilter, setStatusFilter] = useState('all');
@@ -41,8 +39,6 @@ export default function Facilities() {
   const [contractStatusFilter, setContractStatusFilter] = useState('all');
   
   const { sort, handleSort } = useTableSort('name', 'asc');
-  const { toast } = useToast();
-  const queryClient = useQueryClient();
 
   const { data: facilities, isLoading } = useQuery({
     queryKey: ['facilities', search, sort, statusFilter, gsaFilter, contractStatusFilter],
@@ -80,16 +76,6 @@ export default function Facilities() {
     },
   });
 
-  const handleEdit = (facility: Facility) => {
-    setSelectedFacility(facility);
-    setDialogOpen(true);
-  };
-
-  const handleDialogClose = () => {
-    setDialogOpen(false);
-    setSelectedFacility(null);
-  };
-
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -97,7 +83,7 @@ export default function Facilities() {
           <h1 className="text-3xl font-bold text-foreground">Facilities</h1>
           <p className="text-muted-foreground">Manage client organizations</p>
         </div>
-        <Button onClick={() => setDialogOpen(true)}>
+        <Button onClick={() => navigate('/facilities/new')}>
           <Plus className="mr-2 h-4 w-4" />
           New Facility
         </Button>
@@ -140,12 +126,6 @@ export default function Facilities() {
         isLoading={isLoading}
         sort={sort}
         onSort={handleSort}
-      />
-
-      <FacilityDialog
-        open={dialogOpen}
-        onOpenChange={handleDialogClose}
-        facility={selectedFacility}
       />
     </div>
   );

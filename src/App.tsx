@@ -13,6 +13,8 @@ import Interpreters from "./pages/Interpreters";
 import InterpreterDetail from "./pages/InterpreterDetail";
 import Facilities from "./pages/Facilities";
 import FacilityDetail from "./pages/FacilityDetail";
+import NewFacility from "./pages/NewFacility";
+import NewInterpreter from "./pages/NewInterpreter";
 import Invoices from "./pages/Invoices";
 import InvoiceDetail from "./pages/InvoiceDetail";
 import Payables from "./pages/Payables";
@@ -28,8 +30,10 @@ const router = createBrowserRouter([
   { path: "/jobs", element: <AppLayout><Jobs /></AppLayout> },
   { path: "/jobs/:id", element: <AppLayout><JobDetail /></AppLayout> },
   { path: "/interpreters", element: <AppLayout><Interpreters /></AppLayout> },
+  { path: "/interpreters/new", element: <AppLayout><NewInterpreter /></AppLayout> },
   { path: "/interpreters/:id", element: <AppLayout><InterpreterDetail /></AppLayout> },
   { path: "/facilities", element: <AppLayout><Facilities /></AppLayout> },
+  { path: "/facilities/new", element: <AppLayout><NewFacility /></AppLayout> },
   { path: "/facilities/:id", element: <AppLayout><FacilityDetail /></AppLayout> },
   { path: "/invoices", element: <AppLayout><Invoices /></AppLayout> },
   { path: "/invoices/:id", element: <AppLayout><InvoiceDetail /></AppLayout> },

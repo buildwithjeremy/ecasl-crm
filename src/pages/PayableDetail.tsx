@@ -49,12 +49,11 @@ import {
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
 import { useToast } from '@/hooks/use-toast';
-import { Check, ChevronsUpDown, ArrowLeft, Trash2 } from 'lucide-react';
+import { Check, ChevronsUpDown, ArrowLeft, Trash2, DollarSign } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Badge } from '@/components/ui/badge';
 
 const formSchema = z.object({
-  status: z.enum(['queued', 'paid']),
   paid_date: z.string().optional(),
   notes: z.string().optional(),
 });
@@ -106,7 +105,6 @@ export default function PayableDetail() {
   const form = useForm<FormData>({
     resolver: zodResolver(formSchema),
     defaultValues: {
-      status: 'queued',
       paid_date: '',
       notes: '',
     },
@@ -162,7 +160,6 @@ export default function PayableDetail() {
   useEffect(() => {
     if (payable) {
       form.reset({
-        status: payable.status || 'queued',
         paid_date: payable.paid_date || '',
         notes: payable.notes || '',
       });
@@ -175,7 +172,6 @@ export default function PayableDetail() {
       const { error } = await supabase
         .from('interpreter_bills')
         .update({
-          status: data.status,
           paid_date: data.paid_date || null,
           notes: data.notes || null,
         } as never)
@@ -190,6 +186,29 @@ export default function PayableDetail() {
     },
     onError: (error) => {
       toast({ title: 'Error updating payable', description: error.message, variant: 'destructive' });
+    },
+  });
+
+  const statusMutation = useMutation({
+    mutationFn: async () => {
+      if (!selectedPayableId) return;
+      const paidDate = new Date().toISOString().split('T')[0];
+      const { error } = await supabase
+        .from('interpreter_bills')
+        .update({
+          status: 'paid',
+          paid_date: paidDate,
+        } as never)
+        .eq('id', selectedPayableId);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['payable', selectedPayableId] });
+      queryClient.invalidateQueries({ queryKey: ['payables'] });
+      toast({ title: 'Bill marked as Paid' });
+    },
+    onError: (error) => {
+      toast({ title: 'Error updating status', description: error.message, variant: 'destructive' });
     },
   });
 
@@ -377,34 +396,31 @@ export default function PayableDetail() {
           {/* Bill Details Form */}
           <Card>
             <CardHeader className="pb-4">
-              <CardTitle className="text-lg">Bill Details</CardTitle>
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <CardTitle className="text-lg">Bill Details</CardTitle>
+                  <Badge variant={payable.status === 'paid' ? 'default' : 'outline'}>
+                    {statusDisplayMap[payable.status || 'queued']}
+                  </Badge>
+                </div>
+                {payable.status === 'queued' && (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => statusMutation.mutate()}
+                    disabled={statusMutation.isPending}
+                    size="sm"
+                  >
+                    <DollarSign className="mr-2 h-4 w-4" />
+                    Mark as Paid
+                  </Button>
+                )}
+              </div>
             </CardHeader>
             <CardContent>
               <Form {...form}>
                 <form id="payable-detail-form" onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <FormField
-                      control={form.control}
-                      name="status"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Status</FormLabel>
-                          <Select onValueChange={field.onChange} value={field.value}>
-                            <FormControl>
-                              <SelectTrigger>
-                                <SelectValue placeholder="Select status" />
-                              </SelectTrigger>
-                            </FormControl>
-                            <SelectContent>
-                              <SelectItem value="queued">Payment Pending</SelectItem>
-                              <SelectItem value="paid">Paid</SelectItem>
-                            </SelectContent>
-                          </Select>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-
                     <FormField
                       control={form.control}
                       name="paid_date"

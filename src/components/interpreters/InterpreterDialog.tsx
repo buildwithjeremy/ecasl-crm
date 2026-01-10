@@ -43,8 +43,8 @@ const interpreterSchema = z.object({
   rid_certified: z.boolean(),
   nic_certified: z.boolean(),
   other_certifications: z.string().optional(),
-  rate_business_hours: z.coerce.number().optional(),
-  rate_after_hours: z.coerce.number().optional(),
+  rate_business_hours: z.coerce.number().min(0.01, 'Business hours rate is required'),
+  rate_after_hours: z.coerce.number().min(0.01, 'After hours rate is required'),
   rate_mileage: z.coerce.number().optional(),
   minimum_hours: z.coerce.number().default(2),
   eligible_emergency_fee: z.boolean(),
@@ -79,6 +79,7 @@ export function InterpreterDialog({ open, onOpenChange, interpreter }: Interpret
       rid_certified: false,
       nic_certified: false,
       minimum_hours: 2,
+      rate_mileage: 0.7,
       eligible_emergency_fee: false,
       eligible_holiday_fee: false,
       contract_status: 'not_sent',
@@ -124,6 +125,7 @@ export function InterpreterDialog({ open, onOpenChange, interpreter }: Interpret
         rid_certified: false,
         nic_certified: false,
         minimum_hours: 2,
+        rate_mileage: 0.7,
         eligible_emergency_fee: false,
         eligible_holiday_fee: false,
         contract_status: 'not_sent',
@@ -249,22 +251,24 @@ export function InterpreterDialog({ open, onOpenChange, interpreter }: Interpret
               </div>
             </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="status">Status</Label>
-              <Select
-                value={form.watch('status')}
-                onValueChange={(value) => form.setValue('status', value as 'active' | 'inactive' | 'pending')}
-              >
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="active">Active</SelectItem>
-                  <SelectItem value="inactive">Inactive</SelectItem>
-                  <SelectItem value="pending">Pending</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
+            {interpreter && (
+              <div className="space-y-2">
+                <Label htmlFor="status">Status</Label>
+                <Select
+                  value={form.watch('status')}
+                  onValueChange={(value) => form.setValue('status', value as 'active' | 'inactive' | 'pending')}
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="active">Active</SelectItem>
+                    <SelectItem value="inactive">Inactive</SelectItem>
+                    <SelectItem value="pending">Pending</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
           </div>
 
           {/* Certifications */}
@@ -299,12 +303,18 @@ export function InterpreterDialog({ open, onOpenChange, interpreter }: Interpret
             <h3 className="font-semibold">Rates (What We Pay)</h3>
             <div className="grid grid-cols-3 gap-4">
               <div className="space-y-2">
-                <Label htmlFor="rate_business_hours">Business Hours ($/hr)</Label>
+                <Label htmlFor="rate_business_hours">Business Hours ($/hr) *</Label>
                 <Input id="rate_business_hours" type="number" step="0.01" {...form.register('rate_business_hours')} />
+                {form.formState.errors.rate_business_hours && (
+                  <p className="text-sm text-destructive">{form.formState.errors.rate_business_hours.message}</p>
+                )}
               </div>
               <div className="space-y-2">
-                <Label htmlFor="rate_after_hours">After Hours ($/hr)</Label>
+                <Label htmlFor="rate_after_hours">After Hours ($/hr) *</Label>
                 <Input id="rate_after_hours" type="number" step="0.01" {...form.register('rate_after_hours')} />
+                {form.formState.errors.rate_after_hours && (
+                  <p className="text-sm text-destructive">{form.formState.errors.rate_after_hours.message}</p>
+                )}
               </div>
               <div className="space-y-2">
                 <Label htmlFor="rate_mileage">Mileage ($/mile)</Label>

@@ -565,7 +565,11 @@ export default function FacilityDetail() {
           {/* Contract Section with PDF Generation */}
           <FacilityContractSection
             form={form}
-            facility={{ id: facility.id, contract_pdf_url: (facility as any).contract_pdf_url }}
+            facility={{ 
+              id: facility.id, 
+              contract_pdf_url: (facility as any).contract_pdf_url,
+              signed_contract_pdf_url: (facility as any).signed_contract_pdf_url
+            }}
             onContractGenerated={() => {
               queryClient.invalidateQueries({ queryKey: ['facility', selectedFacilityId] });
             }}

@@ -547,7 +547,11 @@ export default function InterpreterDetail() {
           {/* Contract & Compliance */}
           <ContractComplianceSection 
             form={form} 
-            interpreter={interpreter}
+            interpreter={{
+              id: interpreter.id,
+              contract_pdf_url: (interpreter as any).contract_pdf_url,
+              signed_contract_pdf_url: (interpreter as any).signed_contract_pdf_url
+            }}
             onContractGenerated={() => {
               queryClient.invalidateQueries({ queryKey: ['interpreter', selectedInterpreterId] });
             }}

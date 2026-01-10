@@ -49,7 +49,7 @@ const interpreterSchema = z.object({
   minimum_hours: z.coerce.number().default(2),
   eligible_emergency_fee: z.boolean(),
   eligible_holiday_fee: z.boolean(),
-  payment_method: z.enum(['zelle', 'check']).nullable().optional(),
+  payment_method: z.enum(['zelle', 'check'], { required_error: 'Payment method is required' }),
   payment_details: z.string().optional(),
   contract_status: z.enum(['not_sent', 'sent', 'signed']),
   w9_received: z.boolean(),
@@ -351,10 +351,10 @@ export function InterpreterDialog({ open, onOpenChange, interpreter }: Interpret
             <h3 className="font-semibold">Payment & Contract</h3>
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label htmlFor="payment_method">Payment Method</Label>
+                <Label htmlFor="payment_method">Payment Method *</Label>
                 <Select
                   value={form.watch('payment_method') || ''}
-                  onValueChange={(value) => form.setValue('payment_method', value as 'zelle' | 'check' | null)}
+                  onValueChange={(value) => form.setValue('payment_method', value as 'zelle' | 'check')}
                 >
                   <SelectTrigger>
                     <SelectValue placeholder="Select method" />
@@ -364,6 +364,9 @@ export function InterpreterDialog({ open, onOpenChange, interpreter }: Interpret
                     <SelectItem value="check">Check</SelectItem>
                   </SelectContent>
                 </Select>
+                {form.formState.errors.payment_method && (
+                  <p className="text-sm text-destructive">{form.formState.errors.payment_method.message}</p>
+                )}
               </div>
               <div className="space-y-2">
                 <Label htmlFor="payment_details">Payment Details</Label>
@@ -372,23 +375,25 @@ export function InterpreterDialog({ open, onOpenChange, interpreter }: Interpret
             </div>
 
             <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="contract_status">Contract Status</Label>
-                <Select
-                  value={form.watch('contract_status')}
-                  onValueChange={(value) => form.setValue('contract_status', value as 'not_sent' | 'sent' | 'signed')}
-                >
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="not_sent">Not Sent</SelectItem>
-                    <SelectItem value="sent">Sent</SelectItem>
-                    <SelectItem value="signed">Signed</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="flex items-center space-x-2 pt-6">
+              {interpreter && (
+                <div className="space-y-2">
+                  <Label htmlFor="contract_status">Contract Status</Label>
+                  <Select
+                    value={form.watch('contract_status')}
+                    onValueChange={(value) => form.setValue('contract_status', value as 'not_sent' | 'sent' | 'signed')}
+                  >
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="not_sent">Not Sent</SelectItem>
+                      <SelectItem value="sent">Sent</SelectItem>
+                      <SelectItem value="signed">Signed</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
+              <div className={`flex items-center space-x-2 ${interpreter ? 'pt-6' : ''}`}>
                 <Checkbox
                   id="w9_received"
                   checked={form.watch('w9_received')}

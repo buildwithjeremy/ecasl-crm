@@ -7,24 +7,38 @@ import { Plus, Search } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { InterpreterDialog } from '@/components/interpreters/InterpreterDialog';
 import { InterpretersTable } from '@/components/interpreters/InterpretersTable';
+import { SortSelect, SortOption } from '@/components/ui/sort-select';
 import type { Database } from '@/types/database';
 
 type Interpreter = Database['public']['Tables']['interpreters']['Row'];
+
+const sortOptions: SortOption[] = [
+  { value: 'last_name-asc', label: 'Last Name (A-Z)' },
+  { value: 'last_name-desc', label: 'Last Name (Z-A)' },
+  { value: 'first_name-asc', label: 'First Name (A-Z)' },
+  { value: 'first_name-desc', label: 'First Name (Z-A)' },
+  { value: 'status-asc', label: 'Status (A-Z)' },
+  { value: 'status-desc', label: 'Status (Z-A)' },
+  { value: 'created_at-desc', label: 'Created (Newest)' },
+  { value: 'created_at-asc', label: 'Created (Oldest)' },
+];
 
 export default function Interpreters() {
   const [search, setSearch] = useState('');
   const [dialogOpen, setDialogOpen] = useState(false);
   const [selectedInterpreter, setSelectedInterpreter] = useState<Interpreter | null>(null);
+  const [sortBy, setSortBy] = useState('last_name-asc');
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
   const { data: interpreters, isLoading } = useQuery({
-    queryKey: ['interpreters', search],
+    queryKey: ['interpreters', search, sortBy],
     queryFn: async () => {
+      const [field, direction] = sortBy.split('-') as [string, 'asc' | 'desc'];
       let query = supabase
         .from('interpreters')
         .select('*')
-        .order('last_name', { ascending: true });
+        .order(field, { ascending: direction === 'asc' });
 
       if (search) {
         query = query.or(`first_name.ilike.%${search}%,last_name.ilike.%${search}%,email.ilike.%${search}%`);
@@ -89,6 +103,7 @@ export default function Interpreters() {
             className="pl-10"
           />
         </div>
+        <SortSelect options={sortOptions} value={sortBy} onValueChange={setSortBy} />
       </div>
 
       <InterpretersTable

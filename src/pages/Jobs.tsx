@@ -9,21 +9,35 @@ import { JobDialog } from '@/components/jobs/JobDialog';
 import { JobsTable } from '@/components/jobs/JobsTable';
 import { JobsCalendar } from '@/components/jobs/JobsCalendar';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { SortSelect, SortOption } from '@/components/ui/sort-select';
 import type { Database } from '@/types/database';
 
 type Job = Database['public']['Tables']['jobs']['Row'];
+
+const sortOptions: SortOption[] = [
+  { value: 'job_date-desc', label: 'Date (Newest)' },
+  { value: 'job_date-asc', label: 'Date (Oldest)' },
+  { value: 'job_number-asc', label: 'Job # (A-Z)' },
+  { value: 'job_number-desc', label: 'Job # (Z-A)' },
+  { value: 'status-asc', label: 'Status (A-Z)' },
+  { value: 'status-desc', label: 'Status (Z-A)' },
+  { value: 'created_at-desc', label: 'Created (Newest)' },
+  { value: 'created_at-asc', label: 'Created (Oldest)' },
+];
 
 export default function Jobs() {
   const [search, setSearch] = useState('');
   const [dialogOpen, setDialogOpen] = useState(false);
   const [selectedJob, setSelectedJob] = useState<Job | null>(null);
   const [viewMode, setViewMode] = useState<'table' | 'calendar'>('table');
+  const [sortBy, setSortBy] = useState('job_date-desc');
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
   const { data: jobs, isLoading } = useQuery({
-    queryKey: ['jobs', search],
+    queryKey: ['jobs', search, sortBy],
     queryFn: async () => {
+      const [field, direction] = sortBy.split('-') as [string, 'asc' | 'desc'];
       let query = supabase
         .from('jobs')
         .select(`
@@ -31,7 +45,7 @@ export default function Jobs() {
           facility:facilities(name),
           interpreter:interpreters(first_name, last_name)
         `)
-        .order('job_date', { ascending: false });
+        .order(field, { ascending: direction === 'asc' });
 
       if (search) {
         query = query.or(`job_number.ilike.%${search}%,deaf_client_name.ilike.%${search}%`);
@@ -96,18 +110,21 @@ export default function Jobs() {
             className="pl-10"
           />
         </div>
-        <Tabs value={viewMode} onValueChange={(v) => setViewMode(v as 'table' | 'calendar')}>
-          <TabsList>
-            <TabsTrigger value="table" className="gap-2">
-              <List className="h-4 w-4" />
-              Table
-            </TabsTrigger>
-            <TabsTrigger value="calendar" className="gap-2">
-              <CalendarDays className="h-4 w-4" />
-              Calendar
-            </TabsTrigger>
-          </TabsList>
-        </Tabs>
+        <div className="flex items-center gap-4">
+          <SortSelect options={sortOptions} value={sortBy} onValueChange={setSortBy} />
+          <Tabs value={viewMode} onValueChange={(v) => setViewMode(v as 'table' | 'calendar')}>
+            <TabsList>
+              <TabsTrigger value="table" className="gap-2">
+                <List className="h-4 w-4" />
+                Table
+              </TabsTrigger>
+              <TabsTrigger value="calendar" className="gap-2">
+                <CalendarDays className="h-4 w-4" />
+                Calendar
+              </TabsTrigger>
+            </TabsList>
+          </Tabs>
+        </div>
       </div>
 
       {viewMode === 'table' ? (

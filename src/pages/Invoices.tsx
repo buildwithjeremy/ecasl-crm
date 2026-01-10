@@ -18,6 +18,7 @@ import { Plus, Search, Trash2, FileText } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { format } from 'date-fns';
 import { InvoiceDialog } from '@/components/invoices/InvoiceDialog';
+import { SortSelect, SortOption } from '@/components/ui/sort-select';
 
 type Invoice = {
   id: string;
@@ -47,17 +48,32 @@ const statusVariantMap: Record<string, 'default' | 'secondary' | 'outline'> = {
   paid: 'outline',
 };
 
+const sortOptions: SortOption[] = [
+  { value: 'created_at-desc', label: 'Created (Newest)' },
+  { value: 'created_at-asc', label: 'Created (Oldest)' },
+  { value: 'invoice_number-asc', label: 'Invoice # (A-Z)' },
+  { value: 'invoice_number-desc', label: 'Invoice # (Z-A)' },
+  { value: 'issued_date-desc', label: 'Issue Date (Newest)' },
+  { value: 'issued_date-asc', label: 'Issue Date (Oldest)' },
+  { value: 'due_date-asc', label: 'Due Date (Soonest)' },
+  { value: 'due_date-desc', label: 'Due Date (Latest)' },
+  { value: 'status-asc', label: 'Status (A-Z)' },
+  { value: 'status-desc', label: 'Status (Z-A)' },
+];
+
 export default function Invoices() {
   const [searchQuery, setSearchQuery] = useState('');
   const [dialogOpen, setDialogOpen] = useState(false);
   const [selectedInvoice, setSelectedInvoice] = useState<Invoice | null>(null);
+  const [sortBy, setSortBy] = useState('created_at-desc');
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const navigate = useNavigate();
 
   const { data: invoices, isLoading } = useQuery({
-    queryKey: ['invoices', searchQuery],
+    queryKey: ['invoices', searchQuery, sortBy],
     queryFn: async () => {
+      const [field, direction] = sortBy.split('-') as [string, 'asc' | 'desc'];
       let query = supabase
         .from('invoices')
         .select(`
@@ -65,7 +81,7 @@ export default function Invoices() {
           facility:facilities(name),
           job:jobs(job_number, deaf_client_name)
         `)
-        .order('created_at', { ascending: false });
+        .order(field, { ascending: direction === 'asc' });
 
       if (searchQuery) {
         query = query.or(`invoice_number.ilike.%${searchQuery}%,notes.ilike.%${searchQuery}%`);
@@ -132,6 +148,7 @@ export default function Invoices() {
                 className="pl-10"
               />
             </div>
+            <SortSelect options={sortOptions} value={sortBy} onValueChange={setSortBy} />
           </div>
         </CardHeader>
         <CardContent>

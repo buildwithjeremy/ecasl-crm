@@ -81,7 +81,11 @@ export default function Payables() {
         .order(sort.column, { ascending: sort.direction === 'asc' });
 
       if (searchQuery) {
-        query = query.or(`bill_number.ilike.%${searchQuery}%,notes.ilike.%${searchQuery}%`);
+        // Split search into words and match each word against searchable fields
+        const searchTerms = searchQuery.trim().toLowerCase().split(/\s+/);
+        for (const term of searchTerms) {
+          query = query.or(`bill_number.ilike.%${term}%,notes.ilike.%${term}%`);
+        }
       }
       
       if (statusFilter !== 'all') {

@@ -1,24 +1,25 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import {
   Table,
   TableBody,
   TableCell,
-  TableHead,
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
-import { Plus, Search, Trash2, FileText } from 'lucide-react';
+import { Plus, Search, FileText } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { format } from 'date-fns';
 import { InvoiceDialog } from '@/components/invoices/InvoiceDialog';
-import { SortSelect, SortOption } from '@/components/ui/sort-select';
+import { FilterDropdown, FilterOption } from '@/components/ui/filter-dropdown';
+import { SortableTableHead, SortDirection } from '@/components/ui/sortable-table-head';
+import { useTableSort } from '@/hooks/use-table-sort';
 
 type Invoice = {
   id: string;
@@ -48,32 +49,41 @@ const statusVariantMap: Record<string, 'default' | 'secondary' | 'outline'> = {
   paid: 'outline',
 };
 
-const sortOptions: SortOption[] = [
-  { value: 'created_at-desc', label: 'Created (Newest)' },
-  { value: 'created_at-asc', label: 'Created (Oldest)' },
-  { value: 'invoice_number-asc', label: 'Invoice # (A-Z)' },
-  { value: 'invoice_number-desc', label: 'Invoice # (Z-A)' },
-  { value: 'issued_date-desc', label: 'Issue Date (Newest)' },
-  { value: 'issued_date-asc', label: 'Issue Date (Oldest)' },
-  { value: 'due_date-asc', label: 'Due Date (Soonest)' },
-  { value: 'due_date-desc', label: 'Due Date (Latest)' },
-  { value: 'status-asc', label: 'Status (A-Z)' },
-  { value: 'status-desc', label: 'Status (Z-A)' },
+const statusOptions: FilterOption[] = [
+  { value: 'draft', label: 'Created' },
+  { value: 'submitted', label: 'Sent' },
+  { value: 'paid', label: 'Paid' },
+];
+
+const hasPdfOptions: FilterOption[] = [
+  { value: 'yes', label: 'Yes' },
+  { value: 'no', label: 'No' },
+];
+
+const dueDateOptions: FilterOption[] = [
+  { value: 'overdue', label: 'Overdue' },
+  { value: 'this_week', label: 'Due This Week' },
+  { value: 'this_month', label: 'Due This Month' },
 ];
 
 export default function Invoices() {
   const [searchQuery, setSearchQuery] = useState('');
   const [dialogOpen, setDialogOpen] = useState(false);
   const [selectedInvoice, setSelectedInvoice] = useState<Invoice | null>(null);
-  const [sortBy, setSortBy] = useState('created_at-desc');
+  
+  // Filters
+  const [statusFilter, setStatusFilter] = useState('all');
+  const [hasPdfFilter, setHasPdfFilter] = useState('all');
+  const [dueDateFilter, setDueDateFilter] = useState('all');
+  
+  const { sort, handleSort } = useTableSort('created_at', 'desc');
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const navigate = useNavigate();
 
   const { data: invoices, isLoading } = useQuery({
-    queryKey: ['invoices', searchQuery, sortBy],
+    queryKey: ['invoices', searchQuery, sort, statusFilter, hasPdfFilter, dueDateFilter],
     queryFn: async () => {
-      const [field, direction] = sortBy.split('-') as [string, 'asc' | 'desc'];
       let query = supabase
         .from('invoices')
         .select(`
@@ -81,10 +91,37 @@ export default function Invoices() {
           facility:facilities(name),
           job:jobs(job_number, deaf_client_name)
         `)
-        .order(field, { ascending: direction === 'asc' });
+        .order(sort.column, { ascending: sort.direction === 'asc' });
 
       if (searchQuery) {
         query = query.or(`invoice_number.ilike.%${searchQuery}%,notes.ilike.%${searchQuery}%`);
+      }
+      
+      if (statusFilter !== 'all') {
+        query = query.eq('status', statusFilter);
+      }
+      
+      if (hasPdfFilter === 'yes') {
+        query = query.not('pdf_url', 'is', null);
+      } else if (hasPdfFilter === 'no') {
+        query = query.is('pdf_url', null);
+      }
+      
+      // Due date filter
+      if (dueDateFilter !== 'all') {
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        
+        if (dueDateFilter === 'overdue') {
+          query = query.lt('due_date', today.toISOString().split('T')[0]).neq('status', 'paid');
+        } else if (dueDateFilter === 'this_week') {
+          const weekEnd = new Date(today);
+          weekEnd.setDate(weekEnd.getDate() + 7);
+          query = query.gte('due_date', today.toISOString().split('T')[0]).lte('due_date', weekEnd.toISOString().split('T')[0]);
+        } else if (dueDateFilter === 'this_month') {
+          const monthEnd = new Date(today.getFullYear(), today.getMonth() + 1, 0);
+          query = query.gte('due_date', today.toISOString().split('T')[0]).lte('due_date', monthEnd.toISOString().split('T')[0]);
+        }
       }
 
       const { data, error } = await query;
@@ -92,31 +129,6 @@ export default function Invoices() {
       return data as Invoice[];
     },
   });
-
-  const deleteMutation = useMutation({
-    mutationFn: async (id: string) => {
-      const { error } = await supabase.from('invoices').delete().eq('id', id);
-      if (error) throw error;
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['invoices'] });
-      toast({ title: 'Invoice deleted successfully' });
-    },
-    onError: (error) => {
-      toast({ title: 'Error deleting invoice', description: error.message, variant: 'destructive' });
-    },
-  });
-
-  const handleEdit = (invoice: Invoice) => {
-    setSelectedInvoice(invoice);
-    setDialogOpen(true);
-  };
-
-  const handleDelete = (id: string) => {
-    if (confirm('Are you sure you want to delete this invoice?')) {
-      deleteMutation.mutate(id);
-    }
-  };
 
   const handleDialogClose = () => {
     setSelectedInvoice(null);
@@ -138,7 +150,7 @@ export default function Invoices() {
 
       <Card>
         <CardHeader>
-          <div className="flex items-center gap-4">
+          <div className="flex flex-wrap items-center gap-4">
             <div className="relative flex-1">
               <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
               <Input
@@ -148,7 +160,26 @@ export default function Invoices() {
                 className="pl-10"
               />
             </div>
-            <SortSelect options={sortOptions} value={sortBy} onValueChange={setSortBy} />
+            <div className="flex items-center gap-2">
+              <FilterDropdown
+                label="Status"
+                options={statusOptions}
+                value={statusFilter}
+                onValueChange={setStatusFilter}
+              />
+              <FilterDropdown
+                label="Has PDF"
+                options={hasPdfOptions}
+                value={hasPdfFilter}
+                onValueChange={setHasPdfFilter}
+              />
+              <FilterDropdown
+                label="Due Date"
+                options={dueDateOptions}
+                value={dueDateFilter}
+                onValueChange={setDueDateFilter}
+              />
+            </div>
           </div>
         </CardHeader>
         <CardContent>
@@ -160,15 +191,14 @@ export default function Invoices() {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Invoice #</TableHead>
-                  <TableHead>Job #</TableHead>
-                  <TableHead>Facility</TableHead>
-                  <TableHead>Invoice Date</TableHead>
-                  <TableHead>Due Date</TableHead>
-                  <TableHead>Paid Date</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead>PDF</TableHead>
-                  <TableHead className="w-[100px]">Actions</TableHead>
+                  <SortableTableHead column="invoice_number" label="Invoice #" currentSort={sort} onSort={handleSort} />
+                  <SortableTableHead column="job_id" label="Job #" currentSort={sort} onSort={handleSort} />
+                  <SortableTableHead column="facility_id" label="Facility" currentSort={sort} onSort={handleSort} />
+                  <SortableTableHead column="issued_date" label="Invoice Date" currentSort={sort} onSort={handleSort} />
+                  <SortableTableHead column="due_date" label="Due Date" currentSort={sort} onSort={handleSort} />
+                  <SortableTableHead column="paid_date" label="Paid Date" currentSort={sort} onSort={handleSort} />
+                  <SortableTableHead column="status" label="Status" currentSort={sort} onSort={handleSort} />
+                  <SortableTableHead column="pdf_url" label="PDF" currentSort={sort} onSort={handleSort} />
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -210,18 +240,6 @@ export default function Invoices() {
                       ) : (
                         '-'
                       )}
-                    </TableCell>
-                    <TableCell>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleDelete(invoice.id);
-                        }}
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
                     </TableCell>
                   </TableRow>
                 ))}

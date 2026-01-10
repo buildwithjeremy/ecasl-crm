@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -7,41 +7,73 @@ import { Plus, Search } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { InterpreterDialog } from '@/components/interpreters/InterpreterDialog';
 import { InterpretersTable } from '@/components/interpreters/InterpretersTable';
-import { SortSelect, SortOption } from '@/components/ui/sort-select';
+import { FilterDropdown, FilterOption } from '@/components/ui/filter-dropdown';
+import { useTableSort } from '@/hooks/use-table-sort';
 import type { Database } from '@/types/database';
 
 type Interpreter = Database['public']['Tables']['interpreters']['Row'];
 
-const sortOptions: SortOption[] = [
-  { value: 'last_name-asc', label: 'Last Name (A-Z)' },
-  { value: 'last_name-desc', label: 'Last Name (Z-A)' },
-  { value: 'first_name-asc', label: 'First Name (A-Z)' },
-  { value: 'first_name-desc', label: 'First Name (Z-A)' },
-  { value: 'status-asc', label: 'Status (A-Z)' },
-  { value: 'status-desc', label: 'Status (Z-A)' },
-  { value: 'created_at-desc', label: 'Created (Newest)' },
-  { value: 'created_at-asc', label: 'Created (Oldest)' },
+const statusOptions: FilterOption[] = [
+  { value: 'active', label: 'Active' },
+  { value: 'inactive', label: 'Inactive' },
+  { value: 'pending', label: 'Pending' },
+];
+
+const certificationOptions: FilterOption[] = [
+  { value: 'rid', label: 'RID' },
+  { value: 'nic', label: 'NIC' },
+  { value: 'both', label: 'Both' },
+  { value: 'none', label: 'None' },
+];
+
+const paymentMethodOptions: FilterOption[] = [
+  { value: 'zelle', label: 'Zelle' },
+  { value: 'check', label: 'Check' },
 ];
 
 export default function Interpreters() {
   const [search, setSearch] = useState('');
   const [dialogOpen, setDialogOpen] = useState(false);
   const [selectedInterpreter, setSelectedInterpreter] = useState<Interpreter | null>(null);
-  const [sortBy, setSortBy] = useState('last_name-asc');
+  
+  // Filters
+  const [statusFilter, setStatusFilter] = useState('all');
+  const [certificationFilter, setCertificationFilter] = useState('all');
+  const [paymentMethodFilter, setPaymentMethodFilter] = useState('all');
+  
+  const { sort, handleSort } = useTableSort('last_name', 'asc');
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
   const { data: interpreters, isLoading } = useQuery({
-    queryKey: ['interpreters', search, sortBy],
+    queryKey: ['interpreters', search, sort, statusFilter, certificationFilter, paymentMethodFilter],
     queryFn: async () => {
-      const [field, direction] = sortBy.split('-') as [string, 'asc' | 'desc'];
       let query = supabase
         .from('interpreters')
         .select('*')
-        .order(field, { ascending: direction === 'asc' });
+        .order(sort.column, { ascending: sort.direction === 'asc' });
 
       if (search) {
         query = query.or(`first_name.ilike.%${search}%,last_name.ilike.%${search}%,email.ilike.%${search}%`);
+      }
+      
+      if (statusFilter !== 'all') {
+        query = query.eq('status', statusFilter);
+      }
+      
+      if (paymentMethodFilter !== 'all') {
+        query = query.eq('payment_method', paymentMethodFilter);
+      }
+      
+      // Certification filter requires special handling
+      if (certificationFilter === 'rid') {
+        query = query.eq('rid_certified', true);
+      } else if (certificationFilter === 'nic') {
+        query = query.eq('nic_certified', true);
+      } else if (certificationFilter === 'both') {
+        query = query.eq('rid_certified', true).eq('nic_certified', true);
+      } else if (certificationFilter === 'none') {
+        query = query.eq('rid_certified', false).eq('nic_certified', false);
       }
 
       const { data, error } = await query;
@@ -50,29 +82,9 @@ export default function Interpreters() {
     },
   });
 
-  const deleteMutation = useMutation({
-    mutationFn: async (id: string) => {
-      const { error } = await supabase.from('interpreters').delete().eq('id', id);
-      if (error) throw error;
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['interpreters'] });
-      toast({ title: 'Interpreter deleted successfully' });
-    },
-    onError: (error) => {
-      toast({ title: 'Error deleting interpreter', description: error.message, variant: 'destructive' });
-    },
-  });
-
   const handleEdit = (interpreter: Interpreter) => {
     setSelectedInterpreter(interpreter);
     setDialogOpen(true);
-  };
-
-  const handleDelete = (id: string) => {
-    if (confirm('Are you sure you want to delete this interpreter?')) {
-      deleteMutation.mutate(id);
-    }
   };
 
   const handleDialogClose = () => {
@@ -93,7 +105,7 @@ export default function Interpreters() {
         </Button>
       </div>
 
-      <div className="flex items-center gap-4">
+      <div className="flex flex-wrap items-center gap-4">
         <div className="relative flex-1 max-w-sm">
           <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
           <Input
@@ -103,14 +115,33 @@ export default function Interpreters() {
             className="pl-10"
           />
         </div>
-        <SortSelect options={sortOptions} value={sortBy} onValueChange={setSortBy} />
+        <div className="flex items-center gap-2">
+          <FilterDropdown
+            label="Status"
+            options={statusOptions}
+            value={statusFilter}
+            onValueChange={setStatusFilter}
+          />
+          <FilterDropdown
+            label="Certification"
+            options={certificationOptions}
+            value={certificationFilter}
+            onValueChange={setCertificationFilter}
+          />
+          <FilterDropdown
+            label="Payment"
+            options={paymentMethodOptions}
+            value={paymentMethodFilter}
+            onValueChange={setPaymentMethodFilter}
+          />
+        </div>
       </div>
 
       <InterpretersTable
         interpreters={interpreters || []}
         isLoading={isLoading}
-        onEdit={handleEdit}
-        onDelete={handleDelete}
+        sort={sort}
+        onSort={handleSort}
       />
 
       <InterpreterDialog

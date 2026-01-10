@@ -3,13 +3,11 @@ import {
   Table,
   TableBody,
   TableCell,
-  TableHead,
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Pencil, Trash2 } from 'lucide-react';
+import { SortableTableHead, SortDirection } from '@/components/ui/sortable-table-head';
 import type { Database } from '@/types/database';
 
 type Interpreter = Database['public']['Tables']['interpreters']['Row'];
@@ -17,8 +15,8 @@ type Interpreter = Database['public']['Tables']['interpreters']['Row'];
 interface InterpretersTableProps {
   interpreters: Interpreter[];
   isLoading: boolean;
-  onEdit: (interpreter: Interpreter) => void;
-  onDelete: (id: string) => void;
+  sort: { column: string; direction: SortDirection };
+  onSort: (column: string) => void;
 }
 
 const statusColors: Record<string, 'default' | 'secondary' | 'destructive'> = {
@@ -27,7 +25,7 @@ const statusColors: Record<string, 'default' | 'secondary' | 'destructive'> = {
   pending: 'secondary',
 };
 
-export function InterpretersTable({ interpreters, isLoading, onEdit, onDelete }: InterpretersTableProps) {
+export function InterpretersTable({ interpreters, isLoading, sort, onSort }: InterpretersTableProps) {
   const navigate = useNavigate();
 
   const handleRowClick = (interpreterId: string) => {
@@ -47,13 +45,12 @@ export function InterpretersTable({ interpreters, isLoading, onEdit, onDelete }:
       <Table>
         <TableHeader>
           <TableRow>
-            <TableHead>Name</TableHead>
-            <TableHead>Email</TableHead>
-            <TableHead>Phone</TableHead>
-            <TableHead>Status</TableHead>
-            <TableHead>Certifications</TableHead>
-            <TableHead>Rate (Business)</TableHead>
-            <TableHead className="w-[100px]">Actions</TableHead>
+            <SortableTableHead column="last_name" label="Name" currentSort={sort} onSort={onSort} />
+            <SortableTableHead column="email" label="Email" currentSort={sort} onSort={onSort} />
+            <SortableTableHead column="phone" label="Phone" currentSort={sort} onSort={onSort} />
+            <SortableTableHead column="status" label="Status" currentSort={sort} onSort={onSort} />
+            <SortableTableHead column="rid_certified" label="Certifications" currentSort={sort} onSort={onSort} />
+            <SortableTableHead column="rate_business_hours" label="Rate (Business)" currentSort={sort} onSort={onSort} />
           </TableRow>
         </TableHeader>
         <TableBody>
@@ -81,16 +78,6 @@ export function InterpretersTable({ interpreters, isLoading, onEdit, onDelete }:
               </TableCell>
               <TableCell>
                 {interpreter.rate_business_hours ? `$${interpreter.rate_business_hours}/hr` : '-'}
-              </TableCell>
-              <TableCell>
-                <div className="flex gap-1">
-                  <Button variant="ghost" size="icon" onClick={(e) => { e.stopPropagation(); onEdit(interpreter); }}>
-                    <Pencil className="h-4 w-4" />
-                  </Button>
-                  <Button variant="ghost" size="icon" onClick={(e) => { e.stopPropagation(); onDelete(interpreter.id); }}>
-                    <Trash2 className="h-4 w-4" />
-                  </Button>
-                </div>
               </TableCell>
             </TableRow>
           ))}

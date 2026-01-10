@@ -31,8 +31,19 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from '@/components/ui/popover';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from '@/components/ui/alert-dialog';
 import { useToast } from '@/hooks/use-toast';
-import { ArrowLeft, Check, ChevronsUpDown } from 'lucide-react';
+import { ArrowLeft, Check, ChevronsUpDown, Trash2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { FacilityContractSection } from '@/components/facilities/FacilityContractSection';
 import type { Database } from '@/types/database';
@@ -275,7 +286,7 @@ export default function FacilityDetail() {
             </PopoverContent>
           </Popover>
 
-          {/* Save button in header with unsaved indicator */}
+          {/* Save and Delete buttons in header */}
           {facility && (
             <div className="ml-auto flex items-center gap-2">
               {form.formState.isDirty && (
@@ -284,6 +295,37 @@ export default function FacilityDetail() {
                   Unsaved
                 </span>
               )}
+              <AlertDialog>
+                <AlertDialogTrigger asChild>
+                  <Button variant="outline" size="icon">
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
+                </AlertDialogTrigger>
+                <AlertDialogContent>
+                  <AlertDialogHeader>
+                    <AlertDialogTitle>Delete Facility</AlertDialogTitle>
+                    <AlertDialogDescription>
+                      Are you sure you want to delete {facility.name}? This action cannot be undone.
+                    </AlertDialogDescription>
+                  </AlertDialogHeader>
+                  <AlertDialogFooter>
+                    <AlertDialogCancel>Cancel</AlertDialogCancel>
+                    <AlertDialogAction
+                      onClick={async () => {
+                        const { error } = await supabase.from('facilities').delete().eq('id', facility.id);
+                        if (error) {
+                          toast({ title: 'Error deleting facility', description: error.message, variant: 'destructive' });
+                        } else {
+                          toast({ title: 'Facility deleted successfully' });
+                          navigate('/facilities');
+                        }
+                      }}
+                    >
+                      Delete
+                    </AlertDialogAction>
+                  </AlertDialogFooter>
+                </AlertDialogContent>
+              </AlertDialog>
               <Button 
                 type="submit" 
                 form="facility-detail-form"

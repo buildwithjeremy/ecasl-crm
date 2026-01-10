@@ -3,13 +3,11 @@ import {
   Table,
   TableBody,
   TableCell,
-  TableHead,
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Pencil, Trash2 } from 'lucide-react';
+import { SortableTableHead, SortDirection } from '@/components/ui/sortable-table-head';
 import type { Database } from '@/types/database';
 
 type Facility = Database['public']['Tables']['facilities']['Row'];
@@ -17,8 +15,8 @@ type Facility = Database['public']['Tables']['facilities']['Row'];
 interface FacilitiesTableProps {
   facilities: Facility[];
   isLoading: boolean;
-  onEdit: (facility: Facility) => void;
-  onDelete: (id: string) => void;
+  sort: { column: string; direction: SortDirection };
+  onSort: (column: string) => void;
 }
 
 const statusColors: Record<string, 'default' | 'secondary' | 'destructive'> = {
@@ -27,7 +25,7 @@ const statusColors: Record<string, 'default' | 'secondary' | 'destructive'> = {
   pending: 'secondary',
 };
 
-export function FacilitiesTable({ facilities, isLoading, onEdit, onDelete }: FacilitiesTableProps) {
+export function FacilitiesTable({ facilities, isLoading, sort, onSort }: FacilitiesTableProps) {
   const navigate = useNavigate();
 
   if (isLoading) {
@@ -47,13 +45,12 @@ export function FacilitiesTable({ facilities, isLoading, onEdit, onDelete }: Fac
       <Table>
         <TableHeader>
           <TableRow>
-            <TableHead>Name</TableHead>
-            <TableHead>Contact</TableHead>
-            <TableHead>Status</TableHead>
-            <TableHead>GSA</TableHead>
-            <TableHead>Rate (Business)</TableHead>
-            <TableHead>Net Terms</TableHead>
-            <TableHead className="w-[100px]">Actions</TableHead>
+            <SortableTableHead column="name" label="Name" currentSort={sort} onSort={onSort} />
+            <SortableTableHead column="admin_contact_name" label="Contact" currentSort={sort} onSort={onSort} />
+            <SortableTableHead column="status" label="Status" currentSort={sort} onSort={onSort} />
+            <SortableTableHead column="is_gsa" label="GSA" currentSort={sort} onSort={onSort} />
+            <SortableTableHead column="contract_status" label="Contract" currentSort={sort} onSort={onSort} />
+            <SortableTableHead column="rate_business_hours" label="Rate (Business)" currentSort={sort} onSort={onSort} />
           </TableRow>
         </TableHeader>
         <TableBody>
@@ -79,26 +76,10 @@ export function FacilitiesTable({ facilities, isLoading, onEdit, onDelete }: Fac
                 {facility.is_gsa && <Badge variant="outline">GSA</Badge>}
               </TableCell>
               <TableCell>
-                {facility.rate_business_hours ? `$${facility.rate_business_hours}/hr` : '-'}
+                <Badge variant="outline">{facility.contract_status || 'not_sent'}</Badge>
               </TableCell>
-              <TableCell>Net {facility.net_terms}</TableCell>
               <TableCell>
-                <div className="flex gap-1">
-                  <Button 
-                    variant="ghost" 
-                    size="icon" 
-                    onClick={(e) => { e.stopPropagation(); onEdit(facility); }}
-                  >
-                    <Pencil className="h-4 w-4" />
-                  </Button>
-                  <Button 
-                    variant="ghost" 
-                    size="icon" 
-                    onClick={(e) => { e.stopPropagation(); onDelete(facility.id); }}
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </Button>
-                </div>
+                {facility.rate_business_hours ? `$${facility.rate_business_hours}/hr` : '-'}
               </TableCell>
             </TableRow>
           ))}

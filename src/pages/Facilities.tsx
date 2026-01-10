@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -7,39 +7,67 @@ import { Plus, Search } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { FacilityDialog } from '@/components/facilities/FacilityDialog';
 import { FacilitiesTable } from '@/components/facilities/FacilitiesTable';
-import { SortSelect, SortOption } from '@/components/ui/sort-select';
+import { FilterDropdown, FilterOption } from '@/components/ui/filter-dropdown';
+import { useTableSort } from '@/hooks/use-table-sort';
 import type { Database } from '@/types/database';
 
 type Facility = Database['public']['Tables']['facilities']['Row'];
 
-const sortOptions: SortOption[] = [
-  { value: 'name-asc', label: 'Name (A-Z)' },
-  { value: 'name-desc', label: 'Name (Z-A)' },
-  { value: 'status-asc', label: 'Status (A-Z)' },
-  { value: 'status-desc', label: 'Status (Z-A)' },
-  { value: 'created_at-desc', label: 'Created (Newest)' },
-  { value: 'created_at-asc', label: 'Created (Oldest)' },
+const statusOptions: FilterOption[] = [
+  { value: 'active', label: 'Active' },
+  { value: 'inactive', label: 'Inactive' },
+  { value: 'pending', label: 'Pending' },
+];
+
+const gsaOptions: FilterOption[] = [
+  { value: 'yes', label: 'Yes' },
+  { value: 'no', label: 'No' },
+];
+
+const contractStatusOptions: FilterOption[] = [
+  { value: 'not_sent', label: 'Not Sent' },
+  { value: 'sent', label: 'Sent' },
+  { value: 'signed', label: 'Signed' },
 ];
 
 export default function Facilities() {
   const [search, setSearch] = useState('');
   const [dialogOpen, setDialogOpen] = useState(false);
   const [selectedFacility, setSelectedFacility] = useState<Facility | null>(null);
-  const [sortBy, setSortBy] = useState('name-asc');
+  
+  // Filters
+  const [statusFilter, setStatusFilter] = useState('all');
+  const [gsaFilter, setGsaFilter] = useState('all');
+  const [contractStatusFilter, setContractStatusFilter] = useState('all');
+  
+  const { sort, handleSort } = useTableSort('name', 'asc');
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
   const { data: facilities, isLoading } = useQuery({
-    queryKey: ['facilities', search, sortBy],
+    queryKey: ['facilities', search, sort, statusFilter, gsaFilter, contractStatusFilter],
     queryFn: async () => {
-      const [field, direction] = sortBy.split('-') as [string, 'asc' | 'desc'];
       let query = supabase
         .from('facilities')
         .select('*')
-        .order(field, { ascending: direction === 'asc' });
+        .order(sort.column, { ascending: sort.direction === 'asc' });
 
       if (search) {
         query = query.or(`name.ilike.%${search}%,admin_contact_email.ilike.%${search}%`);
+      }
+      
+      if (statusFilter !== 'all') {
+        query = query.eq('status', statusFilter);
+      }
+      
+      if (gsaFilter === 'yes') {
+        query = query.eq('is_gsa', true);
+      } else if (gsaFilter === 'no') {
+        query = query.eq('is_gsa', false);
+      }
+      
+      if (contractStatusFilter !== 'all') {
+        query = query.eq('contract_status', contractStatusFilter);
       }
 
       const { data, error } = await query;
@@ -48,29 +76,9 @@ export default function Facilities() {
     },
   });
 
-  const deleteMutation = useMutation({
-    mutationFn: async (id: string) => {
-      const { error } = await supabase.from('facilities').delete().eq('id', id);
-      if (error) throw error;
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['facilities'] });
-      toast({ title: 'Facility deleted successfully' });
-    },
-    onError: (error) => {
-      toast({ title: 'Error deleting facility', description: error.message, variant: 'destructive' });
-    },
-  });
-
   const handleEdit = (facility: Facility) => {
     setSelectedFacility(facility);
     setDialogOpen(true);
-  };
-
-  const handleDelete = (id: string) => {
-    if (confirm('Are you sure you want to delete this facility?')) {
-      deleteMutation.mutate(id);
-    }
   };
 
   const handleDialogClose = () => {
@@ -91,7 +99,7 @@ export default function Facilities() {
         </Button>
       </div>
 
-      <div className="flex items-center gap-4">
+      <div className="flex flex-wrap items-center gap-4">
         <div className="relative flex-1 max-w-sm">
           <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
           <Input
@@ -101,14 +109,33 @@ export default function Facilities() {
             className="pl-10"
           />
         </div>
-        <SortSelect options={sortOptions} value={sortBy} onValueChange={setSortBy} />
+        <div className="flex items-center gap-2">
+          <FilterDropdown
+            label="Status"
+            options={statusOptions}
+            value={statusFilter}
+            onValueChange={setStatusFilter}
+          />
+          <FilterDropdown
+            label="GSA"
+            options={gsaOptions}
+            value={gsaFilter}
+            onValueChange={setGsaFilter}
+          />
+          <FilterDropdown
+            label="Contract"
+            options={contractStatusOptions}
+            value={contractStatusFilter}
+            onValueChange={setContractStatusFilter}
+          />
+        </div>
       </div>
 
       <FacilitiesTable
         facilities={facilities || []}
         isLoading={isLoading}
-        onEdit={handleEdit}
-        onDelete={handleDelete}
+        sort={sort}
+        onSort={handleSort}
       />
 
       <FacilityDialog

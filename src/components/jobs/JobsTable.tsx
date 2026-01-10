@@ -4,13 +4,11 @@ import {
   Table,
   TableBody,
   TableCell,
-  TableHead,
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Pencil, Trash2 } from 'lucide-react';
+import { SortableTableHead, SortDirection } from '@/components/ui/sortable-table-head';
 import type { Database } from '@/types/database';
 
 type Job = Database['public']['Tables']['jobs']['Row'];
@@ -23,8 +21,8 @@ interface JobWithRelations extends Job {
 interface JobsTableProps {
   jobs: JobWithRelations[];
   isLoading: boolean;
-  onEdit: (job: Job) => void;
-  onDelete: (id: string) => void;
+  sort: { column: string; direction: SortDirection };
+  onSort: (column: string) => void;
 }
 
 const statusColors: Record<string, 'default' | 'secondary' | 'destructive' | 'outline'> = {
@@ -49,7 +47,7 @@ const statusLabels: Record<string, string> = {
   cancelled: 'Cancelled',
 };
 
-export function JobsTable({ jobs, isLoading, onEdit, onDelete }: JobsTableProps) {
+export function JobsTable({ jobs, isLoading, sort, onSort }: JobsTableProps) {
   const navigate = useNavigate();
 
   if (isLoading) {
@@ -65,14 +63,13 @@ export function JobsTable({ jobs, isLoading, onEdit, onDelete }: JobsTableProps)
       <Table>
         <TableHeader>
           <TableRow>
-            <TableHead>Job #</TableHead>
-            <TableHead>Date</TableHead>
-            <TableHead>Time</TableHead>
-            <TableHead>Facility</TableHead>
-            <TableHead>Interpreter</TableHead>
-            <TableHead>Location</TableHead>
-            <TableHead>Status</TableHead>
-            <TableHead className="w-[100px]">Actions</TableHead>
+            <SortableTableHead column="job_number" label="Job #" currentSort={sort} onSort={onSort} />
+            <SortableTableHead column="job_date" label="Date" currentSort={sort} onSort={onSort} />
+            <SortableTableHead column="start_time" label="Time" currentSort={sort} onSort={onSort} />
+            <SortableTableHead column="facility_id" label="Facility" currentSort={sort} onSort={onSort} />
+            <SortableTableHead column="interpreter_id" label="Interpreter" currentSort={sort} onSort={onSort} />
+            <SortableTableHead column="location_type" label="Location" currentSort={sort} onSort={onSort} />
+            <SortableTableHead column="status" label="Status" currentSort={sort} onSort={onSort} />
           </TableRow>
         </TableHeader>
         <TableBody>
@@ -103,30 +100,6 @@ export function JobsTable({ jobs, isLoading, onEdit, onDelete }: JobsTableProps)
                 <Badge variant={statusColors[job.status] || 'secondary'}>
                   {statusLabels[job.status] || job.status}
                 </Badge>
-              </TableCell>
-              <TableCell>
-                <div className="flex gap-1">
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      onEdit(job);
-                    }}
-                  >
-                    <Pencil className="h-4 w-4" />
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      onDelete(job.id);
-                    }}
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </Button>
-                </div>
               </TableCell>
             </TableRow>
           ))}

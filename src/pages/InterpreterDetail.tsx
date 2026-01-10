@@ -31,8 +31,19 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from '@/components/ui/popover';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from '@/components/ui/alert-dialog';
 import { useToast } from '@/hooks/use-toast';
-import { ArrowLeft, Check, ChevronsUpDown, FileText, ExternalLink, Loader2 } from 'lucide-react';
+import { ArrowLeft, Check, ChevronsUpDown, FileText, ExternalLink, Loader2, Trash2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Badge } from '@/components/ui/badge';
 import { ContractComplianceSection } from '@/components/interpreters/ContractComplianceSection';
@@ -280,7 +291,7 @@ export default function InterpreterDetail() {
             </PopoverContent>
           </Popover>
 
-          {/* Save button in header with unsaved indicator */}
+          {/* Save and Delete buttons in header */}
           {interpreter && (
             <div className="ml-auto flex items-center gap-2">
               {form.formState.isDirty && (
@@ -289,6 +300,37 @@ export default function InterpreterDetail() {
                   Unsaved
                 </span>
               )}
+              <AlertDialog>
+                <AlertDialogTrigger asChild>
+                  <Button variant="outline" size="icon">
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
+                </AlertDialogTrigger>
+                <AlertDialogContent>
+                  <AlertDialogHeader>
+                    <AlertDialogTitle>Delete Interpreter</AlertDialogTitle>
+                    <AlertDialogDescription>
+                      Are you sure you want to delete {interpreter.first_name} {interpreter.last_name}? This action cannot be undone.
+                    </AlertDialogDescription>
+                  </AlertDialogHeader>
+                  <AlertDialogFooter>
+                    <AlertDialogCancel>Cancel</AlertDialogCancel>
+                    <AlertDialogAction
+                      onClick={async () => {
+                        const { error } = await supabase.from('interpreters').delete().eq('id', interpreter.id);
+                        if (error) {
+                          toast({ title: 'Error deleting interpreter', description: error.message, variant: 'destructive' });
+                        } else {
+                          toast({ title: 'Interpreter deleted successfully' });
+                          navigate('/interpreters');
+                        }
+                      }}
+                    >
+                      Delete
+                    </AlertDialogAction>
+                  </AlertDialogFooter>
+                </AlertDialogContent>
+              </AlertDialog>
               <Button 
                 type="submit" 
                 form="interpreter-detail-form"

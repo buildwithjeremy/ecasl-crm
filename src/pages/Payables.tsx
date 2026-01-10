@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -9,16 +9,17 @@ import {
   Table,
   TableBody,
   TableCell,
-  TableHead,
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
-import { Plus, Search, Trash2 } from 'lucide-react';
+import { Plus, Search } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { format } from 'date-fns';
 import { PayableDialog } from '@/components/payables/PayableDialog';
-import { SortSelect, SortOption } from '@/components/ui/sort-select';
+import { FilterDropdown, FilterOption } from '@/components/ui/filter-dropdown';
+import { SortableTableHead } from '@/components/ui/sortable-table-head';
+import { useTableSort } from '@/hooks/use-table-sort';
 
 type Payable = {
   id: string;
@@ -43,32 +44,33 @@ const statusVariantMap: Record<string, 'default' | 'secondary' | 'outline'> = {
   paid: 'outline',
 };
 
-const sortOptions: SortOption[] = [
-  { value: 'created_at-desc', label: 'Created (Newest)' },
-  { value: 'created_at-asc', label: 'Created (Oldest)' },
-  { value: 'bill_number-asc', label: 'Bill # (A-Z)' },
-  { value: 'bill_number-desc', label: 'Bill # (Z-A)' },
-  { value: 'total-desc', label: 'Total (High-Low)' },
-  { value: 'total-asc', label: 'Total (Low-High)' },
-  { value: 'paid_date-desc', label: 'Paid Date (Newest)' },
-  { value: 'paid_date-asc', label: 'Paid Date (Oldest)' },
-  { value: 'status-asc', label: 'Status (A-Z)' },
-  { value: 'status-desc', label: 'Status (Z-A)' },
+const statusOptions: FilterOption[] = [
+  { value: 'queued', label: 'Payment Pending' },
+  { value: 'paid', label: 'Paid' },
+];
+
+const paymentMethodOptions: FilterOption[] = [
+  { value: 'zelle', label: 'Zelle' },
+  { value: 'check', label: 'Check' },
 ];
 
 export default function Payables() {
   const [searchQuery, setSearchQuery] = useState('');
   const [dialogOpen, setDialogOpen] = useState(false);
   const [selectedPayable, setSelectedPayable] = useState<Payable | null>(null);
-  const [sortBy, setSortBy] = useState('created_at-desc');
+  
+  // Filters
+  const [statusFilter, setStatusFilter] = useState('all');
+  const [paymentMethodFilter, setPaymentMethodFilter] = useState('all');
+  
+  const { sort, handleSort } = useTableSort('created_at', 'desc');
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const navigate = useNavigate();
 
   const { data: payables, isLoading } = useQuery({
-    queryKey: ['payables', searchQuery, sortBy],
+    queryKey: ['payables', searchQuery, sort, statusFilter, paymentMethodFilter],
     queryFn: async () => {
-      const [field, direction] = sortBy.split('-') as [string, 'asc' | 'desc'];
       let query = supabase
         .from('interpreter_bills')
         .select(`
@@ -76,10 +78,18 @@ export default function Payables() {
           interpreter:interpreters(first_name, last_name),
           job:jobs(job_number)
         `)
-        .order(field, { ascending: direction === 'asc' });
+        .order(sort.column, { ascending: sort.direction === 'asc' });
 
       if (searchQuery) {
         query = query.or(`bill_number.ilike.%${searchQuery}%,notes.ilike.%${searchQuery}%`);
+      }
+      
+      if (statusFilter !== 'all') {
+        query = query.eq('status', statusFilter);
+      }
+      
+      if (paymentMethodFilter !== 'all') {
+        query = query.eq('payment_method', paymentMethodFilter);
       }
 
       const { data, error } = await query;
@@ -87,26 +97,6 @@ export default function Payables() {
       return data as Payable[];
     },
   });
-
-  const deleteMutation = useMutation({
-    mutationFn: async (id: string) => {
-      const { error } = await supabase.from('interpreter_bills').delete().eq('id', id);
-      if (error) throw error;
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['payables'] });
-      toast({ title: 'Payable deleted successfully' });
-    },
-    onError: (error) => {
-      toast({ title: 'Error deleting payable', description: error.message, variant: 'destructive' });
-    },
-  });
-
-  const handleDelete = (id: string) => {
-    if (confirm('Are you sure you want to delete this payable?')) {
-      deleteMutation.mutate(id);
-    }
-  };
 
   const handleDialogClose = () => {
     setSelectedPayable(null);
@@ -133,7 +123,7 @@ export default function Payables() {
 
       <Card>
         <CardHeader>
-          <div className="flex items-center gap-4">
+          <div className="flex flex-wrap items-center gap-4">
             <div className="relative flex-1">
               <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
               <Input
@@ -143,7 +133,20 @@ export default function Payables() {
                 className="pl-10"
               />
             </div>
-            <SortSelect options={sortOptions} value={sortBy} onValueChange={setSortBy} />
+            <div className="flex items-center gap-2">
+              <FilterDropdown
+                label="Status"
+                options={statusOptions}
+                value={statusFilter}
+                onValueChange={setStatusFilter}
+              />
+              <FilterDropdown
+                label="Payment"
+                options={paymentMethodOptions}
+                value={paymentMethodFilter}
+                onValueChange={setPaymentMethodFilter}
+              />
+            </div>
           </div>
         </CardHeader>
         <CardContent>
@@ -155,13 +158,12 @@ export default function Payables() {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Bill #</TableHead>
-                  <TableHead>Interpreter</TableHead>
-                  <TableHead>Job #</TableHead>
-                  <TableHead>Total</TableHead>
-                  <TableHead>Paid Date</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead className="w-[100px]">Actions</TableHead>
+                  <SortableTableHead column="bill_number" label="Bill #" currentSort={sort} onSort={handleSort} />
+                  <SortableTableHead column="interpreter_id" label="Interpreter" currentSort={sort} onSort={handleSort} />
+                  <SortableTableHead column="job_id" label="Job #" currentSort={sort} onSort={handleSort} />
+                  <SortableTableHead column="total" label="Total" currentSort={sort} onSort={handleSort} />
+                  <SortableTableHead column="paid_date" label="Paid Date" currentSort={sort} onSort={handleSort} />
+                  <SortableTableHead column="status" label="Status" currentSort={sort} onSort={handleSort} />
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -188,18 +190,6 @@ export default function Payables() {
                           {statusDisplayMap[payable.status]}
                         </Badge>
                       )}
-                    </TableCell>
-                    <TableCell>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleDelete(payable.id);
-                        }}
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
                     </TableCell>
                   </TableRow>
                 ))}

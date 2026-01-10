@@ -129,6 +129,7 @@ export type Database = {
           rate_after_hours: number | null
           rate_business_hours: number | null
           rate_mileage: number | null
+          signed_contract_pdf_url: string | null
           status: Database["public"]["Enums"]["facility_status"] | null
           updated_at: string | null
         }
@@ -163,6 +164,7 @@ export type Database = {
           rate_after_hours?: number | null
           rate_business_hours?: number | null
           rate_mileage?: number | null
+          signed_contract_pdf_url?: string | null
           status?: Database["public"]["Enums"]["facility_status"] | null
           updated_at?: string | null
         }
@@ -197,6 +199,7 @@ export type Database = {
           rate_after_hours?: number | null
           rate_business_hours?: number | null
           rate_mileage?: number | null
+          signed_contract_pdf_url?: string | null
           status?: Database["public"]["Enums"]["facility_status"] | null
           updated_at?: string | null
         }
@@ -302,6 +305,7 @@ export type Database = {
           rate_business_hours: number | null
           rate_mileage: number | null
           rid_certified: boolean | null
+          signed_contract_pdf_url: string | null
           state: string | null
           status: Database["public"]["Enums"]["interpreter_status"] | null
           timezone: string | null
@@ -336,6 +340,7 @@ export type Database = {
           rate_business_hours?: number | null
           rate_mileage?: number | null
           rid_certified?: boolean | null
+          signed_contract_pdf_url?: string | null
           state?: string | null
           status?: Database["public"]["Enums"]["interpreter_status"] | null
           timezone?: string | null
@@ -370,6 +375,7 @@ export type Database = {
           rate_business_hours?: number | null
           rate_mileage?: number | null
           rid_certified?: boolean | null
+          signed_contract_pdf_url?: string | null
           state?: string | null
           status?: Database["public"]["Enums"]["interpreter_status"] | null
           timezone?: string | null

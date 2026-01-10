@@ -293,6 +293,7 @@ export type Database = {
           email: string
           first_name: string
           id: string
+          insurance_end_date: string | null
           last_name: string
           minimum_hours: number | null
           nic_certified: boolean | null
@@ -328,6 +329,7 @@ export type Database = {
           email: string
           first_name: string
           id?: string
+          insurance_end_date?: string | null
           last_name: string
           minimum_hours?: number | null
           nic_certified?: boolean | null
@@ -363,6 +365,7 @@ export type Database = {
           email?: string
           first_name?: string
           id?: string
+          insurance_end_date?: string | null
           last_name?: string
           minimum_hours?: number | null
           nic_certified?: boolean | null

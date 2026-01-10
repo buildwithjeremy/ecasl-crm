@@ -18,6 +18,7 @@ import { Plus, Search, Trash2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { format } from 'date-fns';
 import { PayableDialog } from '@/components/payables/PayableDialog';
+import { SortSelect, SortOption } from '@/components/ui/sort-select';
 
 type Payable = {
   id: string;
@@ -42,17 +43,32 @@ const statusVariantMap: Record<string, 'default' | 'secondary' | 'outline'> = {
   paid: 'outline',
 };
 
+const sortOptions: SortOption[] = [
+  { value: 'created_at-desc', label: 'Created (Newest)' },
+  { value: 'created_at-asc', label: 'Created (Oldest)' },
+  { value: 'bill_number-asc', label: 'Bill # (A-Z)' },
+  { value: 'bill_number-desc', label: 'Bill # (Z-A)' },
+  { value: 'total-desc', label: 'Total (High-Low)' },
+  { value: 'total-asc', label: 'Total (Low-High)' },
+  { value: 'paid_date-desc', label: 'Paid Date (Newest)' },
+  { value: 'paid_date-asc', label: 'Paid Date (Oldest)' },
+  { value: 'status-asc', label: 'Status (A-Z)' },
+  { value: 'status-desc', label: 'Status (Z-A)' },
+];
+
 export default function Payables() {
   const [searchQuery, setSearchQuery] = useState('');
   const [dialogOpen, setDialogOpen] = useState(false);
   const [selectedPayable, setSelectedPayable] = useState<Payable | null>(null);
+  const [sortBy, setSortBy] = useState('created_at-desc');
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const navigate = useNavigate();
 
   const { data: payables, isLoading } = useQuery({
-    queryKey: ['payables', searchQuery],
+    queryKey: ['payables', searchQuery, sortBy],
     queryFn: async () => {
+      const [field, direction] = sortBy.split('-') as [string, 'asc' | 'desc'];
       let query = supabase
         .from('interpreter_bills')
         .select(`
@@ -60,7 +76,7 @@ export default function Payables() {
           interpreter:interpreters(first_name, last_name),
           job:jobs(job_number)
         `)
-        .order('created_at', { ascending: false });
+        .order(field, { ascending: direction === 'asc' });
 
       if (searchQuery) {
         query = query.or(`bill_number.ilike.%${searchQuery}%,notes.ilike.%${searchQuery}%`);
@@ -127,6 +143,7 @@ export default function Payables() {
                 className="pl-10"
               />
             </div>
+            <SortSelect options={sortOptions} value={sortBy} onValueChange={setSortBy} />
           </div>
         </CardHeader>
         <CardContent>

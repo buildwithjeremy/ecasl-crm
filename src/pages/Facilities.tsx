@@ -7,24 +7,38 @@ import { Plus, Search } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { FacilityDialog } from '@/components/facilities/FacilityDialog';
 import { FacilitiesTable } from '@/components/facilities/FacilitiesTable';
+import { SortSelect, SortOption } from '@/components/ui/sort-select';
 import type { Database } from '@/types/database';
 
 type Facility = Database['public']['Tables']['facilities']['Row'];
+
+const sortOptions: SortOption[] = [
+  { value: 'name-asc', label: 'Name (A-Z)' },
+  { value: 'name-desc', label: 'Name (Z-A)' },
+  { value: 'status-asc', label: 'Status (A-Z)' },
+  { value: 'status-desc', label: 'Status (Z-A)' },
+  { value: 'created_at-desc', label: 'Created (Newest)' },
+  { value: 'created_at-asc', label: 'Created (Oldest)' },
+  { value: 'net_terms-asc', label: 'Net Terms (Low-High)' },
+  { value: 'net_terms-desc', label: 'Net Terms (High-Low)' },
+];
 
 export default function Facilities() {
   const [search, setSearch] = useState('');
   const [dialogOpen, setDialogOpen] = useState(false);
   const [selectedFacility, setSelectedFacility] = useState<Facility | null>(null);
+  const [sortBy, setSortBy] = useState('name-asc');
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
   const { data: facilities, isLoading } = useQuery({
-    queryKey: ['facilities', search],
+    queryKey: ['facilities', search, sortBy],
     queryFn: async () => {
+      const [field, direction] = sortBy.split('-') as [string, 'asc' | 'desc'];
       let query = supabase
         .from('facilities')
         .select('*')
-        .order('name', { ascending: true });
+        .order(field, { ascending: direction === 'asc' });
 
       if (search) {
         query = query.or(`name.ilike.%${search}%,admin_contact_email.ilike.%${search}%`);
@@ -89,6 +103,7 @@ export default function Facilities() {
             className="pl-10"
           />
         </div>
+        <SortSelect options={sortOptions} value={sortBy} onValueChange={setSortBy} />
       </div>
 
       <FacilitiesTable

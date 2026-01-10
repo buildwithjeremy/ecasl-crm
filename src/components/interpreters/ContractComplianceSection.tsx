@@ -128,16 +128,19 @@ export function ContractComplianceSection({
 
       const signedUrl = urlData.publicUrl;
 
-      // Update the interpreter record with the signed contract URL
+      // Update the interpreter record with the signed contract URL and status
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const { error: updateError } = await (supabase.from('interpreters') as any)
-        .update({ signed_contract_pdf_url: signedUrl })
+        .update({ 
+          signed_contract_pdf_url: signedUrl,
+          contract_status: 'signed'
+        })
         .eq('id', interpreter.id);
 
       if (updateError) throw updateError;
 
       setSignedContractPdfUrl(signedUrl);
-      form.setValue('contract_status', 'signed', { shouldDirty: true });
+      form.setValue('contract_status', 'signed', { shouldDirty: false });
       setShowUploadDialog(false);
       toast({ title: 'Signed contract uploaded successfully' });
       onContractGenerated();

@@ -4,6 +4,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
+import { format } from 'date-fns';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -11,6 +12,7 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Calendar } from '@/components/ui/calendar';
 import {
   Select,
   SelectContent,
@@ -43,7 +45,7 @@ import {
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
 import { useToast } from '@/hooks/use-toast';
-import { ArrowLeft, Check, ChevronsUpDown, FileText, ExternalLink, Loader2, Trash2 } from 'lucide-react';
+import { ArrowLeft, CalendarIcon, Check, ChevronsUpDown, Trash2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Badge } from '@/components/ui/badge';
 import { ContractComplianceSection } from '@/components/interpreters/ContractComplianceSection';
@@ -55,11 +57,17 @@ const interpreterSchema = z.object({
   first_name: z.string().min(1, 'First name is required'),
   last_name: z.string().min(1, 'Last name is required'),
   email: z.string().email('Valid email is required'),
-  phone: z.string().optional(),
+  phone: z.string().optional().refine(
+    val => !val || /^(\+1)?[\s.-]?\(?\d{3}\)?[\s.-]?\d{3}[\s.-]?\d{4}$/.test(val.replace(/\s/g, '')),
+    'Please enter a valid phone number'
+  ),
   address: z.string().optional(),
   city: z.string().optional(),
   state: z.string().optional(),
-  zip_code: z.string().optional(),
+  zip_code: z.string().optional().refine(
+    val => !val || /^\d{5}(-\d{4})?$/.test(val),
+    'Please enter a valid ZIP code (e.g., 12345 or 12345-6789)'
+  ),
   timezone: z.string().optional(),
   status: z.enum(['active', 'inactive', 'pending']),
   rid_certified: z.boolean(),
@@ -68,13 +76,14 @@ const interpreterSchema = z.object({
   rate_business_hours: z.coerce.number().optional(),
   rate_after_hours: z.coerce.number().optional(),
   rate_mileage: z.coerce.number().optional(),
-  minimum_hours: z.coerce.number().default(2),
-  eligible_emergency_fee: z.boolean(),
-  eligible_holiday_fee: z.boolean(),
+  minimum_hours: z.coerce.number().optional().default(2),
+  eligible_emergency_fee: z.boolean().optional().default(false),
+  eligible_holiday_fee: z.boolean().optional().default(false),
   payment_method: z.enum(['zelle', 'check']).nullable().optional(),
   payment_details: z.string().optional(),
   contract_status: z.enum(['not_sent', 'sent', 'signed']),
   w9_received: z.boolean(),
+  insurance_end_date: z.date().optional().nullable(),
   notes: z.string().optional(),
 });
 
@@ -137,6 +146,7 @@ export default function InterpreterDetail() {
       eligible_holiday_fee: false,
       contract_status: 'not_sent',
       w9_received: false,
+      insurance_end_date: null,
     },
   });
 
@@ -174,6 +184,7 @@ export default function InterpreterDetail() {
         payment_details: interpreter.payment_details ?? '',
         contract_status: interpreter.contract_status ?? 'not_sent',
         w9_received: interpreter.w9_received ?? false,
+        insurance_end_date: (interpreter as any).insurance_end_date ? new Date((interpreter as any).insurance_end_date) : null,
         notes: interpreter.notes ?? '',
       }, { keepDefaultValues: false });
     }
@@ -200,13 +211,14 @@ export default function InterpreterDetail() {
         rate_business_hours: data.rate_business_hours || null,
         rate_after_hours: data.rate_after_hours || null,
         rate_mileage: data.rate_mileage || null,
-        minimum_hours: data.minimum_hours,
-        eligible_emergency_fee: data.eligible_emergency_fee,
-        eligible_holiday_fee: data.eligible_holiday_fee,
+        minimum_hours: data.minimum_hours ?? 2,
+        eligible_emergency_fee: data.eligible_emergency_fee ?? false,
+        eligible_holiday_fee: data.eligible_holiday_fee ?? false,
         payment_method: data.payment_method || null,
         payment_details: data.payment_details || null,
         contract_status: data.contract_status,
         w9_received: data.w9_received,
+        insurance_end_date: data.insurance_end_date ? format(data.insurance_end_date, 'yyyy-MM-dd') : null,
         notes: data.notes || null,
       };
 
@@ -382,7 +394,10 @@ export default function InterpreterDetail() {
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="phone">Phone</Label>
-                  <Input id="phone" {...form.register('phone')} />
+                  <Input id="phone" {...form.register('phone')} placeholder="(555) 123-4567" />
+                  {form.formState.errors.phone && (
+                    <p className="text-sm text-destructive">{form.formState.errors.phone.message}</p>
+                  )}
                 </div>
               </div>
 
@@ -432,7 +447,10 @@ export default function InterpreterDetail() {
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="zip_code">Zip Code</Label>
-                  <Input id="zip_code" {...form.register('zip_code')} />
+                  <Input id="zip_code" {...form.register('zip_code')} placeholder="12345" />
+                  {form.formState.errors.zip_code && (
+                    <p className="text-sm text-destructive">{form.formState.errors.zip_code.message}</p>
+                  )}
                 </div>
               </div>
             </CardContent>
@@ -475,40 +493,55 @@ export default function InterpreterDetail() {
               <CardTitle className="text-lg">Rates (What We Pay)</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div className="grid grid-cols-3 gap-4">
+              <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label htmlFor="rate_business_hours">Business Hours ($/hr)</Label>
-                  <Input id="rate_business_hours" type="number" step="0.01" {...form.register('rate_business_hours')} />
+                  <Label htmlFor="rate_business_hours">Business Hours Rate</Label>
+                  <div className="relative">
+                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">$</span>
+                    <Input id="rate_business_hours" type="number" step="0.01" className="pl-7" {...form.register('rate_business_hours')} />
+                  </div>
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="rate_after_hours">After Hours ($/hr)</Label>
-                  <Input id="rate_after_hours" type="number" step="0.01" {...form.register('rate_after_hours')} />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="rate_mileage">Mileage ($/mile)</Label>
-                  <Input id="rate_mileage" type="number" step="0.01" {...form.register('rate_mileage')} />
+                  <Label htmlFor="rate_after_hours">After Hours Rate</Label>
+                  <div className="relative">
+                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">$</span>
+                    <Input id="rate_after_hours" type="number" step="0.01" className="pl-7" {...form.register('rate_after_hours')} />
+                  </div>
                 </div>
               </div>
-              <div className="grid grid-cols-3 gap-4">
+              <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label htmlFor="minimum_hours">Minimum Hours</Label>
-                  <Input id="minimum_hours" type="number" step="0.5" {...form.register('minimum_hours')} />
+                  <Label htmlFor="rate_mileage">Mileage Rate</Label>
+                  <div className="relative">
+                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">$</span>
+                    <Input id="rate_mileage" type="number" step="0.01" className="pl-7" {...form.register('rate_mileage')} />
+                  </div>
                 </div>
-                <div className="flex items-center space-x-2 pt-6">
-                  <Checkbox
-                    id="eligible_emergency_fee"
-                    checked={form.watch('eligible_emergency_fee')}
-                    onCheckedChange={(checked) => form.setValue('eligible_emergency_fee', !!checked, { shouldDirty: true })}
-                  />
-                  <Label htmlFor="eligible_emergency_fee">Eligible for Emergency Fee</Label>
-                </div>
-                <div className="flex items-center space-x-2 pt-6">
-                  <Checkbox
-                    id="eligible_holiday_fee"
-                    checked={form.watch('eligible_holiday_fee')}
-                    onCheckedChange={(checked) => form.setValue('eligible_holiday_fee', !!checked, { shouldDirty: true })}
-                  />
-                  <Label htmlFor="eligible_holiday_fee">Eligible for Holiday Fee</Label>
+                <div className="space-y-2">
+                  <Label>Insurance End Date</Label>
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <Button
+                        variant="outline"
+                        className={cn(
+                          "w-full justify-start text-left font-normal",
+                          !form.watch('insurance_end_date') && "text-muted-foreground"
+                        )}
+                      >
+                        <CalendarIcon className="mr-2 h-4 w-4" />
+                        {form.watch('insurance_end_date') ? format(form.watch('insurance_end_date')!, 'PPP') : <span>Select date</span>}
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-auto p-0" align="start">
+                      <Calendar
+                        mode="single"
+                        selected={form.watch('insurance_end_date') ?? undefined}
+                        onSelect={(date) => form.setValue('insurance_end_date', date ?? null, { shouldDirty: true })}
+                        initialFocus
+                        className={cn("p-3 pointer-events-auto")}
+                      />
+                    </PopoverContent>
+                  </Popover>
                 </div>
               </div>
             </CardContent>

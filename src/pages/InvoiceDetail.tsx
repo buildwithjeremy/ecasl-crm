@@ -459,7 +459,7 @@ export default function InvoiceDetail() {
                   </Badge>
                 </div>
                 <div className="flex items-center gap-2">
-                  {invoice.status === 'draft' && !pdfUrl && (
+                  {invoice.status === 'draft' && (
                     <Button
                       type="button"
                       variant="outline"

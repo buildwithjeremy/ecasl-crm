@@ -7,7 +7,7 @@ import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
-import { FileText, ExternalLink, Loader2, Send, CheckCircle } from 'lucide-react';
+import { FileText, ExternalLink, Loader2, Send, CheckCircle, Upload } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { SignedContractUploadDialog } from '@/components/contracts/SignedContractUploadDialog';
 
@@ -231,6 +231,18 @@ export function ContractComplianceSection({
               >
                 <CheckCircle className="h-4 w-4 mr-2" />
                 Mark as Signed
+              </Button>
+            )}
+
+            {/* Upload Signed PDF Button (when already signed but no PDF uploaded) */}
+            {contractStatus === 'signed' && !signedContractPdfUrl && (
+              <Button
+                type="button"
+                variant="outline"
+                onClick={handleMarkAsSignedClick}
+              >
+                <Upload className="h-4 w-4 mr-2" />
+                Upload Signed PDF
               </Button>
             )}
           </div>

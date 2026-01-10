@@ -116,6 +116,7 @@ export type Database = {
           contractor: boolean | null
           created_at: string | null
           emergency_fee: number | null
+          facility_type: Database["public"]["Enums"]["facility_type"] | null
           holiday_fee: number | null
           id: string
           is_gsa: boolean | null
@@ -131,6 +132,7 @@ export type Database = {
           rate_mileage: number | null
           signed_contract_pdf_url: string | null
           status: Database["public"]["Enums"]["facility_status"] | null
+          timezone: string | null
           updated_at: string | null
         }
         Insert: {
@@ -151,6 +153,7 @@ export type Database = {
           contractor?: boolean | null
           created_at?: string | null
           emergency_fee?: number | null
+          facility_type?: Database["public"]["Enums"]["facility_type"] | null
           holiday_fee?: number | null
           id?: string
           is_gsa?: boolean | null
@@ -166,6 +169,7 @@ export type Database = {
           rate_mileage?: number | null
           signed_contract_pdf_url?: string | null
           status?: Database["public"]["Enums"]["facility_status"] | null
+          timezone?: string | null
           updated_at?: string | null
         }
         Update: {
@@ -186,6 +190,7 @@ export type Database = {
           contractor?: boolean | null
           created_at?: string | null
           emergency_fee?: number | null
+          facility_type?: Database["public"]["Enums"]["facility_type"] | null
           holiday_fee?: number | null
           id?: string
           is_gsa?: boolean | null
@@ -201,6 +206,7 @@ export type Database = {
           rate_mileage?: number | null
           signed_contract_pdf_url?: string | null
           status?: Database["public"]["Enums"]["facility_status"] | null
+          timezone?: string | null
           updated_at?: string | null
         }
         Relationships: []
@@ -772,6 +778,13 @@ export type Database = {
       bill_status: "queued" | "paid"
       contract_status: "not_sent" | "sent" | "signed"
       facility_status: "active" | "inactive" | "pending"
+      facility_type:
+        | "hospital"
+        | "clinic"
+        | "school"
+        | "government"
+        | "business"
+        | "other"
       interpreter_status: "active" | "inactive" | "pending"
       invoice_status: "draft" | "submitted" | "paid"
       job_location_type: "in_person" | "remote"
@@ -923,6 +936,14 @@ export const Constants = {
       bill_status: ["queued", "paid"],
       contract_status: ["not_sent", "sent", "signed"],
       facility_status: ["active", "inactive", "pending"],
+      facility_type: [
+        "hospital",
+        "clinic",
+        "school",
+        "government",
+        "business",
+        "other",
+      ],
       interpreter_status: ["active", "inactive", "pending"],
       invoice_status: ["draft", "submitted", "paid"],
       job_location_type: ["in_person", "remote"],

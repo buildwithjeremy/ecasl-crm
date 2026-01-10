@@ -43,15 +43,26 @@ import {
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
 import { useToast } from '@/hooks/use-toast';
-import { ArrowLeft, Check, ChevronsUpDown, Trash2 } from 'lucide-react';
+import { ArrowLeft, Check, ChevronsUpDown, Trash2, Copy } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { getTimezoneFromState, getTimezoneDisplayName } from '@/lib/timezone-utils';
 import { FacilityContractSection } from '@/components/facilities/FacilityContractSection';
 import type { Database } from '@/types/database';
 
 type Facility = Database['public']['Tables']['facilities']['Row'];
 
+const facilityTypeOptions = [
+  { value: 'hospital', label: 'Hospital' },
+  { value: 'clinic', label: 'Clinic' },
+  { value: 'school', label: 'School' },
+  { value: 'government', label: 'Government' },
+  { value: 'business', label: 'Business' },
+  { value: 'other', label: 'Other' },
+] as const;
+
 const facilitySchema = z.object({
-  name: z.string().min(1, 'Name is required'),
+  name: z.string().min(1, 'Facility name is required'),
+  facility_type: z.enum(['hospital', 'clinic', 'school', 'government', 'business', 'other']).optional().nullable(),
   billing_name: z.string().optional(),
   billing_address: z.string().optional(),
   billing_city: z.string().optional(),
@@ -61,6 +72,7 @@ const facilitySchema = z.object({
   physical_city: z.string().optional(),
   physical_state: z.string().optional(),
   physical_zip: z.string().optional(),
+  timezone: z.string().optional().nullable(),
   admin_contact_name: z.string().optional(),
   admin_contact_phone: z.string().optional(),
   admin_contact_email: z.string().email().optional().or(z.literal('')),
@@ -68,7 +80,8 @@ const facilitySchema = z.object({
   rate_business_hours: z.coerce.number().optional(),
   rate_after_hours: z.coerce.number().optional(),
   rate_mileage: z.coerce.number().optional(),
-  minimum_billable_hours: z.coerce.number().default(2),
+  // Keep these in schema for database compatibility but don't show in UI
+  minimum_billable_hours: z.coerce.number().optional().default(2),
   emergency_fee: z.coerce.number().optional(),
   holiday_fee: z.coerce.number().optional(),
   billing_code: z.string().optional(),
@@ -79,12 +92,6 @@ const facilitySchema = z.object({
 });
 
 type FormData = z.infer<typeof facilitySchema>;
-
-const statusLabels: Record<string, string> = {
-  active: 'Active',
-  inactive: 'Inactive',
-  pending: 'Pending',
-};
 
 export default function FacilityDetail() {
   const { id } = useParams<{ id: string }>();
@@ -127,6 +134,7 @@ export default function FacilityDetail() {
     resolver: zodResolver(facilitySchema),
     defaultValues: {
       name: '',
+      facility_type: null,
       status: 'pending',
       minimum_billable_hours: 2,
       contract_status: 'not_sent',
@@ -134,6 +142,16 @@ export default function FacilityDetail() {
       contractor: false,
     },
   });
+
+  const watchedPhysicalState = form.watch('physical_state');
+  const detectedTimezone = getTimezoneFromState(watchedPhysicalState);
+
+  // Auto-update timezone when physical state changes
+  useEffect(() => {
+    if (detectedTimezone) {
+      form.setValue('timezone', detectedTimezone, { shouldDirty: true });
+    }
+  }, [detectedTimezone, form]);
 
   // Update URL when facility changes
   useEffect(() => {
@@ -147,6 +165,7 @@ export default function FacilityDetail() {
     if (facility) {
       form.reset({
         name: facility.name,
+        facility_type: (facility as any).facility_type || null,
         billing_name: facility.billing_name ?? '',
         billing_address: facility.billing_address ?? '',
         billing_city: facility.billing_city ?? '',
@@ -156,6 +175,7 @@ export default function FacilityDetail() {
         physical_city: facility.physical_city ?? '',
         physical_state: facility.physical_state ?? '',
         physical_zip: facility.physical_zip ?? '',
+        timezone: (facility as any).timezone ?? null,
         admin_contact_name: facility.admin_contact_name ?? '',
         admin_contact_phone: facility.admin_contact_phone ?? '',
         admin_contact_email: facility.admin_contact_email ?? '',
@@ -175,12 +195,25 @@ export default function FacilityDetail() {
     }
   }, [facility, form]);
 
+  const copyBillingToPhysical = () => {
+    const billingAddress = form.getValues('billing_address');
+    const billingCity = form.getValues('billing_city');
+    const billingState = form.getValues('billing_state');
+    const billingZip = form.getValues('billing_zip');
+
+    form.setValue('physical_address', billingAddress || '', { shouldDirty: true });
+    form.setValue('physical_city', billingCity || '', { shouldDirty: true });
+    form.setValue('physical_state', billingState || '', { shouldDirty: true });
+    form.setValue('physical_zip', billingZip || '', { shouldDirty: true });
+  };
+
   const mutation = useMutation({
     mutationFn: async (data: FormData) => {
       if (!selectedFacilityId) return;
       
         const payload = {
           name: data.name,
+          facility_type: data.facility_type || null,
           billing_name: data.billing_name || null,
           billing_address: data.billing_address || null,
           billing_city: data.billing_city || null,
@@ -190,6 +223,7 @@ export default function FacilityDetail() {
           physical_city: data.physical_city || null,
           physical_state: data.physical_state || null,
           physical_zip: data.physical_zip || null,
+          timezone: data.timezone || null,
           admin_contact_name: data.admin_contact_name || null,
           admin_contact_phone: data.admin_contact_phone || null,
           admin_contact_email: data.admin_contact_email || null,
@@ -352,19 +386,37 @@ export default function FacilityDetail() {
             <CardContent className="space-y-4">
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label htmlFor="name">Name *</Label>
+                  <Label htmlFor="name">Facility Name *</Label>
                   <Input id="name" {...form.register('name')} />
                   {form.formState.errors.name && (
                     <p className="text-sm text-destructive">{form.formState.errors.name.message}</p>
                   )}
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="billing_name">Billing Name</Label>
-                  <Input id="billing_name" {...form.register('billing_name')} />
+                  <Label htmlFor="facility_type">Facility Type</Label>
+                  <Select
+                    value={form.watch('facility_type') || ''}
+                    onValueChange={(value) => form.setValue('facility_type', value as FormData['facility_type'], { shouldDirty: true })}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select type" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {facilityTypeOptions.map((option) => (
+                        <SelectItem key={option.value} value={option.value}>
+                          {option.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
               </div>
 
               <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="billing_name">Billing Name</Label>
+                  <Input id="billing_name" {...form.register('billing_name')} />
+                </div>
                 <div className="space-y-2">
                   <Label htmlFor="status">Status</Label>
                   <Select
@@ -381,23 +433,24 @@ export default function FacilityDetail() {
                     </SelectContent>
                   </Select>
                 </div>
-                <div className="flex items-center gap-6 pt-6">
-                  <div className="flex items-center space-x-2">
-                    <Checkbox
-                      id="is_gsa"
-                      checked={form.watch('is_gsa')}
-                      onCheckedChange={(checked) => form.setValue('is_gsa', !!checked, { shouldDirty: true })}
-                    />
-                    <Label htmlFor="is_gsa">GSA Contract</Label>
-                  </div>
-                  <div className="flex items-center space-x-2">
-                    <Checkbox
-                      id="contractor"
-                      checked={form.watch('contractor')}
-                      onCheckedChange={(checked) => form.setValue('contractor', !!checked, { shouldDirty: true })}
-                    />
-                    <Label htmlFor="contractor">Contractor</Label>
-                  </div>
+              </div>
+
+              <div className="flex items-center gap-6">
+                <div className="flex items-center space-x-2">
+                  <Checkbox
+                    id="is_gsa"
+                    checked={form.watch('is_gsa')}
+                    onCheckedChange={(checked) => form.setValue('is_gsa', !!checked, { shouldDirty: true })}
+                  />
+                  <Label htmlFor="is_gsa">GSA Contract</Label>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <Checkbox
+                    id="contractor"
+                    checked={form.watch('contractor')}
+                    onCheckedChange={(checked) => form.setValue('contractor', !!checked, { shouldDirty: true })}
+                  />
+                  <Label htmlFor="contractor">Contractor</Label>
                 </div>
               </div>
             </CardContent>
@@ -456,7 +509,19 @@ export default function FacilityDetail() {
           {/* Physical Address */}
           <Card>
             <CardHeader className="pb-4">
-              <CardTitle className="text-lg">Physical Address (for Job Locations)</CardTitle>
+              <div className="flex items-center justify-between">
+                <CardTitle className="text-lg">Physical Address (for Job Locations)</CardTitle>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={copyBillingToPhysical}
+                  className="h-8"
+                >
+                  <Copy className="h-3 w-3 mr-1" />
+                  Copy from Billing
+                </Button>
+              </div>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="space-y-2">
@@ -477,6 +542,16 @@ export default function FacilityDetail() {
                   <Input id="physical_zip" {...form.register('physical_zip')} />
                 </div>
               </div>
+              <div className="space-y-2">
+                <Label htmlFor="timezone">Timezone</Label>
+                <Input
+                  id="timezone"
+                  value={getTimezoneDisplayName(detectedTimezone || form.watch('timezone'))}
+                  disabled
+                  className="bg-muted"
+                />
+                <p className="text-xs text-muted-foreground">Auto-detected from state</p>
+              </div>
             </CardContent>
           </Card>
 
@@ -488,60 +563,43 @@ export default function FacilityDetail() {
             <CardContent className="space-y-4">
               <div className="grid grid-cols-3 gap-4">
                 <div className="space-y-2">
-                  <Label htmlFor="rate_business_hours">Business Hours ($/hr)</Label>
-                  <Input
-                    id="rate_business_hours"
-                    type="number"
-                    step="0.01"
-                    {...form.register('rate_business_hours', { valueAsNumber: true })}
-                  />
+                  <Label htmlFor="rate_business_hours">Business Hours Rate</Label>
+                  <div className="relative">
+                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">$</span>
+                    <Input
+                      id="rate_business_hours"
+                      type="number"
+                      step="0.01"
+                      className="pl-7"
+                      {...form.register('rate_business_hours', { valueAsNumber: true })}
+                    />
+                  </div>
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="rate_after_hours">After Hours ($/hr)</Label>
-                  <Input
-                    id="rate_after_hours"
-                    type="number"
-                    step="0.01"
-                    {...form.register('rate_after_hours', { valueAsNumber: true })}
-                  />
+                  <Label htmlFor="rate_after_hours">After Hours Rate</Label>
+                  <div className="relative">
+                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">$</span>
+                    <Input
+                      id="rate_after_hours"
+                      type="number"
+                      step="0.01"
+                      className="pl-7"
+                      {...form.register('rate_after_hours', { valueAsNumber: true })}
+                    />
+                  </div>
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="rate_mileage">Mileage ($/mile)</Label>
-                  <Input
-                    id="rate_mileage"
-                    type="number"
-                    step="0.01"
-                    {...form.register('rate_mileage', { valueAsNumber: true })}
-                  />
-                </div>
-              </div>
-              <div className="grid grid-cols-3 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="minimum_billable_hours">Minimum Billable Hours</Label>
-                  <Input
-                    id="minimum_billable_hours"
-                    type="number"
-                    step="0.5"
-                    {...form.register('minimum_billable_hours', { valueAsNumber: true })}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="emergency_fee">Emergency Fee ($)</Label>
-                  <Input
-                    id="emergency_fee"
-                    type="number"
-                    step="0.01"
-                    {...form.register('emergency_fee', { valueAsNumber: true })}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="holiday_fee">Holiday Fee ($)</Label>
-                  <Input
-                    id="holiday_fee"
-                    type="number"
-                    step="0.01"
-                    {...form.register('holiday_fee', { valueAsNumber: true })}
-                  />
+                  <Label htmlFor="rate_mileage">Mileage Rate</Label>
+                  <div className="relative">
+                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">$</span>
+                    <Input
+                      id="rate_mileage"
+                      type="number"
+                      step="0.01"
+                      className="pl-7"
+                      {...form.register('rate_mileage', { valueAsNumber: true })}
+                    />
+                  </div>
                 </div>
               </div>
             </CardContent>

@@ -23,14 +23,25 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
+import { Copy } from 'lucide-react';
+import { getTimezoneFromState, getTimezoneDisplayName } from '@/lib/timezone-utils';
 import type { Database } from '@/types/database';
 
 type Facility = Database['public']['Tables']['facilities']['Row'];
 type FacilityInsert = Database['public']['Tables']['facilities']['Insert'];
-type FacilityUpdate = Database['public']['Tables']['facilities']['Update'];
+
+const facilityTypeOptions = [
+  { value: 'hospital', label: 'Hospital' },
+  { value: 'clinic', label: 'Clinic' },
+  { value: 'school', label: 'School' },
+  { value: 'government', label: 'Government' },
+  { value: 'business', label: 'Business' },
+  { value: 'other', label: 'Other' },
+] as const;
 
 const facilitySchema = z.object({
-  name: z.string().min(1, 'Name is required'),
+  name: z.string().min(1, 'Facility name is required'),
+  facility_type: z.enum(['hospital', 'clinic', 'school', 'government', 'business', 'other']).optional().nullable(),
   billing_name: z.string().optional(),
   billing_address: z.string().min(1, 'Address is required'),
   billing_city: z.string().min(1, 'City is required'),
@@ -40,14 +51,16 @@ const facilitySchema = z.object({
   physical_city: z.string().min(1, 'City is required'),
   physical_state: z.string().min(1, 'State is required'),
   physical_zip: z.string().min(1, 'Zip is required'),
-  admin_contact_name: z.string().min(1, 'Name is required'),
-  admin_contact_phone: z.string().min(1, 'Phone is required'),
-  admin_contact_email: z.string().email('Valid email is required'),
+  timezone: z.string().optional().nullable(),
+  admin_contact_name: z.string().optional(),
+  admin_contact_phone: z.string().optional(),
+  admin_contact_email: z.string().email('Valid email is required').optional().or(z.literal('')),
   status: z.enum(['active', 'inactive', 'pending']),
   rate_business_hours: z.coerce.number().min(0.01, 'Business rate is required'),
   rate_after_hours: z.coerce.number().min(0.01, 'After hours rate is required'),
   rate_mileage: z.coerce.number().optional(),
-  minimum_billable_hours: z.coerce.number().default(2),
+  // Keep these in schema for database compatibility but don't show in UI
+  minimum_billable_hours: z.coerce.number().optional().default(2),
   emergency_fee: z.coerce.number().optional(),
   holiday_fee: z.coerce.number().optional(),
   billing_code: z.string().optional(),
@@ -73,6 +86,7 @@ export function FacilityDialog({ open, onOpenChange, facility }: FacilityDialogP
     resolver: zodResolver(facilitySchema),
     defaultValues: {
       name: '',
+      facility_type: null,
       status: 'pending',
       minimum_billable_hours: 2,
       rate_mileage: 0.7,
@@ -82,10 +96,21 @@ export function FacilityDialog({ open, onOpenChange, facility }: FacilityDialogP
     },
   });
 
+  const watchedPhysicalState = form.watch('physical_state');
+  const detectedTimezone = getTimezoneFromState(watchedPhysicalState);
+
+  // Auto-update timezone when physical state changes
+  useEffect(() => {
+    if (detectedTimezone) {
+      form.setValue('timezone', detectedTimezone);
+    }
+  }, [detectedTimezone, form]);
+
   useEffect(() => {
     if (facility) {
       form.reset({
         name: facility.name,
+        facility_type: (facility as any).facility_type || null,
         billing_name: facility.billing_name || '',
         billing_address: facility.billing_address || '',
         billing_city: facility.billing_city || '',
@@ -95,6 +120,7 @@ export function FacilityDialog({ open, onOpenChange, facility }: FacilityDialogP
         physical_city: facility.physical_city || '',
         physical_state: facility.physical_state || '',
         physical_zip: facility.physical_zip || '',
+        timezone: (facility as any).timezone || null,
         admin_contact_name: facility.admin_contact_name || '',
         admin_contact_phone: facility.admin_contact_phone || '',
         admin_contact_email: facility.admin_contact_email || '',
@@ -114,6 +140,7 @@ export function FacilityDialog({ open, onOpenChange, facility }: FacilityDialogP
     } else {
       form.reset({
         name: '',
+        facility_type: null,
         status: 'pending',
         minimum_billable_hours: 2,
         rate_mileage: 0.7,
@@ -124,10 +151,24 @@ export function FacilityDialog({ open, onOpenChange, facility }: FacilityDialogP
     }
   }, [facility, form]);
 
+  const copyBillingToPhysical = () => {
+    const billingAddress = form.getValues('billing_address');
+    const billingCity = form.getValues('billing_city');
+    const billingState = form.getValues('billing_state');
+    const billingZip = form.getValues('billing_zip');
+
+    form.setValue('physical_address', billingAddress || '');
+    form.setValue('physical_city', billingCity || '');
+    form.setValue('physical_state', billingState || '');
+    form.setValue('physical_zip', billingZip || '');
+  };
+
   const mutation = useMutation({
     mutationFn: async (data: FormData) => {
-      const payload = {
+      // Using 'as any' because facility_type and timezone are new columns not yet in generated types
+      const payload: any = {
         name: data.name,
+        facility_type: data.facility_type || null,
         billing_name: data.billing_name || null,
         billing_address: data.billing_address || null,
         billing_city: data.billing_city || null,
@@ -137,6 +178,7 @@ export function FacilityDialog({ open, onOpenChange, facility }: FacilityDialogP
         physical_city: data.physical_city || null,
         physical_state: data.physical_state || null,
         physical_zip: data.physical_zip || null,
+        timezone: data.timezone || null,
         admin_contact_name: data.admin_contact_name || null,
         admin_contact_phone: data.admin_contact_phone || null,
         admin_contact_email: data.admin_contact_email || null,
@@ -152,7 +194,7 @@ export function FacilityDialog({ open, onOpenChange, facility }: FacilityDialogP
         is_gsa: data.is_gsa,
         contractor: data.contractor,
         notes: data.notes || null,
-      } satisfies FacilityInsert;
+      };
 
       if (facility) {
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -193,21 +235,39 @@ export function FacilityDialog({ open, onOpenChange, facility }: FacilityDialogP
             <h3 className="font-semibold">Basic Information</h3>
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label htmlFor="name">Name *</Label>
+                <Label htmlFor="name">Facility Name *</Label>
                 <Input id="name" {...form.register('name')} />
                 {form.formState.errors.name && (
                   <p className="text-sm text-destructive">{form.formState.errors.name.message}</p>
                 )}
               </div>
+              <div className="space-y-2">
+                <Label htmlFor="facility_type">Facility Type</Label>
+                <Select
+                  value={form.watch('facility_type') || ''}
+                  onValueChange={(value) => form.setValue('facility_type', value as FormData['facility_type'])}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select type" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {facilityTypeOptions.map((option) => (
+                      <SelectItem key={option.value} value={option.value}>
+                        {option.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
               {facility && (
                 <div className="space-y-2">
                   <Label htmlFor="billing_name">Billing Name</Label>
                   <Input id="billing_name" {...form.register('billing_name')} />
                 </div>
               )}
-            </div>
-
-            <div className="grid grid-cols-2 gap-4">
               {facility && (
                 <div className="space-y-2">
                   <Label htmlFor="status">Status</Label>
@@ -226,7 +286,10 @@ export function FacilityDialog({ open, onOpenChange, facility }: FacilityDialogP
                   </Select>
                 </div>
               )}
-              <div className="flex items-center space-x-2 pt-6">
+            </div>
+
+            <div className="flex items-center gap-6">
+              <div className="flex items-center space-x-2">
                 <Checkbox
                   id="is_gsa"
                   checked={form.watch('is_gsa')}
@@ -234,7 +297,7 @@ export function FacilityDialog({ open, onOpenChange, facility }: FacilityDialogP
                 />
                 <Label htmlFor="is_gsa">GSA Contract</Label>
               </div>
-              <div className="flex items-center space-x-2 pt-6">
+              <div className="flex items-center space-x-2">
                 <Checkbox
                   id="contractor"
                   checked={form.watch('contractor')}
@@ -250,21 +313,15 @@ export function FacilityDialog({ open, onOpenChange, facility }: FacilityDialogP
             <h3 className="font-semibold">Admin Contact</h3>
             <div className="grid grid-cols-3 gap-4">
               <div className="space-y-2">
-                <Label htmlFor="admin_contact_name">Name *</Label>
+                <Label htmlFor="admin_contact_name">Name</Label>
                 <Input id="admin_contact_name" {...form.register('admin_contact_name')} />
-                {form.formState.errors.admin_contact_name && (
-                  <p className="text-sm text-destructive">{form.formState.errors.admin_contact_name.message}</p>
-                )}
               </div>
               <div className="space-y-2">
-                <Label htmlFor="admin_contact_phone">Phone *</Label>
+                <Label htmlFor="admin_contact_phone">Phone</Label>
                 <Input id="admin_contact_phone" {...form.register('admin_contact_phone')} />
-                {form.formState.errors.admin_contact_phone && (
-                  <p className="text-sm text-destructive">{form.formState.errors.admin_contact_phone.message}</p>
-                )}
               </div>
               <div className="space-y-2">
-                <Label htmlFor="admin_contact_email">Email *</Label>
+                <Label htmlFor="admin_contact_email">Email</Label>
                 <Input id="admin_contact_email" type="email" {...form.register('admin_contact_email')} />
                 {form.formState.errors.admin_contact_email && (
                   <p className="text-sm text-destructive">{form.formState.errors.admin_contact_email.message}</p>
@@ -310,7 +367,19 @@ export function FacilityDialog({ open, onOpenChange, facility }: FacilityDialogP
 
           {/* Physical Address */}
           <div className="space-y-4">
-            <h3 className="font-semibold">Physical Address (for Job Locations)</h3>
+            <div className="flex items-center justify-between">
+              <h3 className="font-semibold">Physical Address (for Job Locations)</h3>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={copyBillingToPhysical}
+                className="h-8"
+              >
+                <Copy className="h-3 w-3 mr-1" />
+                Copy from Billing
+              </Button>
+            </div>
             <div className="space-y-2">
               <Label htmlFor="physical_address">Address *</Label>
               <Input id="physical_address" {...form.register('physical_address')} />
@@ -341,6 +410,16 @@ export function FacilityDialog({ open, onOpenChange, facility }: FacilityDialogP
                 )}
               </div>
             </div>
+            <div className="space-y-2">
+              <Label htmlFor="timezone">Timezone</Label>
+              <Input
+                id="timezone"
+                value={getTimezoneDisplayName(detectedTimezone)}
+                disabled
+                className="bg-muted"
+              />
+              <p className="text-xs text-muted-foreground">Auto-detected from state</p>
+            </div>
           </div>
 
           {/* Rates */}
@@ -348,36 +427,49 @@ export function FacilityDialog({ open, onOpenChange, facility }: FacilityDialogP
             <h3 className="font-semibold">Rates (What We Charge)</h3>
             <div className="grid grid-cols-3 gap-4">
               <div className="space-y-2">
-                <Label htmlFor="rate_business_hours">Business Hours ($/hr) *</Label>
-                <Input id="rate_business_hours" type="number" step="0.01" {...form.register('rate_business_hours')} />
+                <Label htmlFor="rate_business_hours">Business Hours Rate *</Label>
+                <div className="relative">
+                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">$</span>
+                  <Input 
+                    id="rate_business_hours" 
+                    type="number" 
+                    step="0.01" 
+                    className="pl-7"
+                    {...form.register('rate_business_hours')} 
+                  />
+                </div>
                 {form.formState.errors.rate_business_hours && (
                   <p className="text-sm text-destructive">{form.formState.errors.rate_business_hours.message}</p>
                 )}
               </div>
               <div className="space-y-2">
-                <Label htmlFor="rate_after_hours">After Hours ($/hr) *</Label>
-                <Input id="rate_after_hours" type="number" step="0.01" {...form.register('rate_after_hours')} />
+                <Label htmlFor="rate_after_hours">After Hours Rate *</Label>
+                <div className="relative">
+                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">$</span>
+                  <Input 
+                    id="rate_after_hours" 
+                    type="number" 
+                    step="0.01" 
+                    className="pl-7"
+                    {...form.register('rate_after_hours')} 
+                  />
+                </div>
                 {form.formState.errors.rate_after_hours && (
                   <p className="text-sm text-destructive">{form.formState.errors.rate_after_hours.message}</p>
                 )}
               </div>
               <div className="space-y-2">
-                <Label htmlFor="rate_mileage">Mileage ($/mile)</Label>
-                <Input id="rate_mileage" type="number" step="0.01" {...form.register('rate_mileage')} />
-              </div>
-            </div>
-            <div className="grid grid-cols-3 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="minimum_billable_hours">Minimum Hours</Label>
-                <Input id="minimum_billable_hours" type="number" step="0.5" {...form.register('minimum_billable_hours')} />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="emergency_fee">Emergency Fee ($)</Label>
-                <Input id="emergency_fee" type="number" step="0.01" {...form.register('emergency_fee')} />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="holiday_fee">Holiday Fee ($)</Label>
-                <Input id="holiday_fee" type="number" step="0.01" {...form.register('holiday_fee')} />
+                <Label htmlFor="rate_mileage">Mileage Rate</Label>
+                <div className="relative">
+                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">$</span>
+                  <Input 
+                    id="rate_mileage" 
+                    type="number" 
+                    step="0.01" 
+                    className="pl-7"
+                    {...form.register('rate_mileage')} 
+                  />
+                </div>
               </div>
             </div>
           </div>
@@ -422,7 +514,7 @@ export function FacilityDialog({ open, onOpenChange, facility }: FacilityDialogP
               Cancel
             </Button>
             <Button type="submit" disabled={mutation.isPending}>
-              {mutation.isPending ? 'Saving...' : facility ? 'Update' : 'Create'}
+              {mutation.isPending ? 'Saving...' : facility ? 'Save' : 'Create'}
             </Button>
           </div>
         </form>

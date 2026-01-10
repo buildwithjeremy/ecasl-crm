@@ -5,15 +5,9 @@ import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
-import { FileText, ExternalLink, Loader2 } from 'lucide-react';
+import { FileText, ExternalLink, Loader2, Send, CheckCircle } from 'lucide-react';
+import { Badge } from '@/components/ui/badge';
 
 interface Facility {
   id: string;
@@ -78,32 +72,55 @@ export function FacilityContractSection({
   const contractStatus = form.watch('contract_status');
   const canGenerateContract = contractStatus === 'not_sent';
 
+  const getStatusBadgeVariant = (status: string) => {
+    switch (status) {
+      case 'signed':
+        return 'default';
+      case 'sent':
+        return 'secondary';
+      default:
+        return 'outline';
+    }
+  };
+
+  const getStatusLabel = (status: string) => {
+    switch (status) {
+      case 'signed':
+        return 'Signed';
+      case 'sent':
+        return 'Sent';
+      default:
+        return 'Not Sent';
+    }
+  };
+
+  const handleMarkAsSent = () => {
+    form.setValue('contract_status', 'sent', { shouldDirty: true });
+  };
+
+  const handleMarkAsSigned = () => {
+    form.setValue('contract_status', 'signed', { shouldDirty: true });
+  };
+
   return (
     <Card>
       <CardHeader className="pb-4">
         <CardTitle className="text-lg">Contract</CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
-        <div className="space-y-2 max-w-xs">
-          <Label htmlFor="contract_status">Contract Status</Label>
-          <Select
-            value={contractStatus}
-            onValueChange={(value) => form.setValue('contract_status', value as 'not_sent' | 'sent' | 'signed', { shouldDirty: true })}
-          >
-            <SelectTrigger>
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="not_sent">Not Sent</SelectItem>
-              <SelectItem value="sent">Sent</SelectItem>
-              <SelectItem value="signed">Signed</SelectItem>
-            </SelectContent>
-          </Select>
+        <div className="space-y-2">
+          <Label>Contract Status</Label>
+          <div className="pt-1">
+            <Badge variant={getStatusBadgeVariant(contractStatus)}>
+              {getStatusLabel(contractStatus)}
+            </Badge>
+          </div>
         </div>
 
-        {/* Generate Contract Button */}
-        {canGenerateContract && (
-          <div className="pt-2">
+        {/* Action Buttons Row */}
+        <div className="flex flex-wrap gap-2 pt-2">
+          {/* Generate Contract Button */}
+          {canGenerateContract && (
             <Button
               type="button"
               variant="outline"
@@ -122,8 +139,32 @@ export function FacilityContractSection({
                 </>
               )}
             </Button>
-          </div>
-        )}
+          )}
+
+          {/* Mark as Sent Button */}
+          {contractStatus === 'not_sent' && (
+            <Button
+              type="button"
+              variant="outline"
+              onClick={handleMarkAsSent}
+            >
+              <Send className="h-4 w-4 mr-2" />
+              Mark as Sent
+            </Button>
+          )}
+
+          {/* Mark as Signed Button */}
+          {contractStatus === 'sent' && (
+            <Button
+              type="button"
+              variant="outline"
+              onClick={handleMarkAsSigned}
+            >
+              <CheckCircle className="h-4 w-4 mr-2" />
+              Mark as Signed
+            </Button>
+          )}
+        </div>
 
         {/* Contract PDF Link */}
         {contractPdfUrl && (

@@ -68,7 +68,11 @@ export default function Jobs() {
         .order(sort.column, { ascending: sort.direction === 'asc' });
 
       if (search) {
-        query = query.or(`job_number.ilike.%${search}%,deaf_client_name.ilike.%${search}%`);
+        // Split search into words and match each word against searchable fields
+        const searchTerms = search.trim().toLowerCase().split(/\s+/);
+        for (const term of searchTerms) {
+          query = query.or(`job_number.ilike.%${term}%,deaf_client_name.ilike.%${term}%`);
+        }
       }
       
       if (statusFilter !== 'all') {

@@ -53,7 +53,11 @@ export default function Facilities() {
         .order(sort.column, { ascending: sort.direction === 'asc' });
 
       if (search) {
-        query = query.or(`name.ilike.%${search}%,admin_contact_email.ilike.%${search}%`);
+        // Split search into words and match each word against searchable fields
+        const searchTerms = search.trim().toLowerCase().split(/\s+/);
+        for (const term of searchTerms) {
+          query = query.or(`name.ilike.%${term}%,admin_contact_email.ilike.%${term}%,admin_contact_name.ilike.%${term}%`);
+        }
       }
       
       if (statusFilter !== 'all') {

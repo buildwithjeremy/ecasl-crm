@@ -51,7 +51,7 @@ import {
   CommandList,
 } from '@/components/ui/command';
 import { useToast } from '@/hooks/use-toast';
-import { Check, ChevronsUpDown, ArrowLeft, Mail, Pencil } from 'lucide-react';
+import { Check, ChevronsUpDown, ArrowLeft, Mail, Pencil, Trash2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
@@ -1285,7 +1285,7 @@ export default function JobDetail() {
             <Badge variant="secondary">{statusLabels[job.status]}</Badge>
           )}
 
-          {/* Save button in header with unsaved indicator */}
+          {/* Save and Delete buttons in header */}
           {job && (
             <div className="ml-auto flex items-center gap-2">
               {form.formState.isDirty && (
@@ -1294,6 +1294,37 @@ export default function JobDetail() {
                   Unsaved
                 </span>
               )}
+              <AlertDialog>
+                <AlertDialogTrigger asChild>
+                  <Button variant="outline" size="icon" disabled={isLocked}>
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
+                </AlertDialogTrigger>
+                <AlertDialogContent>
+                  <AlertDialogHeader>
+                    <AlertDialogTitle>Delete Job</AlertDialogTitle>
+                    <AlertDialogDescription>
+                      Are you sure you want to delete Job #{job.job_number}? This action cannot be undone.
+                    </AlertDialogDescription>
+                  </AlertDialogHeader>
+                  <AlertDialogFooter>
+                    <AlertDialogCancel>Cancel</AlertDialogCancel>
+                    <AlertDialogAction
+                      onClick={async () => {
+                        const { error } = await supabase.from('jobs').delete().eq('id', job.id);
+                        if (error) {
+                          toast({ title: 'Error deleting job', description: error.message, variant: 'destructive' });
+                        } else {
+                          toast({ title: 'Job deleted successfully' });
+                          navigate('/jobs');
+                        }
+                      }}
+                    >
+                      Delete
+                    </AlertDialogAction>
+                  </AlertDialogFooter>
+                </AlertDialogContent>
+              </AlertDialog>
               <Button 
                 type="submit" 
                 form="job-detail-form"

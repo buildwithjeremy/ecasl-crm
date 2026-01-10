@@ -37,8 +37,19 @@ import {
   CommandItem,
   CommandList,
 } from '@/components/ui/command';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from '@/components/ui/alert-dialog';
 import { useToast } from '@/hooks/use-toast';
-import { Check, ChevronsUpDown, ArrowLeft } from 'lucide-react';
+import { Check, ChevronsUpDown, ArrowLeft, Trash2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Badge } from '@/components/ui/badge';
 
@@ -263,7 +274,7 @@ export default function PayableDetail() {
             </PopoverContent>
           </Popover>
 
-          {/* Save button in header with unsaved indicator */}
+          {/* Save and Delete buttons in header */}
           {payable && (
             <div className="ml-auto flex items-center gap-2">
               {form.formState.isDirty && (
@@ -272,6 +283,37 @@ export default function PayableDetail() {
                   Unsaved
                 </span>
               )}
+              <AlertDialog>
+                <AlertDialogTrigger asChild>
+                  <Button variant="outline" size="icon">
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
+                </AlertDialogTrigger>
+                <AlertDialogContent>
+                  <AlertDialogHeader>
+                    <AlertDialogTitle>Delete Payable</AlertDialogTitle>
+                    <AlertDialogDescription>
+                      Are you sure you want to delete Bill #{payable.bill_number || 'N/A'}? This action cannot be undone.
+                    </AlertDialogDescription>
+                  </AlertDialogHeader>
+                  <AlertDialogFooter>
+                    <AlertDialogCancel>Cancel</AlertDialogCancel>
+                    <AlertDialogAction
+                      onClick={async () => {
+                        const { error } = await supabase.from('interpreter_bills').delete().eq('id', payable.id);
+                        if (error) {
+                          toast({ title: 'Error deleting payable', description: error.message, variant: 'destructive' });
+                        } else {
+                          toast({ title: 'Payable deleted successfully' });
+                          navigate('/payables');
+                        }
+                      }}
+                    >
+                      Delete
+                    </AlertDialogAction>
+                  </AlertDialogFooter>
+                </AlertDialogContent>
+              </AlertDialog>
               <Button 
                 type="submit" 
                 form="payable-detail-form"

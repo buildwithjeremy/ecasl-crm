@@ -37,8 +37,19 @@ import {
   CommandItem,
   CommandList,
 } from '@/components/ui/command';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from '@/components/ui/alert-dialog';
 import { useToast } from '@/hooks/use-toast';
-import { Check, ChevronsUpDown, ArrowLeft, FileText, Loader2 } from 'lucide-react';
+import { Check, ChevronsUpDown, ArrowLeft, FileText, Loader2, Trash2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Badge } from '@/components/ui/badge';
 
@@ -337,7 +348,7 @@ export default function InvoiceDetail() {
             </PopoverContent>
           </Popover>
 
-          {/* Save button in header with unsaved indicator */}
+          {/* Save and Delete buttons in header */}
           {invoice && (
             <div className="ml-auto flex items-center gap-2">
               {form.formState.isDirty && (
@@ -346,6 +357,37 @@ export default function InvoiceDetail() {
                   Unsaved
                 </span>
               )}
+              <AlertDialog>
+                <AlertDialogTrigger asChild>
+                  <Button variant="outline" size="icon">
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
+                </AlertDialogTrigger>
+                <AlertDialogContent>
+                  <AlertDialogHeader>
+                    <AlertDialogTitle>Delete Invoice</AlertDialogTitle>
+                    <AlertDialogDescription>
+                      Are you sure you want to delete Invoice #{invoice.invoice_number}? This action cannot be undone.
+                    </AlertDialogDescription>
+                  </AlertDialogHeader>
+                  <AlertDialogFooter>
+                    <AlertDialogCancel>Cancel</AlertDialogCancel>
+                    <AlertDialogAction
+                      onClick={async () => {
+                        const { error } = await supabase.from('invoices').delete().eq('id', invoice.id);
+                        if (error) {
+                          toast({ title: 'Error deleting invoice', description: error.message, variant: 'destructive' });
+                        } else {
+                          toast({ title: 'Invoice deleted successfully' });
+                          navigate('/invoices');
+                        }
+                      }}
+                    >
+                      Delete
+                    </AlertDialogAction>
+                  </AlertDialogFooter>
+                </AlertDialogContent>
+              </AlertDialog>
               <Button 
                 type="submit" 
                 form="invoice-detail-form"

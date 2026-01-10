@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -9,20 +9,35 @@ import { JobDialog } from '@/components/jobs/JobDialog';
 import { JobsTable } from '@/components/jobs/JobsTable';
 import { JobsCalendar } from '@/components/jobs/JobsCalendar';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { SortSelect, SortOption } from '@/components/ui/sort-select';
+import { FilterDropdown, FilterOption } from '@/components/ui/filter-dropdown';
+import { useTableSort } from '@/hooks/use-table-sort';
 import type { Database } from '@/types/database';
 
 type Job = Database['public']['Tables']['jobs']['Row'];
 
-const sortOptions: SortOption[] = [
-  { value: 'job_date-desc', label: 'Date (Newest)' },
-  { value: 'job_date-asc', label: 'Date (Oldest)' },
-  { value: 'job_number-asc', label: 'Job # (A-Z)' },
-  { value: 'job_number-desc', label: 'Job # (Z-A)' },
-  { value: 'status-asc', label: 'Status (A-Z)' },
-  { value: 'status-desc', label: 'Status (Z-A)' },
-  { value: 'created_at-desc', label: 'Created (Newest)' },
-  { value: 'created_at-asc', label: 'Created (Oldest)' },
+const statusOptions: FilterOption[] = [
+  { value: 'new', label: 'New' },
+  { value: 'outreach_in_progress', label: 'Outreach' },
+  { value: 'confirmed', label: 'Confirmed' },
+  { value: 'complete', label: 'Complete' },
+  { value: 'ready_to_bill', label: 'Ready to Bill' },
+  { value: 'billed', label: 'Billed' },
+  { value: 'paid', label: 'Paid' },
+  { value: 'cancelled', label: 'Cancelled' },
+];
+
+const locationTypeOptions: FilterOption[] = [
+  { value: 'in_person', label: 'In-Person' },
+  { value: 'remote', label: 'Remote' },
+];
+
+const sourceOptions: FilterOption[] = [
+  { value: 'direct', label: 'Direct' },
+  { value: 'agency', label: 'Agency' },
+  { value: 'gsa', label: 'GSA' },
+  { value: 'referral', label: 'Referral' },
+  { value: 'repeat', label: 'Repeat' },
+  { value: 'other', label: 'Other' },
 ];
 
 export default function Jobs() {
@@ -30,14 +45,19 @@ export default function Jobs() {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [selectedJob, setSelectedJob] = useState<Job | null>(null);
   const [viewMode, setViewMode] = useState<'table' | 'calendar'>('table');
-  const [sortBy, setSortBy] = useState('job_date-desc');
+  
+  // Filters
+  const [statusFilter, setStatusFilter] = useState('all');
+  const [locationTypeFilter, setLocationTypeFilter] = useState('all');
+  const [sourceFilter, setSourceFilter] = useState('all');
+  
+  const { sort, handleSort } = useTableSort('job_date', 'desc');
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
   const { data: jobs, isLoading } = useQuery({
-    queryKey: ['jobs', search, sortBy],
+    queryKey: ['jobs', search, sort, statusFilter, locationTypeFilter, sourceFilter],
     queryFn: async () => {
-      const [field, direction] = sortBy.split('-') as [string, 'asc' | 'desc'];
       let query = supabase
         .from('jobs')
         .select(`
@@ -45,10 +65,22 @@ export default function Jobs() {
           facility:facilities(name),
           interpreter:interpreters(first_name, last_name)
         `)
-        .order(field, { ascending: direction === 'asc' });
+        .order(sort.column, { ascending: sort.direction === 'asc' });
 
       if (search) {
         query = query.or(`job_number.ilike.%${search}%,deaf_client_name.ilike.%${search}%`);
+      }
+      
+      if (statusFilter !== 'all') {
+        query = query.eq('status', statusFilter);
+      }
+      
+      if (locationTypeFilter !== 'all') {
+        query = query.eq('location_type', locationTypeFilter);
+      }
+      
+      if (sourceFilter !== 'all') {
+        query = query.eq('opportunity_source', sourceFilter);
       }
 
       const { data, error } = await query;
@@ -57,29 +89,9 @@ export default function Jobs() {
     },
   });
 
-  const deleteMutation = useMutation({
-    mutationFn: async (id: string) => {
-      const { error } = await supabase.from('jobs').delete().eq('id', id);
-      if (error) throw error;
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['jobs'] });
-      toast({ title: 'Job deleted successfully' });
-    },
-    onError: (error) => {
-      toast({ title: 'Error deleting job', description: error.message, variant: 'destructive' });
-    },
-  });
-
   const handleEdit = (job: Job) => {
     setSelectedJob(job);
     setDialogOpen(true);
-  };
-
-  const handleDelete = (id: string) => {
-    if (confirm('Are you sure you want to delete this job?')) {
-      deleteMutation.mutate(id);
-    }
   };
 
   const handleDialogClose = () => {
@@ -100,7 +112,7 @@ export default function Jobs() {
         </Button>
       </div>
 
-      <div className="flex items-center justify-between gap-4">
+      <div className="flex flex-wrap items-center gap-4">
         <div className="relative flex-1 max-w-sm">
           <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
           <Input
@@ -110,29 +122,46 @@ export default function Jobs() {
             className="pl-10"
           />
         </div>
-        <div className="flex items-center gap-4">
-          <SortSelect options={sortOptions} value={sortBy} onValueChange={setSortBy} />
-          <Tabs value={viewMode} onValueChange={(v) => setViewMode(v as 'table' | 'calendar')}>
-            <TabsList>
-              <TabsTrigger value="table" className="gap-2">
-                <List className="h-4 w-4" />
-                Table
-              </TabsTrigger>
-              <TabsTrigger value="calendar" className="gap-2">
-                <CalendarDays className="h-4 w-4" />
-                Calendar
-              </TabsTrigger>
-            </TabsList>
-          </Tabs>
+        <div className="flex items-center gap-2">
+          <FilterDropdown
+            label="Status"
+            options={statusOptions}
+            value={statusFilter}
+            onValueChange={setStatusFilter}
+          />
+          <FilterDropdown
+            label="Location"
+            options={locationTypeOptions}
+            value={locationTypeFilter}
+            onValueChange={setLocationTypeFilter}
+          />
+          <FilterDropdown
+            label="Source"
+            options={sourceOptions}
+            value={sourceFilter}
+            onValueChange={setSourceFilter}
+          />
         </div>
+        <Tabs value={viewMode} onValueChange={(v) => setViewMode(v as 'table' | 'calendar')}>
+          <TabsList>
+            <TabsTrigger value="table" className="gap-2">
+              <List className="h-4 w-4" />
+              Table
+            </TabsTrigger>
+            <TabsTrigger value="calendar" className="gap-2">
+              <CalendarDays className="h-4 w-4" />
+              Calendar
+            </TabsTrigger>
+          </TabsList>
+        </Tabs>
       </div>
 
       {viewMode === 'table' ? (
         <JobsTable
           jobs={jobs || []}
           isLoading={isLoading}
-          onEdit={handleEdit}
-          onDelete={handleDelete}
+          sort={sort}
+          onSort={handleSort}
         />
       ) : (
         <JobsCalendar jobs={jobs || []} isLoading={isLoading} />

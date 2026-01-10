@@ -6,15 +6,9 @@ import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
-import { FileText, ExternalLink, Loader2 } from 'lucide-react';
+import { FileText, ExternalLink, Loader2, Send, CheckCircle } from 'lucide-react';
+import { Badge } from '@/components/ui/badge';
 
 interface Interpreter {
   id: string;
@@ -79,6 +73,36 @@ export function ContractComplianceSection({
   const contractStatus = form.watch('contract_status');
   const canGenerateContract = contractStatus === 'not_sent';
 
+  const getStatusBadgeVariant = (status: string) => {
+    switch (status) {
+      case 'signed':
+        return 'default';
+      case 'sent':
+        return 'secondary';
+      default:
+        return 'outline';
+    }
+  };
+
+  const getStatusLabel = (status: string) => {
+    switch (status) {
+      case 'signed':
+        return 'Signed';
+      case 'sent':
+        return 'Sent';
+      default:
+        return 'Not Sent';
+    }
+  };
+
+  const handleMarkAsSent = () => {
+    form.setValue('contract_status', 'sent', { shouldDirty: true });
+  };
+
+  const handleMarkAsSigned = () => {
+    form.setValue('contract_status', 'signed', { shouldDirty: true });
+  };
+
   return (
     <Card>
       <CardHeader className="pb-4">
@@ -87,20 +111,12 @@ export function ContractComplianceSection({
       <CardContent className="space-y-4">
         <div className="grid grid-cols-2 gap-4">
           <div className="space-y-2">
-            <Label htmlFor="contract_status">Contract Status</Label>
-            <Select
-              value={contractStatus}
-              onValueChange={(value) => form.setValue('contract_status', value as 'not_sent' | 'sent' | 'signed', { shouldDirty: true })}
-            >
-              <SelectTrigger>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="not_sent">Not Sent</SelectItem>
-                <SelectItem value="sent">Sent</SelectItem>
-                <SelectItem value="signed">Signed</SelectItem>
-              </SelectContent>
-            </Select>
+            <Label>Contract Status</Label>
+            <div className="pt-1">
+              <Badge variant={getStatusBadgeVariant(contractStatus)}>
+                {getStatusLabel(contractStatus)}
+              </Badge>
+            </div>
           </div>
           <div className="flex items-center space-x-2 pt-6">
             <Checkbox
@@ -112,9 +128,10 @@ export function ContractComplianceSection({
           </div>
         </div>
 
-        {/* Generate Contract Button */}
-        {canGenerateContract && (
-          <div className="pt-2">
+        {/* Action Buttons Row */}
+        <div className="flex flex-wrap gap-2 pt-2">
+          {/* Generate Contract Button */}
+          {canGenerateContract && (
             <Button
               type="button"
               variant="outline"
@@ -133,8 +150,32 @@ export function ContractComplianceSection({
                 </>
               )}
             </Button>
-          </div>
-        )}
+          )}
+
+          {/* Mark as Sent Button */}
+          {contractStatus === 'not_sent' && (
+            <Button
+              type="button"
+              variant="outline"
+              onClick={handleMarkAsSent}
+            >
+              <Send className="h-4 w-4 mr-2" />
+              Mark as Sent
+            </Button>
+          )}
+
+          {/* Mark as Signed Button */}
+          {contractStatus === 'sent' && (
+            <Button
+              type="button"
+              variant="outline"
+              onClick={handleMarkAsSigned}
+            >
+              <CheckCircle className="h-4 w-4 mr-2" />
+              Mark as Signed
+            </Button>
+          )}
+        </div>
 
         {/* Contract PDF Link */}
         {contractPdfUrl && (

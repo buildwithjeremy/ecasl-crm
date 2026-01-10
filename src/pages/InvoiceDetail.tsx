@@ -459,26 +459,28 @@ export default function InvoiceDetail() {
                   </Badge>
                 </div>
                 <div className="flex items-center gap-2">
-                  <Button
-                    type="button"
-                    variant="outline"
-                    onClick={handleGeneratePdf}
-                    disabled={isGeneratingPdf || !job || invoice.status !== 'draft'}
-                    size="sm"
-                  >
-                    {isGeneratingPdf ? (
-                      <>
-                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                        Generating...
-                      </>
-                    ) : (
-                      <>
-                        <FileText className="mr-2 h-4 w-4" />
-                        Generate PDF
-                      </>
-                    )}
-                  </Button>
-                  {invoice.status === 'draft' && (
+                  {invoice.status === 'draft' && !pdfUrl && (
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={handleGeneratePdf}
+                      disabled={isGeneratingPdf || !job}
+                      size="sm"
+                    >
+                      {isGeneratingPdf ? (
+                        <>
+                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                          Generating...
+                        </>
+                      ) : (
+                        <>
+                          <FileText className="mr-2 h-4 w-4" />
+                          Generate PDF
+                        </>
+                      )}
+                    </Button>
+                  )}
+                  {invoice.status === 'draft' && pdfUrl && (
                     <Button
                       type="button"
                       variant="outline"

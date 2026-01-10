@@ -45,7 +45,7 @@ import {
 import { useToast } from '@/hooks/use-toast';
 import { ArrowLeft, Check, ChevronsUpDown, Trash2, Copy } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { getTimezoneFromState, getTimezoneDisplayName } from '@/lib/timezone-utils';
+import { getTimezoneFromState, timezoneOptions } from '@/lib/timezone-utils';
 import { FacilityContractSection } from '@/components/facilities/FacilityContractSection';
 import type { Database } from '@/types/database';
 
@@ -544,13 +544,24 @@ export default function FacilityDetail() {
               </div>
               <div className="space-y-2">
                 <Label htmlFor="timezone">Timezone</Label>
-                <Input
-                  id="timezone"
-                  value={getTimezoneDisplayName(detectedTimezone || form.watch('timezone'))}
-                  disabled
-                  className="bg-muted"
-                />
-                <p className="text-xs text-muted-foreground">Auto-detected from state</p>
+                <Select
+                  value={form.watch('timezone') || ''}
+                  onValueChange={(value) => form.setValue('timezone', value, { shouldDirty: true })}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select timezone" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {timezoneOptions.map((option) => (
+                      <SelectItem key={option.value} value={option.value}>
+                        {option.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <p className="text-xs text-muted-foreground">
+                  Auto-detected from state. For border areas with split time zones, please verify and adjust if needed.
+                </p>
               </div>
             </CardContent>
           </Card>

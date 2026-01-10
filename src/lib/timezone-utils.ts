@@ -79,7 +79,7 @@ const timezoneDisplayNames: Record<string, string> = {
   'America/Chicago': 'Central Time (CT)',
   'America/Denver': 'Mountain Time (MT)',
   'America/Boise': 'Mountain Time (MT)',
-  'America/Phoenix': 'Arizona Time (MST)',
+  'America/Phoenix': 'Arizona Time (MST - No DST)',
   'America/Los_Angeles': 'Pacific Time (PT)',
   'America/Anchorage': 'Alaska Time (AKT)',
   'America/Honolulu': 'Hawaii Time (HT)',
@@ -88,6 +88,22 @@ const timezoneDisplayNames: Record<string, string> = {
   'Pacific/Guam': 'Chamorro Time (ChST)',
   'Pacific/Pago_Pago': 'Samoa Time (SST)',
 };
+
+// Timezone options for dropdown selection
+// Note: Some states have split time zones (FL, IN, KY, TN, TX, KS, NE, ND, SD, ID, OR, NV)
+// Users in border areas should manually verify and adjust the timezone
+export const timezoneOptions = [
+  { value: 'America/New_York', label: 'Eastern Time (ET)' },
+  { value: 'America/Chicago', label: 'Central Time (CT)' },
+  { value: 'America/Denver', label: 'Mountain Time (MT)' },
+  { value: 'America/Phoenix', label: 'Arizona Time (MST - No DST)' },
+  { value: 'America/Los_Angeles', label: 'Pacific Time (PT)' },
+  { value: 'America/Anchorage', label: 'Alaska Time (AKT)' },
+  { value: 'America/Honolulu', label: 'Hawaii Time (HT)' },
+  { value: 'America/Puerto_Rico', label: 'Atlantic Time (AT)' },
+  { value: 'Pacific/Guam', label: 'Chamorro Time (ChST)' },
+  { value: 'Pacific/Pago_Pago', label: 'Samoa Time (SST)' },
+] as const;
 
 export function getTimezoneFromState(stateCode: string | undefined | null): string | null {
   if (!stateCode) return null;

@@ -54,7 +54,11 @@ export default function Interpreters() {
         .order(sort.column, { ascending: sort.direction === 'asc' });
 
       if (search) {
-        query = query.or(`first_name.ilike.%${search}%,last_name.ilike.%${search}%,email.ilike.%${search}%`);
+        // Split search into words and match each word against first_name, last_name, or email
+        const searchTerms = search.trim().toLowerCase().split(/\s+/);
+        for (const term of searchTerms) {
+          query = query.or(`first_name.ilike.%${term}%,last_name.ilike.%${term}%,email.ilike.%${term}%`);
+        }
       }
       
       if (statusFilter !== 'all') {

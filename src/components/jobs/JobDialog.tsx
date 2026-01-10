@@ -101,6 +101,8 @@ const jobSchema = z.object({
   client_contact_name: z.string().optional(),
   client_contact_phone: z.string().optional(),
   client_contact_email: z.string().optional(),
+  emergency_fee: z.coerce.number().optional(),
+  holiday_fee: z.coerce.number().optional(),
 });
 
 type FormData = z.infer<typeof jobSchema>;
@@ -228,6 +230,8 @@ export function JobDialog({ open, onOpenChange, job }: JobDialogProps) {
         client_contact_name: job.client_contact_name || '',
         client_contact_phone: job.client_contact_phone || '',
         client_contact_email: job.client_contact_email || '',
+        emergency_fee: job.emergency_fee_applied ? (job as any).emergency_fee : undefined,
+        holiday_fee: job.holiday_fee_applied ? (job as any).holiday_fee : undefined,
       });
     } else {
       form.reset({
@@ -236,6 +240,8 @@ export function JobDialog({ open, onOpenChange, job }: JobDialogProps) {
         job_date: format(new Date(), 'yyyy-MM-dd'),
         start_time: '09:00',
         end_time: '10:00',
+        emergency_fee: undefined,
+        holiday_fee: undefined,
       });
     }
   }, [job, form]);
@@ -260,6 +266,8 @@ export function JobDialog({ open, onOpenChange, job }: JobDialogProps) {
         client_contact_name: data.client_contact_name || null,
         client_contact_phone: data.client_contact_phone || null,
         client_contact_email: data.client_contact_email || null,
+        emergency_fee: data.emergency_fee || null,
+        holiday_fee: data.holiday_fee || null,
       };
 
       if (job) {

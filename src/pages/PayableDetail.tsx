@@ -59,11 +59,23 @@ type Payable = {
   paid_date: string | null;
   notes: string | null;
   total: number | null;
-  interpreter: { first_name: string; last_name: string } | null;
+  interpreter: { first_name: string; last_name: string; eligible_emergency_fee: boolean | null; eligible_holiday_fee: boolean | null } | null;
   job: { 
     job_number: string | null;
     interpreter_hourly_total: number | null;
     interpreter_billable_total: number | null;
+    mileage: number | null;
+    interpreter_rate_mileage: number | null;
+    travel_time_hours: number | null;
+    travel_time_rate: number | null;
+    parking: number | null;
+    tolls: number | null;
+    misc_fee: number | null;
+    trilingual_rate_uplift: number | null;
+    billable_hours: number | null;
+    emergency_fee_applied: boolean | null;
+    holiday_fee_applied: boolean | null;
+    facility: { emergency_fee: number | null; holiday_fee: number | null } | null;
   } | null;
 };
 
@@ -109,7 +121,17 @@ export default function PayableDetail() {
       if (!selectedPayableId) return null;
       const { data, error } = await supabase
         .from('interpreter_bills')
-        .select('*, interpreter:interpreters(first_name, last_name), job:jobs(job_number, interpreter_hourly_total, interpreter_billable_total)')
+        .select(`
+          *, 
+          interpreter:interpreters(first_name, last_name, eligible_emergency_fee, eligible_holiday_fee), 
+          job:jobs(
+            job_number, interpreter_hourly_total, interpreter_billable_total,
+            mileage, interpreter_rate_mileage, travel_time_hours, travel_time_rate,
+            parking, tolls, misc_fee, trilingual_rate_uplift, billable_hours,
+            emergency_fee_applied, holiday_fee_applied,
+            facility:facilities(emergency_fee, holiday_fee)
+          )
+        `)
         .eq('id', selectedPayableId)
         .maybeSingle();
       if (error) throw error;
@@ -170,6 +192,18 @@ export default function PayableDetail() {
     if (value === null || value === undefined) return '-';
     return `$${value.toFixed(2)}`;
   };
+
+  // Calculate derived values for line items
+  const job = payable?.job;
+  const mileageTotal = (job?.mileage || 0) * (job?.interpreter_rate_mileage || 0);
+  const travelTimeTotal = (job?.travel_time_hours || 0) * (job?.travel_time_rate || 0);
+  const hourlyTotal = job?.interpreter_hourly_total ?? 0;
+  
+  // Emergency/holiday fees for interpreters
+  const emergencyFee = (job?.emergency_fee_applied && payable?.interpreter?.eligible_emergency_fee) 
+    ? (job.facility?.emergency_fee || 0) : 0;
+  const holidayFee = (job?.holiday_fee_applied && payable?.interpreter?.eligible_holiday_fee) 
+    ? (job.facility?.holiday_fee || 0) : 0;
 
   return (
     <div className="space-y-4">
@@ -297,6 +331,71 @@ export default function PayableDetail() {
               </div>
             </CardContent>
           </Card>
+
+          {/* Line Items */}
+          {job && (
+            <Card>
+              <CardHeader className="pb-4">
+                <CardTitle className="text-lg">Line Items (Job #{job.job_number})</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-2">
+                  {hourlyTotal > 0 && (
+                    <div className="flex justify-between py-2 border-b">
+                      <span>Interpreter Services</span>
+                      <span className="font-medium">{formatCurrency(hourlyTotal)}</span>
+                    </div>
+                  )}
+                  {mileageTotal > 0 && (
+                    <div className="flex justify-between py-2 border-b">
+                      <span>Mileage ({job.mileage} mi × ${job.interpreter_rate_mileage}/mi)</span>
+                      <span className="font-medium">{formatCurrency(mileageTotal)}</span>
+                    </div>
+                  )}
+                  {travelTimeTotal > 0 && (
+                    <div className="flex justify-between py-2 border-b">
+                      <span>Travel Time ({job.travel_time_hours} hrs × ${job.travel_time_rate}/hr)</span>
+                      <span className="font-medium">{formatCurrency(travelTimeTotal)}</span>
+                    </div>
+                  )}
+                  {(job.parking || 0) > 0 && (
+                    <div className="flex justify-between py-2 border-b">
+                      <span>Parking</span>
+                      <span className="font-medium">{formatCurrency(job.parking)}</span>
+                    </div>
+                  )}
+                  {(job.tolls || 0) > 0 && (
+                    <div className="flex justify-between py-2 border-b">
+                      <span>Tolls</span>
+                      <span className="font-medium">{formatCurrency(job.tolls)}</span>
+                    </div>
+                  )}
+                  {(job.misc_fee || 0) > 0 && (
+                    <div className="flex justify-between py-2 border-b">
+                      <span>Miscellaneous Fee</span>
+                      <span className="font-medium">{formatCurrency(job.misc_fee)}</span>
+                    </div>
+                  )}
+                  {emergencyFee > 0 && (
+                    <div className="flex justify-between py-2 border-b">
+                      <span>Emergency Fee</span>
+                      <span className="font-medium">{formatCurrency(emergencyFee)}</span>
+                    </div>
+                  )}
+                  {holidayFee > 0 && (
+                    <div className="flex justify-between py-2 border-b">
+                      <span>Holiday Fee</span>
+                      <span className="font-medium">{formatCurrency(holidayFee)}</span>
+                    </div>
+                  )}
+                  <div className="flex justify-between py-3 font-semibold text-lg">
+                    <span>Total</span>
+                    <span className="text-primary">{formatCurrency(payable?.job?.interpreter_billable_total)}</span>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          )}
 
           {/* Bill Details Form */}
           <Card>

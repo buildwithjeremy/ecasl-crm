@@ -179,33 +179,33 @@ export default function FacilityDetail() {
     mutationFn: async (data: FormData) => {
       if (!selectedFacilityId) return;
       
-      const payload = {
-        name: data.name,
-        billing_name: data.billing_name || null,
-        billing_address: data.billing_address || null,
-        billing_city: data.billing_city || null,
-        billing_state: data.billing_state || null,
-        billing_zip: data.billing_zip || null,
-        physical_address: data.physical_address || null,
-        physical_city: data.physical_city || null,
-        physical_state: data.physical_state || null,
-        physical_zip: data.physical_zip || null,
-        admin_contact_name: data.admin_contact_name || null,
-        admin_contact_phone: data.admin_contact_phone || null,
-        admin_contact_email: data.admin_contact_email || null,
-        status: data.status,
-        rate_business_hours: data.rate_business_hours || null,
-        rate_after_hours: data.rate_after_hours || null,
-        rate_mileage: data.rate_mileage || null,
-        minimum_billable_hours: data.minimum_billable_hours,
-        emergency_fee: data.emergency_fee || null,
-        holiday_fee: data.holiday_fee || null,
-        billing_code: data.billing_code || null,
-        contract_status: data.contract_status,
-        is_gsa: data.is_gsa,
-        contractor: data.contractor,
-        notes: data.notes || null,
-      };
+        const payload = {
+          name: data.name,
+          billing_name: data.billing_name || null,
+          billing_address: data.billing_address || null,
+          billing_city: data.billing_city || null,
+          billing_state: data.billing_state || null,
+          billing_zip: data.billing_zip || null,
+          physical_address: data.physical_address || null,
+          physical_city: data.physical_city || null,
+          physical_state: data.physical_state || null,
+          physical_zip: data.physical_zip || null,
+          admin_contact_name: data.admin_contact_name || null,
+          admin_contact_phone: data.admin_contact_phone || null,
+          admin_contact_email: data.admin_contact_email || null,
+          status: data.status,
+          rate_business_hours: data.rate_business_hours ?? null,
+          rate_after_hours: data.rate_after_hours ?? null,
+          rate_mileage: data.rate_mileage ?? null,
+          minimum_billable_hours: data.minimum_billable_hours,
+          emergency_fee: data.emergency_fee ?? null,
+          holiday_fee: data.holiday_fee ?? null,
+          billing_code: data.billing_code || null,
+          contract_status: data.contract_status,
+          is_gsa: data.is_gsa,
+          contractor: data.contractor,
+          notes: data.notes || null,
+        };
 
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const { error } = await (supabase.from('facilities') as any)
@@ -489,29 +489,59 @@ export default function FacilityDetail() {
               <div className="grid grid-cols-3 gap-4">
                 <div className="space-y-2">
                   <Label htmlFor="rate_business_hours">Business Hours ($/hr)</Label>
-                  <Input id="rate_business_hours" type="number" step="0.01" {...form.register('rate_business_hours')} />
+                  <Input
+                    id="rate_business_hours"
+                    type="number"
+                    step="0.01"
+                    {...form.register('rate_business_hours', { valueAsNumber: true })}
+                  />
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="rate_after_hours">After Hours ($/hr)</Label>
-                  <Input id="rate_after_hours" type="number" step="0.01" {...form.register('rate_after_hours')} />
+                  <Input
+                    id="rate_after_hours"
+                    type="number"
+                    step="0.01"
+                    {...form.register('rate_after_hours', { valueAsNumber: true })}
+                  />
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="rate_mileage">Mileage ($/mile)</Label>
-                  <Input id="rate_mileage" type="number" step="0.01" {...form.register('rate_mileage')} />
+                  <Input
+                    id="rate_mileage"
+                    type="number"
+                    step="0.01"
+                    {...form.register('rate_mileage', { valueAsNumber: true })}
+                  />
                 </div>
               </div>
               <div className="grid grid-cols-3 gap-4">
                 <div className="space-y-2">
                   <Label htmlFor="minimum_billable_hours">Minimum Billable Hours</Label>
-                  <Input id="minimum_billable_hours" type="number" step="0.5" {...form.register('minimum_billable_hours')} />
+                  <Input
+                    id="minimum_billable_hours"
+                    type="number"
+                    step="0.5"
+                    {...form.register('minimum_billable_hours', { valueAsNumber: true })}
+                  />
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="emergency_fee">Emergency Fee ($)</Label>
-                  <Input id="emergency_fee" type="number" step="0.01" {...form.register('emergency_fee')} />
+                  <Input
+                    id="emergency_fee"
+                    type="number"
+                    step="0.01"
+                    {...form.register('emergency_fee', { valueAsNumber: true })}
+                  />
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="holiday_fee">Holiday Fee ($)</Label>
-                  <Input id="holiday_fee" type="number" step="0.01" {...form.register('holiday_fee')} />
+                  <Input
+                    id="holiday_fee"
+                    type="number"
+                    step="0.01"
+                    {...form.register('holiday_fee', { valueAsNumber: true })}
+                  />
                 </div>
               </div>
             </CardContent>

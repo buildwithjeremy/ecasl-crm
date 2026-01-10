@@ -459,35 +459,11 @@ export default function InvoiceDetail() {
                   </Badge>
                 </div>
                 <div className="flex items-center gap-2">
-                  {invoice.status === 'draft' && (
-                    <Button
-                      type="button"
-                      variant="outline"
-                      onClick={() => statusMutation.mutate('submitted')}
-                      disabled={statusMutation.isPending}
-                      size="sm"
-                    >
-                      <Send className="mr-2 h-4 w-4" />
-                      Mark as Sent
-                    </Button>
-                  )}
-                  {(invoice.status === 'draft' || invoice.status === 'submitted') && (
-                    <Button
-                      type="button"
-                      variant="outline"
-                      onClick={() => statusMutation.mutate('paid')}
-                      disabled={statusMutation.isPending}
-                      size="sm"
-                    >
-                      <DollarSign className="mr-2 h-4 w-4" />
-                      Mark as Paid
-                    </Button>
-                  )}
                   <Button
                     type="button"
                     variant="outline"
                     onClick={handleGeneratePdf}
-                    disabled={isGeneratingPdf || !job}
+                    disabled={isGeneratingPdf || !job || invoice.status !== 'draft'}
                     size="sm"
                   >
                     {isGeneratingPdf ? (
@@ -502,6 +478,30 @@ export default function InvoiceDetail() {
                       </>
                     )}
                   </Button>
+                  {invoice.status === 'draft' && (
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={() => statusMutation.mutate('submitted')}
+                      disabled={statusMutation.isPending}
+                      size="sm"
+                    >
+                      <Send className="mr-2 h-4 w-4" />
+                      Mark as Sent
+                    </Button>
+                  )}
+                  {invoice.status === 'submitted' && (
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={() => statusMutation.mutate('paid')}
+                      disabled={statusMutation.isPending}
+                      size="sm"
+                    >
+                      <DollarSign className="mr-2 h-4 w-4" />
+                      Mark as Paid
+                    </Button>
+                  )}
                 </div>
               </div>
             </CardHeader>

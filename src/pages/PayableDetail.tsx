@@ -160,9 +160,9 @@ export default function PayableDetail() {
   useEffect(() => {
     if (payable) {
       form.reset({
-        paid_date: payable.paid_date || '',
-        notes: payable.notes || '',
-      });
+        paid_date: payable.paid_date ?? '',
+        notes: payable.notes ?? '',
+      }, { keepDefaultValues: false });
     }
   }, [payable, form]);
 

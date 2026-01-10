@@ -191,12 +191,12 @@ export default function InvoiceDetail() {
   useEffect(() => {
     if (invoice) {
       form.reset({
-        issued_date: invoice.issued_date || '',
-        due_date: invoice.due_date || '',
-        paid_date: invoice.paid_date || '',
-        notes: invoice.notes || '',
-      });
-      setPdfUrl(invoice.pdf_url || null);
+        issued_date: invoice.issued_date ?? '',
+        due_date: invoice.due_date ?? '',
+        paid_date: invoice.paid_date ?? '',
+        notes: invoice.notes ?? '',
+      }, { keepDefaultValues: false });
+      setPdfUrl(invoice.pdf_url ?? null);
     }
   }, [invoice, form]);
 

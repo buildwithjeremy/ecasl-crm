@@ -183,19 +183,68 @@ Deno.serve(async (req) => {
 
   try {
     const supabaseUrl = Deno.env.get("SUPABASE_URL");
+    const supabaseAnonKey = Deno.env.get("SUPABASE_ANON_KEY");
     const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
 
-    if (!supabaseUrl || !supabaseServiceKey) {
+    if (!supabaseUrl || !supabaseServiceKey || !supabaseAnonKey) {
       throw new Error("Missing Supabase environment variables");
     }
 
+    // Authenticate the request
+    const authHeader = req.headers.get("authorization");
+    if (!authHeader?.startsWith("Bearer ")) {
+      console.error("Missing or invalid authorization header");
+      return new Response(
+        JSON.stringify({ error: "Unauthorized" }),
+        { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // Create client with user's auth token to validate
+    const userSupabase = createClient(supabaseUrl, supabaseAnonKey, {
+      global: { headers: { Authorization: authHeader } }
+    });
+
+    const token = authHeader.replace("Bearer ", "");
+    const { data: claimsData, error: claimsError } = await userSupabase.auth.getClaims(token);
+    
+    if (claimsError || !claimsData?.claims) {
+      console.error("Invalid token:", claimsError);
+      return new Response(
+        JSON.stringify({ error: "Unauthorized" }),
+        { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    const userId = claimsData.claims.sub;
+    console.log("Authenticated user:", userId);
+
+    // Verify user is a team member using service role client
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
+    const { data: isTeamMember } = await supabase.rpc('is_team_member', { _user_id: userId });
+    
+    if (!isTeamMember) {
+      console.error("User is not a team member:", userId);
+      return new Response(
+        JSON.stringify({ error: "Forbidden" }),
+        { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
 
     const { facilityId } = await req.json();
 
     if (!facilityId) {
       return new Response(
         JSON.stringify({ error: "facilityId is required" }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // Validate facilityId format (UUID)
+    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    if (!uuidRegex.test(facilityId)) {
+      return new Response(
+        JSON.stringify({ error: "Invalid facility ID format" }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
@@ -235,36 +284,49 @@ Deno.serve(async (req) => {
 
     if (uploadError) {
       console.error("Error uploading PDF:", uploadError);
-      throw new Error(`Failed to upload PDF: ${uploadError.message}`);
+      return new Response(
+        JSON.stringify({ error: "Failed to upload PDF" }),
+        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
     }
 
-    // Get public URL
-    const { data: { publicUrl } } = supabase.storage
+    // Generate signed URL for private bucket (1 hour expiry)
+    const { data: signedUrlData, error: signedUrlError } = await supabase.storage
       .from("facility-contracts")
-      .getPublicUrl(fileName);
+      .createSignedUrl(fileName, 3600);
 
-    console.log(`PDF uploaded successfully: ${publicUrl}`);
+    if (signedUrlError || !signedUrlData) {
+      console.error("Error creating signed URL:", signedUrlError);
+      return new Response(
+        JSON.stringify({ error: "Failed to generate document URL" }),
+        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
 
-    // Update facility record with contract URL
+    console.log(`PDF uploaded successfully`);
+
+    // Update facility record with storage path (not public URL since bucket is now private)
     const { error: updateError } = await supabase
       .from("facilities")
-      .update({ contract_pdf_url: publicUrl })
+      .update({ contract_pdf_url: fileName })
       .eq("id", facilityId);
 
     if (updateError) {
       console.error("Error updating facility:", updateError);
-      throw new Error(`Failed to update facility: ${updateError.message}`);
+      return new Response(
+        JSON.stringify({ error: "Failed to update facility record" }),
+        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
     }
 
     return new Response(
-      JSON.stringify({ success: true, pdf_url: publicUrl }),
+      JSON.stringify({ success: true, pdf_url: signedUrlData.signedUrl }),
       { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   } catch (error) {
-    const errorMessage = error instanceof Error ? error.message : "Unknown error";
     console.error("Error generating facility contract PDF:", error);
     return new Response(
-      JSON.stringify({ error: errorMessage }),
+      JSON.stringify({ error: "An unexpected error occurred" }),
       { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   }

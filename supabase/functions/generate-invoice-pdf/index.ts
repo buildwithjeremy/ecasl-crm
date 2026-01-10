@@ -156,15 +156,64 @@ Deno.serve(async (req) => {
 
   try {
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
+    const supabaseAnonKey = Deno.env.get('SUPABASE_ANON_KEY')!;
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+
+    // Authenticate the request
+    const authHeader = req.headers.get('authorization');
+    if (!authHeader?.startsWith('Bearer ')) {
+      console.error('Missing or invalid authorization header');
+      return new Response(
+        JSON.stringify({ error: 'Unauthorized' }),
+        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    // Create client with user's auth token to validate
+    const userSupabase = createClient(supabaseUrl, supabaseAnonKey, {
+      global: { headers: { Authorization: authHeader } }
+    });
+
+    const token = authHeader.replace('Bearer ', '');
+    const { data: claimsData, error: claimsError } = await userSupabase.auth.getClaims(token);
     
+    if (claimsError || !claimsData?.claims) {
+      console.error('Invalid token:', claimsError);
+      return new Response(
+        JSON.stringify({ error: 'Unauthorized' }),
+        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    const userId = claimsData.claims.sub;
+    console.log('Authenticated user:', userId);
+
+    // Verify user is a team member using service role client
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
+    const { data: isTeamMember } = await supabase.rpc('is_team_member', { _user_id: userId });
+    
+    if (!isTeamMember) {
+      console.error('User is not a team member:', userId);
+      return new Response(
+        JSON.stringify({ error: 'Forbidden' }),
+        { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
 
     const { invoiceId } = await req.json();
 
     if (!invoiceId) {
       return new Response(
         JSON.stringify({ error: 'Invoice ID is required' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    // Validate invoiceId format (UUID)
+    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    if (!uuidRegex.test(invoiceId)) {
+      return new Response(
+        JSON.stringify({ error: 'Invalid invoice ID format' }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
@@ -396,29 +445,36 @@ Deno.serve(async (req) => {
       );
     }
 
-    // Get public URL
-    const { data: publicUrl } = supabase.storage
+    // Generate signed URL for private bucket (1 hour expiry)
+    const { data: signedUrlData, error: signedUrlError } = await supabase.storage
       .from('invoices')
-      .getPublicUrl(fileName);
+      .createSignedUrl(fileName, 3600);
 
-    // Update invoice with PDF URL
+    if (signedUrlError || !signedUrlData) {
+      console.error('Error creating signed URL:', signedUrlError);
+      return new Response(
+        JSON.stringify({ error: 'Failed to generate document URL' }),
+        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    // Update invoice with storage path (not public URL since bucket is now private)
     await supabase
       .from('invoices')
-      .update({ pdf_url: publicUrl.publicUrl })
+      .update({ pdf_url: fileName })
       .eq('id', invoiceId);
 
-    console.log('PDF generated successfully:', publicUrl.publicUrl);
+    console.log('PDF generated successfully');
 
     return new Response(
-      JSON.stringify({ success: true, pdfUrl: publicUrl.publicUrl }),
+      JSON.stringify({ success: true, pdfUrl: signedUrlData.signedUrl }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
 
   } catch (error) {
     console.error('Error generating invoice PDF:', error);
-    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
     return new Response(
-      JSON.stringify({ error: errorMessage }),
+      JSON.stringify({ error: 'An unexpected error occurred' }),
       { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   }

@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -6,23 +6,13 @@ import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { format } from 'date-fns';
 import { CalendarIcon } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Checkbox } from '@/components/ui/checkbox';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Calendar } from '@/components/ui/calendar';
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from '@/components/ui/popover';
 import {
   Select,
   SelectContent,
@@ -30,13 +20,14 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from '@/components/ui/popover';
 import { useToast } from '@/hooks/use-toast';
+import { ArrowLeft } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import type { Database } from '@/types/database';
-
-type Interpreter = Database['public']['Tables']['interpreters']['Row'];
-type InterpreterInsert = Database['public']['Tables']['interpreters']['Insert'];
-type InterpreterUpdate = Database['public']['Tables']['interpreters']['Update'];
 
 const interpreterSchema = z.object({
   first_name: z.string().min(1, 'First name is required'),
@@ -53,20 +44,14 @@ const interpreterSchema = z.object({
     val => !val || /^\d{5}(-\d{4})?$/.test(val),
     'Please enter a valid ZIP code (e.g., 12345 or 12345-6789)'
   ),
-  timezone: z.string().optional(),
-  status: z.enum(['active', 'inactive', 'pending']),
   rid_certified: z.boolean(),
   nic_certified: z.boolean(),
   other_certifications: z.string().optional(),
   rate_business_hours: z.coerce.number().min(0.01, 'Business hours rate is required'),
   rate_after_hours: z.coerce.number().min(0.01, 'After hours rate is required'),
   rate_mileage: z.coerce.number().optional(),
-  minimum_hours: z.coerce.number().optional().default(2),
-  eligible_emergency_fee: z.boolean().optional().default(false),
-  eligible_holiday_fee: z.boolean().optional().default(false),
   payment_method: z.enum(['zelle', 'check'], { required_error: 'Payment method is required' }),
   payment_details: z.string().optional(),
-  contract_status: z.enum(['not_sent', 'sent', 'signed']),
   w9_received: z.boolean(),
   insurance_end_date: z.date().optional().nullable(),
   notes: z.string().optional(),
@@ -74,13 +59,8 @@ const interpreterSchema = z.object({
 
 type FormData = z.infer<typeof interpreterSchema>;
 
-interface InterpreterDialogProps {
-  open: boolean;
-  onOpenChange: () => void;
-  interpreter: Interpreter | null;
-}
-
-export function InterpreterDialog({ open, onOpenChange, interpreter }: InterpreterDialogProps) {
+export default function NewInterpreter() {
+  const navigate = useNavigate();
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
@@ -91,67 +71,13 @@ export function InterpreterDialog({ open, onOpenChange, interpreter }: Interpret
       last_name: '',
       email: '',
       phone: '',
-      status: 'pending',
       rid_certified: false,
       nic_certified: false,
-      minimum_hours: 2,
       rate_mileage: 0.7,
-      eligible_emergency_fee: false,
-      eligible_holiday_fee: false,
-      contract_status: 'not_sent',
       w9_received: false,
       insurance_end_date: null,
     },
   });
-
-  useEffect(() => {
-    if (interpreter) {
-      form.reset({
-        first_name: interpreter.first_name,
-        last_name: interpreter.last_name,
-        email: interpreter.email,
-        phone: interpreter.phone || '',
-        address: interpreter.address || '',
-        city: interpreter.city || '',
-        state: interpreter.state || '',
-        zip_code: interpreter.zip_code || '',
-        timezone: interpreter.timezone || '',
-        status: interpreter.status,
-        rid_certified: interpreter.rid_certified,
-        nic_certified: interpreter.nic_certified,
-        other_certifications: interpreter.other_certifications || '',
-        rate_business_hours: interpreter.rate_business_hours || undefined,
-        rate_after_hours: interpreter.rate_after_hours || undefined,
-        rate_mileage: interpreter.rate_mileage || undefined,
-        minimum_hours: interpreter.minimum_hours,
-        eligible_emergency_fee: interpreter.eligible_emergency_fee,
-        eligible_holiday_fee: interpreter.eligible_holiday_fee,
-        payment_method: interpreter.payment_method,
-        payment_details: interpreter.payment_details || '',
-        contract_status: interpreter.contract_status,
-        w9_received: interpreter.w9_received,
-        insurance_end_date: (interpreter as any).insurance_end_date ? new Date((interpreter as any).insurance_end_date) : null,
-        notes: interpreter.notes || '',
-      });
-    } else {
-      form.reset({
-        first_name: '',
-        last_name: '',
-        email: '',
-        phone: '',
-        status: 'pending',
-        rid_certified: false,
-        nic_certified: false,
-        minimum_hours: 2,
-        rate_mileage: 0.7,
-        eligible_emergency_fee: false,
-        eligible_holiday_fee: false,
-        contract_status: 'not_sent',
-        w9_received: false,
-        insurance_end_date: null,
-      });
-    }
-  }, [interpreter, form]);
 
   const mutation = useMutation({
     mutationFn: async (data: FormData) => {
@@ -164,41 +90,36 @@ export function InterpreterDialog({ open, onOpenChange, interpreter }: Interpret
         city: data.city || null,
         state: data.state || null,
         zip_code: data.zip_code || null,
-        timezone: data.timezone || null,
-        status: data.status,
+        status: 'pending',
         rid_certified: data.rid_certified,
         nic_certified: data.nic_certified,
         other_certifications: data.other_certifications || null,
         rate_business_hours: data.rate_business_hours || null,
         rate_after_hours: data.rate_after_hours || null,
         rate_mileage: data.rate_mileage || null,
-        minimum_hours: data.minimum_hours ?? 2,
-        eligible_emergency_fee: data.eligible_emergency_fee ?? false,
-        eligible_holiday_fee: data.eligible_holiday_fee ?? false,
+        minimum_hours: 2,
+        eligible_emergency_fee: false,
+        eligible_holiday_fee: false,
         payment_method: data.payment_method || null,
         payment_details: data.payment_details || null,
-        contract_status: data.contract_status,
+        contract_status: 'not_sent',
         w9_received: data.w9_received,
         insurance_end_date: data.insurance_end_date ? format(data.insurance_end_date, 'yyyy-MM-dd') : null,
         notes: data.notes || null,
       } as any;
 
-      if (interpreter) {
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const { error } = await (supabase.from('interpreters') as any)
-          .update(payload)
-          .eq('id', interpreter.id);
-        if (error) throw error;
-      } else {
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const { error } = await (supabase.from('interpreters') as any).insert(payload);
-        if (error) throw error;
-      }
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const { data: newInterpreter, error } = await (supabase.from('interpreters') as any)
+        .insert(payload)
+        .select()
+        .single();
+      if (error) throw error;
+      return newInterpreter;
     },
-    onSuccess: () => {
+    onSuccess: (newInterpreter) => {
       queryClient.invalidateQueries({ queryKey: ['interpreters'] });
-      toast({ title: `Interpreter ${interpreter ? 'updated' : 'created'} successfully` });
-      onOpenChange();
+      toast({ title: 'Interpreter created successfully' });
+      navigate(`/interpreters/${newInterpreter.id}`);
     },
     onError: (error) => {
       toast({ title: 'Error', description: error.message, variant: 'destructive' });
@@ -210,16 +131,34 @@ export function InterpreterDialog({ open, onOpenChange, interpreter }: Interpret
   };
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle>{interpreter ? 'Edit Interpreter' : 'New Interpreter'}</DialogTitle>
-        </DialogHeader>
+    <div className="space-y-4">
+      {/* Sticky Header */}
+      <div className="sticky top-14 z-10 bg-background py-3 border-b -mx-6 px-6 -mt-6 mb-4">
+        <div className="flex items-center gap-3">
+          <Button variant="ghost" size="icon" onClick={() => navigate('/interpreters')}>
+            <ArrowLeft className="h-4 w-4" />
+          </Button>
+          <h1 className="text-xl font-bold text-foreground">New Interpreter</h1>
 
-        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-          {/* Personal Information */}
-          <div className="space-y-4">
-            <h3 className="font-semibold">Personal Information</h3>
+          <div className="ml-auto">
+            <Button 
+              type="submit" 
+              form="new-interpreter-form"
+              disabled={mutation.isPending}
+            >
+              {mutation.isPending ? 'Creating...' : 'Create Interpreter'}
+            </Button>
+          </div>
+        </div>
+      </div>
+
+      <form id="new-interpreter-form" onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+        {/* Personal Information */}
+        <Card>
+          <CardHeader className="pb-4">
+            <CardTitle className="text-lg">Personal Information</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="first_name">First Name *</Label>
@@ -253,12 +192,19 @@ export function InterpreterDialog({ open, onOpenChange, interpreter }: Interpret
                 )}
               </div>
             </div>
+          </CardContent>
+        </Card>
 
+        {/* Address */}
+        <Card>
+          <CardHeader className="pb-4">
+            <CardTitle className="text-lg">Address</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="address">Address</Label>
+              <Label htmlFor="address">Street Address</Label>
               <Input id="address" {...form.register('address')} />
             </div>
-
             <div className="grid grid-cols-3 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="city">City</Label>
@@ -276,30 +222,15 @@ export function InterpreterDialog({ open, onOpenChange, interpreter }: Interpret
                 )}
               </div>
             </div>
+          </CardContent>
+        </Card>
 
-            {interpreter && (
-              <div className="space-y-2">
-                <Label htmlFor="status">Status</Label>
-                <Select
-                  value={form.watch('status')}
-                  onValueChange={(value) => form.setValue('status', value as 'active' | 'inactive' | 'pending')}
-                >
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="active">Active</SelectItem>
-                    <SelectItem value="inactive">Inactive</SelectItem>
-                    <SelectItem value="pending">Pending</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-            )}
-          </div>
-
-          {/* Certifications */}
-          <div className="space-y-4">
-            <h3 className="font-semibold">Certifications</h3>
+        {/* Certifications */}
+        <Card>
+          <CardHeader className="pb-4">
+            <CardTitle className="text-lg">Certifications</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
             <div className="flex gap-6">
               <div className="flex items-center space-x-2">
                 <Checkbox
@@ -322,12 +253,16 @@ export function InterpreterDialog({ open, onOpenChange, interpreter }: Interpret
               <Label htmlFor="other_certifications">Other Certifications</Label>
               <Input id="other_certifications" {...form.register('other_certifications')} />
             </div>
-          </div>
+          </CardContent>
+        </Card>
 
-          {/* Rates */}
-          <div className="space-y-4">
-            <h3 className="font-semibold">Rates (What We Pay)</h3>
-            <div className="grid grid-cols-2 gap-4">
+        {/* Rates */}
+        <Card>
+          <CardHeader className="pb-4">
+            <CardTitle className="text-lg">Rates (What We Pay)</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="grid grid-cols-3 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="rate_business_hours">Business Hours Rate *</Label>
                 <div className="relative">
@@ -348,8 +283,6 @@ export function InterpreterDialog({ open, onOpenChange, interpreter }: Interpret
                   <p className="text-sm text-destructive">{form.formState.errors.rate_after_hours.message}</p>
                 )}
               </div>
-            </div>
-            <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="rate_mileage">Mileage Rate</Label>
                 <div className="relative">
@@ -358,11 +291,15 @@ export function InterpreterDialog({ open, onOpenChange, interpreter }: Interpret
                 </div>
               </div>
             </div>
-          </div>
+          </CardContent>
+        </Card>
 
-          {/* Payment & Contract */}
-          <div className="space-y-4">
-            <h3 className="font-semibold">Payment & Contract</h3>
+        {/* Payment & Contract */}
+        <Card>
+          <CardHeader className="pb-4">
+            <CardTitle className="text-lg">Payment & Contract</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="payment_method">Payment Method *</Label>
@@ -389,25 +326,7 @@ export function InterpreterDialog({ open, onOpenChange, interpreter }: Interpret
             </div>
 
             <div className="grid grid-cols-2 gap-4">
-              {interpreter && (
-                <div className="space-y-2">
-                  <Label htmlFor="contract_status">Contract Status</Label>
-                  <Select
-                    value={form.watch('contract_status')}
-                    onValueChange={(value) => form.setValue('contract_status', value as 'not_sent' | 'sent' | 'signed')}
-                  >
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="not_sent">Not Sent</SelectItem>
-                      <SelectItem value="sent">Sent</SelectItem>
-                      <SelectItem value="signed">Signed</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-              )}
-              <div className={`flex items-center space-x-2 ${interpreter ? 'pt-6' : ''}`}>
+              <div className="flex items-center space-x-2 pt-6">
                 <Checkbox
                   id="w9_received"
                   checked={form.watch('w9_received')}
@@ -415,52 +334,52 @@ export function InterpreterDialog({ open, onOpenChange, interpreter }: Interpret
                 />
                 <Label htmlFor="w9_received">W9 Received</Label>
               </div>
+              <div className="space-y-2">
+                <Label>Insurance End Date</Label>
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant="outline"
+                      className={cn(
+                        'w-full justify-start text-left font-normal',
+                        !form.watch('insurance_end_date') && 'text-muted-foreground'
+                      )}
+                    >
+                      <CalendarIcon className="mr-2 h-4 w-4" />
+                      {form.watch('insurance_end_date') 
+                        ? format(form.watch('insurance_end_date')!, 'PPP')
+                        : 'Pick a date'}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0" align="start">
+                    <Calendar
+                      mode="single"
+                      selected={form.watch('insurance_end_date') || undefined}
+                      onSelect={(date) => form.setValue('insurance_end_date', date || null)}
+                      initialFocus
+                    />
+                  </PopoverContent>
+                </Popover>
+              </div>
             </div>
+          </CardContent>
+        </Card>
 
-            <div className="space-y-2">
-              <Label>Insurance End Date</Label>
-              <Popover>
-                <PopoverTrigger asChild>
-                  <Button
-                    variant="outline"
-                    className={cn(
-                      "w-full justify-start text-left font-normal",
-                      !form.watch('insurance_end_date') && "text-muted-foreground"
-                    )}
-                  >
-                    <CalendarIcon className="mr-2 h-4 w-4" />
-                    {form.watch('insurance_end_date') ? format(form.watch('insurance_end_date')!, 'PPP') : <span>Select date</span>}
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-auto p-0" align="start">
-                  <Calendar
-                    mode="single"
-                    selected={form.watch('insurance_end_date') ?? undefined}
-                    onSelect={(date) => form.setValue('insurance_end_date', date ?? null)}
-                    initialFocus
-                    className={cn("p-3 pointer-events-auto")}
-                  />
-                </PopoverContent>
-              </Popover>
-            </div>
-          </div>
-
-          {/* Notes */}
-          <div className="space-y-2">
-            <Label htmlFor="notes">Notes</Label>
-            <Textarea id="notes" {...form.register('notes')} />
-          </div>
-
-          <div className="flex justify-end gap-2">
-            <Button type="button" variant="outline" onClick={onOpenChange}>
-              Cancel
-            </Button>
-            <Button type="submit" disabled={mutation.isPending}>
-              {mutation.isPending ? 'Saving...' : interpreter ? 'Update' : 'Create'}
-            </Button>
-          </div>
-        </form>
-      </DialogContent>
-    </Dialog>
+        {/* Notes */}
+        <Card>
+          <CardHeader className="pb-4">
+            <CardTitle className="text-lg">Notes</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <Textarea
+              id="notes"
+              {...form.register('notes')}
+              rows={4}
+              placeholder="Additional notes about this interpreter..."
+            />
+          </CardContent>
+        </Card>
+      </form>
+    </div>
   );
 }

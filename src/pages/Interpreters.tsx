@@ -1,11 +1,10 @@
 import { useState } from 'react';
-import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useNavigate } from 'react-router-dom';
+import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Plus, Search } from 'lucide-react';
-import { useToast } from '@/hooks/use-toast';
-import { InterpreterDialog } from '@/components/interpreters/InterpreterDialog';
 import { InterpretersTable } from '@/components/interpreters/InterpretersTable';
 import { FilterDropdown, FilterOption } from '@/components/ui/filter-dropdown';
 import { useTableSort } from '@/hooks/use-table-sort';
@@ -32,9 +31,8 @@ const paymentMethodOptions: FilterOption[] = [
 ];
 
 export default function Interpreters() {
+  const navigate = useNavigate();
   const [search, setSearch] = useState('');
-  const [dialogOpen, setDialogOpen] = useState(false);
-  const [selectedInterpreter, setSelectedInterpreter] = useState<Interpreter | null>(null);
   
   // Filters
   const [statusFilter, setStatusFilter] = useState('all');
@@ -42,8 +40,6 @@ export default function Interpreters() {
   const [paymentMethodFilter, setPaymentMethodFilter] = useState('all');
   
   const { sort, handleSort } = useTableSort('last_name', 'asc');
-  const { toast } = useToast();
-  const queryClient = useQueryClient();
 
   const { data: interpreters, isLoading } = useQuery({
     queryKey: ['interpreters', search, sort, statusFilter, certificationFilter, paymentMethodFilter],
@@ -86,16 +82,6 @@ export default function Interpreters() {
     },
   });
 
-  const handleEdit = (interpreter: Interpreter) => {
-    setSelectedInterpreter(interpreter);
-    setDialogOpen(true);
-  };
-
-  const handleDialogClose = () => {
-    setDialogOpen(false);
-    setSelectedInterpreter(null);
-  };
-
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -103,7 +89,7 @@ export default function Interpreters() {
           <h1 className="text-3xl font-bold text-foreground">Interpreters</h1>
           <p className="text-muted-foreground">Manage ASL interpreters in your network</p>
         </div>
-        <Button onClick={() => setDialogOpen(true)}>
+        <Button onClick={() => navigate('/interpreters/new')}>
           <Plus className="mr-2 h-4 w-4" />
           New Interpreter
         </Button>
@@ -146,12 +132,6 @@ export default function Interpreters() {
         isLoading={isLoading}
         sort={sort}
         onSort={handleSort}
-      />
-
-      <InterpreterDialog
-        open={dialogOpen}
-        onOpenChange={handleDialogClose}
-        interpreter={selectedInterpreter}
       />
     </div>
   );

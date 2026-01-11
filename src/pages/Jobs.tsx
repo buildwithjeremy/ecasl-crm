@@ -1,19 +1,15 @@
 import { useState } from 'react';
-import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useNavigate } from 'react-router-dom';
+import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Plus, Search, List, CalendarDays } from 'lucide-react';
-import { useToast } from '@/hooks/use-toast';
-import { JobDialog } from '@/components/jobs/JobDialog';
 import { JobsTable } from '@/components/jobs/JobsTable';
 import { JobsCalendar } from '@/components/jobs/JobsCalendar';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { FilterDropdown, FilterOption } from '@/components/ui/filter-dropdown';
 import { useTableSort } from '@/hooks/use-table-sort';
-import type { Database } from '@/types/database';
-
-type Job = Database['public']['Tables']['jobs']['Row'];
 
 const statusOptions: FilterOption[] = [
   { value: 'new', label: 'New' },
@@ -41,9 +37,8 @@ const sourceOptions: FilterOption[] = [
 ];
 
 export default function Jobs() {
+  const navigate = useNavigate();
   const [search, setSearch] = useState('');
-  const [dialogOpen, setDialogOpen] = useState(false);
-  const [selectedJob, setSelectedJob] = useState<Job | null>(null);
   const [viewMode, setViewMode] = useState<'table' | 'calendar'>('table');
   
   // Filters
@@ -52,8 +47,6 @@ export default function Jobs() {
   const [sourceFilter, setSourceFilter] = useState('all');
   
   const { sort, handleSort } = useTableSort('job_date', 'desc');
-  const { toast } = useToast();
-  const queryClient = useQueryClient();
 
   const { data: jobs, isLoading } = useQuery({
     queryKey: ['jobs', search, sort, statusFilter, locationTypeFilter, sourceFilter],
@@ -93,16 +86,6 @@ export default function Jobs() {
     },
   });
 
-  const handleEdit = (job: Job) => {
-    setSelectedJob(job);
-    setDialogOpen(true);
-  };
-
-  const handleDialogClose = () => {
-    setDialogOpen(false);
-    setSelectedJob(null);
-  };
-
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -110,7 +93,7 @@ export default function Jobs() {
           <h1 className="text-3xl font-bold text-foreground">Jobs</h1>
           <p className="text-muted-foreground">Manage interpreting assignments</p>
         </div>
-        <Button onClick={() => setDialogOpen(true)}>
+        <Button onClick={() => navigate('/jobs/new')}>
           <Plus className="mr-2 h-4 w-4" />
           New Job
         </Button>
@@ -170,12 +153,6 @@ export default function Jobs() {
       ) : (
         <JobsCalendar jobs={jobs || []} isLoading={isLoading} />
       )}
-
-      <JobDialog
-        open={dialogOpen}
-        onOpenChange={handleDialogClose}
-        job={selectedJob}
-      />
     </div>
   );
 }

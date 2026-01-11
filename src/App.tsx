@@ -9,6 +9,7 @@ import Index from "./pages/Index";
 import Auth from "./pages/Auth";
 import Jobs from "./pages/Jobs";
 import JobDetail from "./pages/JobDetail";
+import NewJob from "./pages/NewJob";
 import Interpreters from "./pages/Interpreters";
 import InterpreterDetail from "./pages/InterpreterDetail";
 import Facilities from "./pages/Facilities";
@@ -28,6 +29,7 @@ const router = createBrowserRouter([
   { path: "/auth", element: <Auth /> },
   { path: "/", element: <AppLayout><Index /></AppLayout> },
   { path: "/jobs", element: <AppLayout><Jobs /></AppLayout> },
+  { path: "/jobs/new", element: <AppLayout><NewJob /></AppLayout> },
   { path: "/jobs/:id", element: <AppLayout><JobDetail /></AppLayout> },
   { path: "/interpreters", element: <AppLayout><Interpreters /></AppLayout> },
   { path: "/interpreters/new", element: <AppLayout><NewInterpreter /></AppLayout> },

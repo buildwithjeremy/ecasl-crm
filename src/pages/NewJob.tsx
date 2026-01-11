@@ -668,6 +668,23 @@ export default function NewJob() {
                     ))}
                   </SelectContent>
                 </Select>
+                {/* Hours Breakdown */}
+                {hoursSplit && (
+                  <div className="flex items-center gap-3 text-xs text-muted-foreground pt-1">
+                    {hoursSplit.businessHours > 0 && (
+                      <span className="flex items-center gap-1">
+                        <span className="w-2 h-2 rounded-full bg-primary" />
+                        {hoursSplit.businessHours}h business
+                      </span>
+                    )}
+                    {hoursSplit.afterHours > 0 && (
+                      <span className="flex items-center gap-1">
+                        <span className="w-2 h-2 rounded-full bg-amber-500" />
+                        {hoursSplit.afterHours}h after-hours
+                      </span>
+                    )}
+                  </div>
+                )}
               </div>
             </div>
           </CardContent>

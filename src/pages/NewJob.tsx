@@ -467,16 +467,7 @@ export default function NewJob() {
         {/* Schedule */}
         <Card>
           <CardHeader className="pb-4">
-            <div className="flex items-center justify-between">
-              <CardTitle className="text-lg">Schedule</CardTitle>
-              {hoursSplit && (
-                <Badge 
-                  variant={hoursSplit.hoursType === 'business' ? 'default' : hoursSplit.hoursType === 'after' ? 'secondary' : 'outline'}
-                >
-                  {hoursSplit.hoursType === 'business' ? 'Business Hours' : hoursSplit.hoursType === 'after' ? 'After Hours' : 'Mixed Hours'}
-                </Badge>
-              )}
-            </div>
+            <CardTitle className="text-lg">Schedule</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
@@ -488,12 +479,14 @@ export default function NewJob() {
                     <Button
                       variant="outline"
                       className={cn(
-                        'w-full justify-start text-left font-normal',
+                        'w-full justify-start text-left font-normal overflow-hidden',
                         !watchedJobDate && 'text-muted-foreground'
                       )}
                     >
-                      <CalendarIcon className="mr-2 h-4 w-4" />
-                      {watchedJobDate ? format(new Date(watchedJobDate + 'T00:00:00'), 'PPP') : <span>Pick a date</span>}
+                      <CalendarIcon className="mr-2 h-4 w-4 shrink-0" />
+                      <span className="truncate">
+                        {watchedJobDate ? format(new Date(watchedJobDate + 'T00:00:00'), 'MMM d, yyyy') : 'Pick a date'}
+                      </span>
                     </Button>
                   </PopoverTrigger>
                   <PopoverContent className="w-auto p-0" align="start">
@@ -562,11 +555,27 @@ export default function NewJob() {
                 )}
               </div>
 
-              {/* Job Duration */}
+              {/* Job Duration with breakdown */}
               <div className="space-y-2">
                 <Label>Duration</Label>
-                <div className="h-10 px-3 py-2 border rounded-md bg-muted text-muted-foreground flex items-center">
-                  {jobDuration !== null ? formatDuration(jobDuration) : '—'}
+                <div className="flex flex-wrap items-center gap-2 h-10">
+                  {hoursSplit && (
+                    <>
+                      {hoursSplit.businessHours > 0 && (
+                        <Badge variant="outline" className="bg-background">
+                          {formatDuration(hoursSplit.businessHours)} business
+                        </Badge>
+                      )}
+                      {hoursSplit.afterHours > 0 && (
+                        <Badge variant="outline" className="bg-background">
+                          {formatDuration(hoursSplit.afterHours)} after hrs
+                        </Badge>
+                      )}
+                      {!hoursSplit.businessHours && !hoursSplit.afterHours && (
+                        <Badge variant="outline" className="bg-background">—</Badge>
+                      )}
+                    </>
+                  )}
                 </div>
               </div>
             </div>

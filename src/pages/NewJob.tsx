@@ -1,4 +1,4 @@
-import { useEffect, useMemo } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -18,9 +18,47 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from '@/components/ui/popover';
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from '@/components/ui/command';
+import { Calendar } from '@/components/ui/calendar';
+import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
-import { ArrowLeft } from 'lucide-react';
+import { ArrowLeft, Check, ChevronsUpDown, CalendarIcon, ExternalLink, Building2, MapPin, User } from 'lucide-react';
+import { cn } from '@/lib/utils';
 import type { Database } from '@/types/database';
+
+// Generate 15-minute time increments
+function generateTimeOptions(): { value: string; label: string }[] {
+  const options: { value: string; label: string }[] = [];
+  for (let h = 0; h < 24; h++) {
+    for (let m = 0; m < 60; m += 15) {
+      const hour24 = h.toString().padStart(2, '0');
+      const min = m.toString().padStart(2, '0');
+      const value = `${hour24}:${min}`;
+      
+      // Format for display (12-hour with AM/PM)
+      const hour12 = h === 0 ? 12 : h > 12 ? h - 12 : h;
+      const ampm = h < 12 ? 'AM' : 'PM';
+      const label = `${hour12}:${min} ${ampm}`;
+      
+      options.push({ value, label });
+    }
+  }
+  return options;
+}
+
+const TIME_OPTIONS = generateTimeOptions();
 
 // Helper to calculate hours split between business (8am-5pm) and after-hours
 function calculateHoursSplit(startTime: string, endTime: string, minimumHours: number = 2): {
@@ -29,6 +67,7 @@ function calculateHoursSplit(startTime: string, endTime: string, minimumHours: n
   totalHours: number;
   billableHours: number;
   minimumApplied: number;
+  hoursType: 'business' | 'after' | 'mixed';
 } {
   const [startH, startM] = startTime.split(':').map(Number);
   const [endH, endM] = endTime.split(':').map(Number);
@@ -67,13 +106,31 @@ function calculateHoursSplit(startTime: string, endTime: string, minimumHours: n
   const billableHours = Math.max(totalHours, minimumHours);
   const minimumApplied = billableHours > totalHours ? billableHours - totalHours : 0;
   
+  // Determine hours type
+  let hoursType: 'business' | 'after' | 'mixed' = 'mixed';
+  if (afterMinutes === 0) {
+    hoursType = 'business';
+  } else if (businessMinutes === 0) {
+    hoursType = 'after';
+  }
+  
   return {
     businessHours: businessHours + minimumApplied,
     afterHours,
     totalHours,
     billableHours,
     minimumApplied,
+    hoursType,
   };
+}
+
+// Format duration as "Xh Ym"
+function formatDuration(hours: number): string {
+  const h = Math.floor(hours);
+  const m = Math.round((hours - h) * 60);
+  if (m === 0) return `${h}h`;
+  if (h === 0) return `${m}m`;
+  return `${h}h ${m}m`;
 }
 
 type Facility = Database['public']['Tables']['facilities']['Row'];
@@ -99,6 +156,19 @@ const jobSchema = z.object({
   client_contact_email: z.string().optional(),
   emergency_fee: z.coerce.number().optional(),
   holiday_fee: z.coerce.number().optional(),
+}).refine((data) => {
+  // Validate minimum 2 hour job length
+  const [startH, startM] = data.start_time.split(':').map(Number);
+  const [endH, endM] = data.end_time.split(':').map(Number);
+  const startMinutes = startH * 60 + startM;
+  const endMinutes = endH * 60 + endM;
+  const duration = endMinutes >= startMinutes 
+    ? endMinutes - startMinutes 
+    : (24 * 60 - startMinutes) + endMinutes;
+  return duration >= 120; // 2 hours in minutes
+}, {
+  message: 'Job must be at least 2 hours long',
+  path: ['end_time'],
 });
 
 type FormData = z.infer<typeof jobSchema>;
@@ -107,6 +177,9 @@ export default function NewJob() {
   const navigate = useNavigate();
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const [facilityOpen, setFacilityOpen] = useState(false);
+  const [datePickerOpen, setDatePickerOpen] = useState(false);
+  const [createdAt] = useState(new Date());
 
   const { data: facilities } = useQuery({
     queryKey: ['facilities-select'],
@@ -128,12 +201,17 @@ export default function NewJob() {
       location_type: 'in_person',
       job_date: format(new Date(), 'yyyy-MM-dd'),
       start_time: '09:00',
-      end_time: '10:00',
+      end_time: '11:00', // Default 2-hour job
     },
   });
 
   const watchedFacilityId = form.watch('facility_id');
   const watchedLocationType = form.watch('location_type');
+  const watchedStartTime = form.watch('start_time');
+  const watchedEndTime = form.watch('end_time');
+  const watchedJobDate = form.watch('job_date');
+  const watchedEmergencyFee = form.watch('emergency_fee');
+  const watchedHolidayFee = form.watch('holiday_fee');
   
   const selectedFacility = facilities?.find((f) => f.id === watchedFacilityId);
   const isContractor = selectedFacility?.contractor ?? false;
@@ -173,9 +251,6 @@ export default function NewJob() {
     }
   }, [watchedFacilityId, watchedLocationType, facilities, form]);
 
-  const watchedStartTime = form.watch('start_time');
-  const watchedEndTime = form.watch('end_time');
-
   // Calculate billable hours split
   const hoursSplit = useMemo(() => {
     if (!watchedStartTime || !watchedEndTime) return null;
@@ -183,7 +258,7 @@ export default function NewJob() {
     return calculateHoursSplit(watchedStartTime, watchedEndTime, minimumHours);
   }, [watchedStartTime, watchedEndTime, selectedFacility?.minimum_billable_hours]);
 
-  // Calculate billable total (hourly charges only)
+  // Calculate billable total (hourly charges + fees)
   const billableTotal = useMemo(() => {
     if (!hoursSplit || !selectedFacility) return null;
     const businessRate = selectedFacility.rate_business_hours ?? 0;
@@ -191,15 +266,37 @@ export default function NewJob() {
 
     const businessTotal = hoursSplit.businessHours * businessRate;
     const afterHoursTotal = hoursSplit.afterHours * afterHoursRate;
+    const hoursSubtotal = businessTotal + afterHoursTotal;
+    
+    const emergencyFee = watchedEmergencyFee || 0;
+    const holidayFee = watchedHolidayFee || 0;
+    const feesTotal = emergencyFee + holidayFee;
 
     return {
       businessTotal,
       afterHoursTotal,
-      total: businessTotal + afterHoursTotal,
+      hoursSubtotal,
       businessRate,
       afterHoursRate,
+      emergencyFee,
+      holidayFee,
+      feesTotal,
+      total: hoursSubtotal + feesTotal,
     };
-  }, [hoursSplit, selectedFacility]);
+  }, [hoursSplit, selectedFacility, watchedEmergencyFee, watchedHolidayFee]);
+
+  // Calculate job duration
+  const jobDuration = useMemo(() => {
+    if (!watchedStartTime || !watchedEndTime) return null;
+    const [startH, startM] = watchedStartTime.split(':').map(Number);
+    const [endH, endM] = watchedEndTime.split(':').map(Number);
+    const startMinutes = startH * 60 + startM;
+    const endMinutes = endH * 60 + endM;
+    const duration = endMinutes >= startMinutes 
+      ? endMinutes - startMinutes 
+      : (24 * 60 - startMinutes) + endMinutes;
+    return duration / 60; // hours
+  }, [watchedStartTime, watchedEndTime]);
 
   const mutation = useMutation({
     mutationFn: async (data: FormData) => {
@@ -243,60 +340,107 @@ export default function NewJob() {
     mutation.mutate(data);
   };
 
+  // Get facility location display
+  const facilityLocation = selectedFacility ? {
+    address: selectedFacility.physical_address || selectedFacility.billing_address,
+    city: selectedFacility.physical_city || selectedFacility.billing_city,
+    state: selectedFacility.physical_state || selectedFacility.billing_state,
+    zip: selectedFacility.physical_zip || selectedFacility.billing_zip,
+  } : null;
+
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
       {/* Sticky Header */}
-      <div className="sticky top-0 z-10 -mx-6 -mt-6 px-6 py-4 bg-background border-b flex items-center justify-between">
-        <div className="flex items-center gap-4">
+      <div className="sticky top-14 z-10 bg-background py-3 border-b -mx-6 px-6 -mt-6 mb-4">
+        <div className="flex items-center gap-3">
           <Button variant="ghost" size="icon" onClick={() => navigate('/jobs')}>
             <ArrowLeft className="h-4 w-4" />
           </Button>
           <h1 className="text-xl font-bold text-foreground">New Job</h1>
+
+          <div className="ml-auto">
+            <Button onClick={form.handleSubmit(onSubmit)} disabled={mutation.isPending}>
+              {mutation.isPending ? 'Creating...' : 'Create Job'}
+            </Button>
+          </div>
         </div>
-        <Button onClick={form.handleSubmit(onSubmit)} disabled={mutation.isPending}>
-          {mutation.isPending ? 'Creating...' : 'Create Job'}
-        </Button>
       </div>
 
-      <form className="space-y-6">
+      <form className="space-y-4">
         {/* Job Details */}
         <Card>
-          <CardHeader>
-            <CardTitle>Job Details</CardTitle>
+          <CardHeader className="pb-4">
+            <div className="flex items-center justify-between">
+              <CardTitle className="text-lg">Job Details</CardTitle>
+              <span className="text-sm text-muted-foreground">
+                {format(createdAt, "MMM d, yyyy 'at' h:mm a")}
+              </span>
+            </div>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {/* Facility Combobox */}
               <div className="space-y-2">
-                <Label htmlFor="job_date">Job Date *</Label>
-                <Input id="job_date" type="date" {...form.register('job_date')} />
-                {form.formState.errors.job_date && (
-                  <p className="text-sm text-destructive">{form.formState.errors.job_date.message}</p>
-                )}
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="facility_id">Facility *</Label>
-                <Select
-                  value={form.watch('facility_id')}
-                  onValueChange={(value) => form.setValue('facility_id', value)}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select facility" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {facilities?.map((facility) => (
-                      <SelectItem key={facility.id} value={facility.id}>
-                        {facility.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <Label>Facility *</Label>
+                <Popover open={facilityOpen} onOpenChange={setFacilityOpen}>
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant="outline"
+                      role="combobox"
+                      aria-expanded={facilityOpen}
+                      className="w-full justify-between"
+                    >
+                      {selectedFacility ? (
+                        <span className="flex items-center gap-2 truncate">
+                          {selectedFacility.name}
+                          {selectedFacility.contractor && (
+                            <Badge variant="secondary" className="text-xs">Contractor</Badge>
+                          )}
+                        </span>
+                      ) : (
+                        <span className="text-muted-foreground">Select facility...</span>
+                      )}
+                      <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-[400px] p-0" align="start">
+                    <Command>
+                      <CommandInput placeholder="Search facilities..." />
+                      <CommandList>
+                        <CommandEmpty>No facility found.</CommandEmpty>
+                        <CommandGroup>
+                          {facilities?.map((facility) => (
+                            <CommandItem
+                              key={facility.id}
+                              value={facility.name}
+                              onSelect={() => {
+                                form.setValue('facility_id', facility.id);
+                                setFacilityOpen(false);
+                              }}
+                            >
+                              <Check
+                                className={cn(
+                                  'mr-2 h-4 w-4',
+                                  watchedFacilityId === facility.id ? 'opacity-100' : 'opacity-0'
+                                )}
+                              />
+                              <span className="flex-1">{facility.name}</span>
+                              {facility.contractor && (
+                                <Badge variant="secondary" className="ml-2 text-xs">Contractor</Badge>
+                              )}
+                            </CommandItem>
+                          ))}
+                        </CommandGroup>
+                      </CommandList>
+                    </Command>
+                  </PopoverContent>
+                </Popover>
                 {form.formState.errors.facility_id && (
                   <p className="text-sm text-destructive">{form.formState.errors.facility_id.message}</p>
                 )}
               </div>
-            </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {/* Job Source */}
               <div className="space-y-2">
                 <Label htmlFor="opportunity_source">Job Source</Label>
                 <Select
@@ -316,49 +460,144 @@ export default function NewJob() {
                   </SelectContent>
                 </Select>
               </div>
-              <div className="space-y-2">
-                <Label htmlFor="deaf_client_name">Deaf Client Name</Label>
-                <Input id="deaf_client_name" {...form.register('deaf_client_name')} />
-              </div>
             </div>
           </CardContent>
         </Card>
 
         {/* Schedule */}
         <Card>
-          <CardHeader>
-            <CardTitle>Schedule</CardTitle>
+          <CardHeader className="pb-4">
+            <div className="flex items-center justify-between">
+              <CardTitle className="text-lg">Schedule</CardTitle>
+              {hoursSplit && (
+                <Badge 
+                  variant={hoursSplit.hoursType === 'business' ? 'default' : hoursSplit.hoursType === 'after' ? 'secondary' : 'outline'}
+                >
+                  {hoursSplit.hoursType === 'business' ? 'Business Hours' : hoursSplit.hoursType === 'after' ? 'After Hours' : 'Mixed Hours'}
+                </Badge>
+              )}
+            </div>
           </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <CardContent className="space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+              {/* Job Date */}
               <div className="space-y-2">
-                <Label htmlFor="start_time">Start Time *</Label>
-                <Input id="start_time" type="time" {...form.register('start_time')} />
+                <Label>Job Date *</Label>
+                <Popover open={datePickerOpen} onOpenChange={setDatePickerOpen}>
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant="outline"
+                      className={cn(
+                        'w-full justify-start text-left font-normal',
+                        !watchedJobDate && 'text-muted-foreground'
+                      )}
+                    >
+                      <CalendarIcon className="mr-2 h-4 w-4" />
+                      {watchedJobDate ? format(new Date(watchedJobDate + 'T00:00:00'), 'PPP') : <span>Pick a date</span>}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0" align="start">
+                    <Calendar
+                      mode="single"
+                      selected={watchedJobDate ? new Date(watchedJobDate + 'T00:00:00') : undefined}
+                      onSelect={(date) => {
+                        if (date) {
+                          form.setValue('job_date', format(date, 'yyyy-MM-dd'));
+                          setDatePickerOpen(false);
+                        }
+                      }}
+                      initialFocus
+                      className={cn("p-3 pointer-events-auto")}
+                    />
+                  </PopoverContent>
+                </Popover>
+                {form.formState.errors.job_date && (
+                  <p className="text-sm text-destructive">{form.formState.errors.job_date.message}</p>
+                )}
+              </div>
+
+              {/* Start Time */}
+              <div className="space-y-2">
+                <Label>Start Time *</Label>
+                <Select
+                  value={watchedStartTime}
+                  onValueChange={(value) => form.setValue('start_time', value)}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select time" />
+                  </SelectTrigger>
+                  <SelectContent className="max-h-[300px]">
+                    {TIME_OPTIONS.map((option) => (
+                      <SelectItem key={option.value} value={option.value}>
+                        {option.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
                 {form.formState.errors.start_time && (
                   <p className="text-sm text-destructive">{form.formState.errors.start_time.message}</p>
                 )}
               </div>
+
+              {/* End Time */}
               <div className="space-y-2">
-                <Label htmlFor="end_time">End Time *</Label>
-                <Input id="end_time" type="time" {...form.register('end_time')} />
+                <Label>End Time *</Label>
+                <Select
+                  value={watchedEndTime}
+                  onValueChange={(value) => form.setValue('end_time', value)}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select time" />
+                  </SelectTrigger>
+                  <SelectContent className="max-h-[300px]">
+                    {TIME_OPTIONS.map((option) => (
+                      <SelectItem key={option.value} value={option.value}>
+                        {option.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
                 {form.formState.errors.end_time && (
                   <p className="text-sm text-destructive">{form.formState.errors.end_time.message}</p>
                 )}
+              </div>
+
+              {/* Job Duration */}
+              <div className="space-y-2">
+                <Label>Duration</Label>
+                <div className="h-10 px-3 py-2 border rounded-md bg-muted text-muted-foreground flex items-center">
+                  {jobDuration !== null ? formatDuration(jobDuration) : '—'}
+                </div>
               </div>
             </div>
           </CardContent>
         </Card>
 
-        {/* Location */}
+        {/* Location & Client */}
         <Card>
-          <CardHeader>
-            <CardTitle>Location</CardTitle>
+          <CardHeader className="pb-4">
+            <div className="flex items-center justify-between">
+              <CardTitle className="text-lg">Location & Client</CardTitle>
+              {selectedFacility && (
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => window.open(`/facilities/${selectedFacility.id}`, '_blank')}
+                  className="text-muted-foreground hover:text-foreground"
+                >
+                  <ExternalLink className="h-4 w-4 mr-1" />
+                  View Facility
+                </Button>
+              )}
+            </div>
           </CardHeader>
-          <CardContent className="space-y-4">
+          <CardContent className="space-y-6">
+            {/* Location Type */}
             <div className="space-y-2">
-              <Label htmlFor="location_type">Location Type</Label>
+              <Label>Location Type</Label>
               <Select
-                value={form.watch('location_type')}
+                value={watchedLocationType}
                 onValueChange={(value) => form.setValue('location_type', value as 'in_person' | 'remote')}
               >
                 <SelectTrigger className="w-[200px]">
@@ -372,67 +611,133 @@ export default function NewJob() {
             </div>
 
             {watchedLocationType === 'in_person' ? (
-              <>
-                <div className="space-y-2">
-                  <Label htmlFor="location_address">Address {isContractor && '*'}</Label>
-                  <Input id="location_address" {...form.register('location_address')} />
+              <div className="rounded-lg border p-4 space-y-4">
+                <div className="flex items-center gap-2">
+                  <MapPin className="h-4 w-4 text-muted-foreground" />
+                  <span className="font-medium text-sm">Address</span>
+                  {selectedFacility && !isContractor && (
+                    <Badge variant="secondary" className="text-xs">
+                      <Building2 className="h-3 w-3 mr-1" />
+                      From Facility
+                    </Badge>
+                  )}
+                  {isContractor && (
+                    <Badge variant="outline" className="text-xs">
+                      Manual Entry
+                    </Badge>
+                  )}
                 </div>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="location_city">City</Label>
-                    <Input id="location_city" {...form.register('location_city')} />
+                
+                {selectedFacility && !isContractor ? (
+                  // Non-contractor: Show read-only facility address
+                  <div className="text-sm text-muted-foreground pl-6">
+                    {facilityLocation?.address && <div>{facilityLocation.address}</div>}
+                    {(facilityLocation?.city || facilityLocation?.state || facilityLocation?.zip) && (
+                      <div>
+                        {[facilityLocation?.city, facilityLocation?.state].filter(Boolean).join(', ')}
+                        {facilityLocation?.zip && ` ${facilityLocation.zip}`}
+                      </div>
+                    )}
+                    {!facilityLocation?.address && <div className="italic">No address on file</div>}
                   </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="location_state">State</Label>
-                    <Input id="location_state" {...form.register('location_state')} />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="location_zip">Zip</Label>
-                    <Input id="location_zip" {...form.register('location_zip')} />
-                  </div>
-                </div>
-              </>
+                ) : (
+                  // Contractor or no facility: Editable address fields
+                  <>
+                    <div className="space-y-2">
+                      <Input 
+                        placeholder="Address" 
+                        {...form.register('location_address')} 
+                      />
+                    </div>
+                    <div className="grid grid-cols-3 gap-4">
+                      <Input 
+                        placeholder="City" 
+                        {...form.register('location_city')} 
+                      />
+                      <Input 
+                        placeholder="State" 
+                        {...form.register('location_state')} 
+                      />
+                      <Input 
+                        placeholder="Zip" 
+                        {...form.register('location_zip')} 
+                      />
+                    </div>
+                  </>
+                )}
+              </div>
             ) : (
-              <div className="space-y-2">
+              <div className="rounded-lg border p-4 space-y-2">
                 <Label htmlFor="video_call_link">Video Call Link</Label>
                 <Input id="video_call_link" placeholder="https://..." {...form.register('video_call_link')} />
               </div>
             )}
-          </CardContent>
-        </Card>
 
-        {/* Client Information */}
-        <Card>
-          <CardHeader>
-            <CardTitle>
-              Client Information
-              {isContractor && <span className="text-destructive ml-1">*</span>}
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            {isContractor && (
-              <p className="text-sm text-muted-foreground">
-                This is a contractor facility. Please enter the client details for this job.
-              </p>
-            )}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="client_business_name">Business Name {isContractor && '*'}</Label>
-                <Input id="client_business_name" {...form.register('client_business_name')} />
+            {/* Client Information */}
+            <div className="rounded-lg border p-4 space-y-4">
+              <div className="flex items-center gap-2">
+                <User className="h-4 w-4 text-muted-foreground" />
+                <span className="font-medium text-sm">Client Contact</span>
+                {selectedFacility && (
+                  <Badge variant="secondary" className="text-xs">
+                    <Building2 className="h-3 w-3 mr-1" />
+                    From Facility
+                  </Badge>
+                )}
               </div>
-              <div className="space-y-2">
-                <Label htmlFor="client_contact_name">Contact Name</Label>
-                <Input id="client_contact_name" {...form.register('client_contact_name')} />
-              </div>
-            </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="client_contact_phone">Phone</Label>
-                <Input id="client_contact_phone" {...form.register('client_contact_phone')} />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="client_contact_email">Email</Label>
-                <Input id="client_contact_email" type="email" {...form.register('client_contact_email')} />
+              
+              {selectedFacility && !isContractor ? (
+                // Non-contractor: Show read-only client info
+                <div className="grid grid-cols-2 gap-4 text-sm pl-6">
+                  <div>
+                    <div className="text-muted-foreground text-xs">Business</div>
+                    <div>{selectedFacility.name || '—'}</div>
+                  </div>
+                  <div>
+                    <div className="text-muted-foreground text-xs">Contact</div>
+                    <div>{selectedFacility.admin_contact_name || '—'}</div>
+                  </div>
+                  <div>
+                    <div className="text-muted-foreground text-xs">Phone</div>
+                    <div>{selectedFacility.admin_contact_phone || '—'}</div>
+                  </div>
+                  <div>
+                    <div className="text-muted-foreground text-xs">Email</div>
+                    <div>{selectedFacility.admin_contact_email || '—'}</div>
+                  </div>
+                </div>
+              ) : (
+                // Contractor or no facility: Editable client fields
+                <>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="client_business_name">Business Name</Label>
+                      <Input id="client_business_name" {...form.register('client_business_name')} />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="client_contact_name">Contact Name</Label>
+                      <Input id="client_contact_name" {...form.register('client_contact_name')} />
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="client_contact_phone">Phone</Label>
+                      <Input id="client_contact_phone" {...form.register('client_contact_phone')} />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="client_contact_email">Email</Label>
+                      <Input id="client_contact_email" type="email" {...form.register('client_contact_email')} />
+                    </div>
+                  </div>
+                </>
+              )}
+
+              {/* Deaf Client Name - moved here */}
+              <div className="pt-2 border-t">
+                <div className="space-y-2">
+                  <Label htmlFor="deaf_client_name">Deaf Client Name</Label>
+                  <Input id="deaf_client_name" {...form.register('deaf_client_name')} />
+                </div>
               </div>
             </div>
           </CardContent>
@@ -440,8 +745,8 @@ export default function NewJob() {
 
         {/* Fees */}
         <Card>
-          <CardHeader>
-            <CardTitle>Fees</CardTitle>
+          <CardHeader className="pb-4">
+            <CardTitle className="text-lg">Fees</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -478,40 +783,76 @@ export default function NewJob() {
         {/* Estimated Billable */}
         {hoursSplit && billableTotal && (
           <Card>
-            <CardHeader>
-              <CardTitle>Estimated Billable</CardTitle>
+            <CardHeader className="pb-4">
+              <CardTitle className="text-lg">Estimated Billable</CardTitle>
             </CardHeader>
-            <CardContent className="space-y-2">
-              <div className="grid grid-cols-2 gap-4 text-sm">
-                <div className="text-muted-foreground">Job Duration</div>
-                <div className="text-right font-medium">{hoursSplit.totalHours.toFixed(2)} hrs</div>
-                
-                <div className="text-muted-foreground">Billable Hours</div>
-                <div className="text-right font-medium">
-                  {hoursSplit.billableHours.toFixed(2)} hrs
-                  {hoursSplit.minimumApplied > 0 && (
-                    <span className="text-muted-foreground ml-1">
-                      (min +{hoursSplit.minimumApplied.toFixed(2)})
-                    </span>
-                  )}
-                </div>
-                
-                <div className="text-muted-foreground">Business Hours</div>
-                <div className="text-right">
-                  {hoursSplit.businessHours.toFixed(2)} hrs × ${billableTotal.businessRate.toFixed(2)} = ${billableTotal.businessTotal.toFixed(2)}
-                </div>
-                
-                {hoursSplit.afterHours > 0 && (
-                  <>
-                    <div className="text-muted-foreground">After Hours</div>
-                    <div className="text-right">
-                      {hoursSplit.afterHours.toFixed(2)} hrs × ${billableTotal.afterHoursRate.toFixed(2)} = ${billableTotal.afterHoursTotal.toFixed(2)}
+            <CardContent>
+              <div className="space-y-4">
+                {/* Hours Breakdown */}
+                <div className="space-y-2">
+                  <div className="text-sm font-medium text-muted-foreground">Hours Breakdown</div>
+                  <div className="space-y-1 text-sm">
+                    <div className="flex justify-between items-center">
+                      <span>Business Hours</span>
+                      <span className="tabular-nums">
+                        {hoursSplit.businessHours.toFixed(2)} hrs × ${billableTotal.businessRate.toFixed(2)}
+                        <span className="w-24 inline-block text-right font-medium ml-4">${billableTotal.businessTotal.toFixed(2)}</span>
+                      </span>
                     </div>
-                  </>
+                    <div className="flex justify-between items-center">
+                      <span>After Hours</span>
+                      <span className="tabular-nums">
+                        {hoursSplit.afterHours.toFixed(2)} hrs × ${billableTotal.afterHoursRate.toFixed(2)}
+                        <span className="w-24 inline-block text-right font-medium ml-4">${billableTotal.afterHoursTotal.toFixed(2)}</span>
+                      </span>
+                    </div>
+                    <div className="flex justify-between items-center pt-2 border-t">
+                      <span className="font-medium">
+                        Total Billable Hours
+                        {hoursSplit.minimumApplied > 0 && (
+                          <span className="text-muted-foreground font-normal ml-1">
+                            (incl. {hoursSplit.minimumApplied.toFixed(2)}hr minimum)
+                          </span>
+                        )}
+                      </span>
+                      <span className="tabular-nums">
+                        {hoursSplit.billableHours.toFixed(2)} hrs
+                        <span className="w-24 inline-block text-right font-medium ml-4">${billableTotal.hoursSubtotal.toFixed(2)}</span>
+                      </span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Additional Fees */}
+                {billableTotal.feesTotal > 0 && (
+                  <div className="space-y-2">
+                    <div className="text-sm font-medium text-muted-foreground">Additional Fees</div>
+                    <div className="space-y-1 text-sm">
+                      {billableTotal.emergencyFee > 0 && (
+                        <div className="flex justify-between items-center">
+                          <span>Emergency Fee</span>
+                          <span className="tabular-nums">
+                            <span className="w-24 inline-block text-right font-medium ml-4">+${billableTotal.emergencyFee.toFixed(2)}</span>
+                          </span>
+                        </div>
+                      )}
+                      {billableTotal.holidayFee > 0 && (
+                        <div className="flex justify-between items-center">
+                          <span>Holiday Fee</span>
+                          <span className="tabular-nums">
+                            <span className="w-24 inline-block text-right font-medium ml-4">+${billableTotal.holidayFee.toFixed(2)}</span>
+                          </span>
+                        </div>
+                      )}
+                    </div>
+                  </div>
                 )}
-                
-                <div className="text-muted-foreground font-semibold pt-2 border-t">Estimated Total</div>
-                <div className="text-right font-bold pt-2 border-t">${billableTotal.total.toFixed(2)}</div>
+
+                {/* Total */}
+                <div className="flex justify-between items-center pt-3 border-t text-base font-semibold">
+                  <span>ESTIMATED TOTAL</span>
+                  <span className="tabular-nums text-lg">${billableTotal.total.toFixed(2)}</span>
+                </div>
               </div>
             </CardContent>
           </Card>
@@ -519,8 +860,8 @@ export default function NewJob() {
 
         {/* Notes */}
         <Card>
-          <CardHeader>
-            <CardTitle>Notes</CardTitle>
+          <CardHeader className="pb-4">
+            <CardTitle className="text-lg">Notes</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="space-y-2">

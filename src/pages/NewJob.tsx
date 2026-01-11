@@ -287,14 +287,14 @@ export default function NewJob() {
       ? endMinutes - startMinutes 
       : (24 * 60 - startMinutes) + endMinutes;
     
-    // Clamp duration to valid range (2-8 hours = 120-480 minutes)
-    if (durationMinutes < 120) {
-      durationMinutes = 120; // Minimum 2 hours
-    } else if (durationMinutes > 480) {
-      durationMinutes = 480; // Maximum 8 hours
-    } else {
+    // If duration is invalid OR if end time is now "before" start time (user moved start past end),
+    // default to minimum 2 hours - this handles the edge case cleanly
+    if (durationMinutes >= 120 && durationMinutes <= 480 && endMinutes >= startMinutes) {
       return; // Duration is valid, no adjustment needed
     }
+    
+    // Default to 2 hours for any edge case (too short, too long, or start moved past end)
+    durationMinutes = 120;
     
     // Calculate new end time
     const newEndMinutes = (startMinutes + durationMinutes) % (24 * 60);

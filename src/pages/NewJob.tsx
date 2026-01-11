@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -265,6 +265,76 @@ export default function NewJob() {
       }
     }
   }, [watchedFacilityId, watchedLocationType, facilities, form]);
+
+  // Track previous start time to detect changes
+  const prevStartTimeRef = useRef(watchedStartTime);
+  
+  // When start time changes, auto-adjust end time to maintain valid duration (2-8 hours)
+  useEffect(() => {
+    if (!watchedStartTime || !watchedEndTime) return;
+    
+    // Only run when start time actually changed
+    if (prevStartTimeRef.current === watchedStartTime) return;
+    prevStartTimeRef.current = watchedStartTime;
+    
+    const [startH, startM] = watchedStartTime.split(':').map(Number);
+    const [endH, endM] = watchedEndTime.split(':').map(Number);
+    const startMinutes = startH * 60 + startM;
+    const endMinutes = endH * 60 + endM;
+    
+    // Calculate current duration
+    let durationMinutes = endMinutes >= startMinutes 
+      ? endMinutes - startMinutes 
+      : (24 * 60 - startMinutes) + endMinutes;
+    
+    // Clamp duration to valid range (2-8 hours = 120-480 minutes)
+    if (durationMinutes < 120) {
+      durationMinutes = 120; // Minimum 2 hours
+    } else if (durationMinutes > 480) {
+      durationMinutes = 480; // Maximum 8 hours
+    } else {
+      return; // Duration is valid, no adjustment needed
+    }
+    
+    // Calculate new end time
+    const newEndMinutes = (startMinutes + durationMinutes) % (24 * 60);
+    const newEndH = Math.floor(newEndMinutes / 60);
+    const newEndM = newEndMinutes % 60;
+    const newEndTime = `${newEndH.toString().padStart(2, '0')}:${newEndM.toString().padStart(2, '0')}`;
+    
+    form.setValue('end_time', newEndTime);
+  }, [watchedStartTime, watchedEndTime, form]);
+
+  // Track previous end time to detect changes
+  const prevEndTimeRef = useRef(watchedEndTime);
+  
+  // When end time changes directly, ensure it maintains valid duration
+  useEffect(() => {
+    if (!watchedStartTime || !watchedEndTime) return;
+    
+    // Only run when end time actually changed
+    if (prevEndTimeRef.current === watchedEndTime) return;
+    prevEndTimeRef.current = watchedEndTime;
+    
+    const [startH, startM] = watchedStartTime.split(':').map(Number);
+    const [endH, endM] = watchedEndTime.split(':').map(Number);
+    const startMinutes = startH * 60 + startM;
+    const endMinutes = endH * 60 + endM;
+    
+    let durationMinutes = endMinutes >= startMinutes 
+      ? endMinutes - startMinutes 
+      : (24 * 60 - startMinutes) + endMinutes;
+    
+    // If duration is invalid, adjust end time
+    if (durationMinutes < 120 || durationMinutes > 480) {
+      const clampedDuration = Math.max(120, Math.min(480, durationMinutes));
+      const newEndMinutes = (startMinutes + clampedDuration) % (24 * 60);
+      const newEndH = Math.floor(newEndMinutes / 60);
+      const newEndM = newEndMinutes % 60;
+      const newEndTime = `${newEndH.toString().padStart(2, '0')}:${newEndM.toString().padStart(2, '0')}`;
+      form.setValue('end_time', newEndTime);
+    }
+  }, [watchedEndTime, watchedStartTime, form]);
 
   // Calculate billable hours split
   const hoursSplit = useMemo(() => {
@@ -574,7 +644,7 @@ export default function NewJob() {
               <div className="space-y-2">
                 <Label>Duration</Label>
                 <Select
-                  value={jobDuration !== null ? String(Math.round(jobDuration * 60)) : undefined}
+                  value={jobDuration !== null ? String(Math.round((jobDuration * 60) / 15) * 15) : undefined}
                   onValueChange={(value) => {
                     // Calculate new end time based on duration
                     const durationMinutes = parseInt(value, 10);

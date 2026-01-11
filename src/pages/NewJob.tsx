@@ -136,6 +136,21 @@ function formatDuration(hours: number): string {
 type Facility = Database['public']['Tables']['facilities']['Row'];
 type FacilitySelect = Pick<Facility, 'id' | 'name' | 'physical_address' | 'physical_city' | 'physical_state' | 'physical_zip' | 'billing_address' | 'billing_city' | 'billing_state' | 'billing_zip' | 'contractor' | 'admin_contact_name' | 'admin_contact_phone' | 'admin_contact_email' | 'rate_business_hours' | 'rate_after_hours' | 'rate_mileage' | 'minimum_billable_hours'>;
 
+// Generate duration options (2h to 8h in 15-min increments)
+function generateDurationOptions(): { value: number; label: string }[] {
+  const options: { value: number; label: string }[] = [];
+  // 2 hours to 8 hours in 15-minute increments
+  for (let minutes = 120; minutes <= 480; minutes += 15) {
+    const hours = Math.floor(minutes / 60);
+    const mins = minutes % 60;
+    const label = mins === 0 ? `${hours}h` : `${hours}h ${mins}m`;
+    options.push({ value: minutes, label });
+  }
+  return options;
+}
+
+const DURATION_OPTIONS = generateDurationOptions();
+
 const jobSchema = z.object({
   facility_id: z.string().min(1, 'Facility is required'),
   deaf_client_name: z.string().optional(),
@@ -157,7 +172,7 @@ const jobSchema = z.object({
   emergency_fee: z.coerce.number().optional(),
   holiday_fee: z.coerce.number().optional(),
 }).refine((data) => {
-  // Validate minimum 2 hour job length
+  // Validate minimum 2 hour and maximum 8 hour job length
   const [startH, startM] = data.start_time.split(':').map(Number);
   const [endH, endM] = data.end_time.split(':').map(Number);
   const startMinutes = startH * 60 + startM;
@@ -165,9 +180,9 @@ const jobSchema = z.object({
   const duration = endMinutes >= startMinutes 
     ? endMinutes - startMinutes 
     : (24 * 60 - startMinutes) + endMinutes;
-  return duration >= 120; // 2 hours in minutes
+  return duration >= 120 && duration <= 480; // 2-8 hours in minutes
 }, {
-  message: 'Job must be at least 2 hours long',
+  message: 'Job must be between 2 and 8 hours long',
   path: ['end_time'],
 });
 
@@ -555,28 +570,34 @@ export default function NewJob() {
                 )}
               </div>
 
-              {/* Job Duration with breakdown */}
+              {/* Job Duration */}
               <div className="space-y-2">
                 <Label>Duration</Label>
-                <div className="flex flex-wrap items-center gap-2 h-10">
-                  {hoursSplit && (
-                    <>
-                      {hoursSplit.businessHours > 0 && (
-                        <Badge variant="outline" className="bg-background">
-                          {formatDuration(hoursSplit.businessHours)} business
-                        </Badge>
-                      )}
-                      {hoursSplit.afterHours > 0 && (
-                        <Badge variant="outline" className="bg-background">
-                          {formatDuration(hoursSplit.afterHours)} after hrs
-                        </Badge>
-                      )}
-                      {!hoursSplit.businessHours && !hoursSplit.afterHours && (
-                        <Badge variant="outline" className="bg-background">—</Badge>
-                      )}
-                    </>
-                  )}
-                </div>
+                <Select
+                  value={jobDuration !== null ? String(Math.round(jobDuration * 60)) : undefined}
+                  onValueChange={(value) => {
+                    // Calculate new end time based on duration
+                    const durationMinutes = parseInt(value, 10);
+                    const [startH, startM] = watchedStartTime.split(':').map(Number);
+                    const startMinutes = startH * 60 + startM;
+                    const endMinutes = (startMinutes + durationMinutes) % (24 * 60);
+                    const endH = Math.floor(endMinutes / 60);
+                    const endM = endMinutes % 60;
+                    const newEndTime = `${endH.toString().padStart(2, '0')}:${endM.toString().padStart(2, '0')}`;
+                    form.setValue('end_time', newEndTime);
+                  }}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select duration" />
+                  </SelectTrigger>
+                  <SelectContent className="max-h-[300px]">
+                    {DURATION_OPTIONS.map((option) => (
+                      <SelectItem key={option.value} value={String(option.value)}>
+                        {option.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
             </div>
           </CardContent>

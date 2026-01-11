@@ -1,20 +1,16 @@
 import { useEffect, useMemo } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { format } from 'date-fns';
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import {
   Select,
   SelectContent,
@@ -23,6 +19,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
+import { ArrowLeft } from 'lucide-react';
 import type { Database } from '@/types/database';
 
 // Helper to calculate hours split between business (8am-5pm) and after-hours
@@ -79,7 +76,6 @@ function calculateHoursSplit(startTime: string, endTime: string, minimumHours: n
   };
 }
 
-type Job = Database['public']['Tables']['jobs']['Row'];
 type Facility = Database['public']['Tables']['facilities']['Row'];
 type FacilitySelect = Pick<Facility, 'id' | 'name' | 'physical_address' | 'physical_city' | 'physical_state' | 'physical_zip' | 'billing_address' | 'billing_city' | 'billing_state' | 'billing_zip' | 'contractor' | 'admin_contact_name' | 'admin_contact_phone' | 'admin_contact_email' | 'rate_business_hours' | 'rate_after_hours' | 'rate_mileage' | 'minimum_billable_hours'>;
 
@@ -107,13 +103,8 @@ const jobSchema = z.object({
 
 type FormData = z.infer<typeof jobSchema>;
 
-interface JobDialogProps {
-  open: boolean;
-  onOpenChange: () => void;
-  job: Job | null;
-}
-
-export function JobDialog({ open, onOpenChange, job }: JobDialogProps) {
+export default function NewJob() {
+  const navigate = useNavigate();
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
@@ -210,42 +201,6 @@ export function JobDialog({ open, onOpenChange, job }: JobDialogProps) {
     };
   }, [hoursSplit, selectedFacility]);
 
-  useEffect(() => {
-    if (job) {
-      form.reset({
-        facility_id: job.facility_id,
-        deaf_client_name: job.deaf_client_name || '',
-        job_date: job.job_date,
-        start_time: job.start_time,
-        end_time: job.end_time,
-        location_type: job.location_type || 'in_person',
-        location_address: job.location_address || '',
-        location_city: job.location_city || '',
-        location_state: job.location_state || '',
-        location_zip: job.location_zip || '',
-        video_call_link: job.video_call_link || '',
-        opportunity_source: job.opportunity_source,
-        internal_notes: job.internal_notes || '',
-        client_business_name: job.client_business_name || '',
-        client_contact_name: job.client_contact_name || '',
-        client_contact_phone: job.client_contact_phone || '',
-        client_contact_email: job.client_contact_email || '',
-        emergency_fee: job.emergency_fee_applied ? (job as any).emergency_fee : undefined,
-        holiday_fee: job.holiday_fee_applied ? (job as any).holiday_fee : undefined,
-      });
-    } else {
-      form.reset({
-        facility_id: '',
-        location_type: 'in_person',
-        job_date: format(new Date(), 'yyyy-MM-dd'),
-        start_time: '09:00',
-        end_time: '10:00',
-        emergency_fee: undefined,
-        holiday_fee: undefined,
-      });
-    }
-  }, [job, form]);
-
   const mutation = useMutation({
     mutationFn: async (data: FormData) => {
       const payload = {
@@ -270,18 +225,14 @@ export function JobDialog({ open, onOpenChange, job }: JobDialogProps) {
         holiday_fee: data.holiday_fee || null,
       };
 
-      if (job) {
-        const { error } = await (supabase.from('jobs') as any).update(payload).eq('id', job.id);
-        if (error) throw error;
-      } else {
-        const { error } = await (supabase.from('jobs') as any).insert(payload);
-        if (error) throw error;
-      }
+      const { data: newJob, error } = await (supabase.from('jobs') as any).insert(payload).select('id').single();
+      if (error) throw error;
+      return newJob;
     },
-    onSuccess: () => {
+    onSuccess: (newJob) => {
       queryClient.invalidateQueries({ queryKey: ['jobs'] });
-      toast({ title: `Job ${job ? 'updated' : 'created'} successfully` });
-      onOpenChange();
+      toast({ title: 'Job created successfully' });
+      navigate(`/jobs/${newJob.id}`);
     },
     onError: (error) => {
       toast({ title: 'Error', description: error.message, variant: 'destructive' });
@@ -293,19 +244,34 @@ export function JobDialog({ open, onOpenChange, job }: JobDialogProps) {
   };
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle>{job ? 'Edit Job' : 'New Job'}</DialogTitle>
-        </DialogHeader>
+    <div className="space-y-6">
+      {/* Sticky Header */}
+      <div className="sticky top-0 z-10 -mx-6 -mt-6 px-6 py-4 bg-background border-b flex items-center justify-between">
+        <div className="flex items-center gap-4">
+          <Button variant="ghost" size="icon" onClick={() => navigate('/jobs')}>
+            <ArrowLeft className="h-4 w-4" />
+          </Button>
+          <h1 className="text-xl font-bold text-foreground">New Job</h1>
+        </div>
+        <Button onClick={form.handleSubmit(onSubmit)} disabled={mutation.isPending}>
+          {mutation.isPending ? 'Creating...' : 'Create Job'}
+        </Button>
+      </div>
 
-        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-          {/* Job Details */}
-          <div className="space-y-4">
-            <div className="grid grid-cols-2 gap-4">
+      <form className="space-y-6">
+        {/* Job Details */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Job Details</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="job_date">Job Date *</Label>
                 <Input id="job_date" type="date" {...form.register('job_date')} />
+                {form.formState.errors.job_date && (
+                  <p className="text-sm text-destructive">{form.formState.errors.job_date.message}</p>
+                )}
               </div>
               <div className="space-y-2">
                 <Label htmlFor="facility_id">Facility *</Label>
@@ -330,7 +296,7 @@ export function JobDialog({ open, onOpenChange, job }: JobDialogProps) {
               </div>
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="opportunity_source">Job Source</Label>
                 <Select
@@ -355,26 +321,40 @@ export function JobDialog({ open, onOpenChange, job }: JobDialogProps) {
                 <Input id="deaf_client_name" {...form.register('deaf_client_name')} />
               </div>
             </div>
-          </div>
+          </CardContent>
+        </Card>
 
-          {/* Schedule */}
-          <div className="space-y-4">
-            <h3 className="font-semibold">Schedule</h3>
-            <div className="grid grid-cols-2 gap-4">
+        {/* Schedule */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Schedule</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="start_time">Start Time *</Label>
                 <Input id="start_time" type="time" {...form.register('start_time')} />
+                {form.formState.errors.start_time && (
+                  <p className="text-sm text-destructive">{form.formState.errors.start_time.message}</p>
+                )}
               </div>
               <div className="space-y-2">
                 <Label htmlFor="end_time">End Time *</Label>
                 <Input id="end_time" type="time" {...form.register('end_time')} />
+                {form.formState.errors.end_time && (
+                  <p className="text-sm text-destructive">{form.formState.errors.end_time.message}</p>
+                )}
               </div>
             </div>
-          </div>
+          </CardContent>
+        </Card>
 
-          {/* Location */}
-          <div className="space-y-4">
-            <h3 className="font-semibold">Location</h3>
+        {/* Location */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Location</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
             <div className="space-y-2">
               <Label htmlFor="location_type">Location Type</Label>
               <Select
@@ -397,7 +377,7 @@ export function JobDialog({ open, onOpenChange, job }: JobDialogProps) {
                   <Label htmlFor="location_address">Address {isContractor && '*'}</Label>
                   <Input id="location_address" {...form.register('location_address')} />
                 </div>
-                <div className="grid grid-cols-3 gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                   <div className="space-y-2">
                     <Label htmlFor="location_city">City</Label>
                     <Input id="location_city" {...form.register('location_city')} />
@@ -418,118 +398,143 @@ export function JobDialog({ open, onOpenChange, job }: JobDialogProps) {
                 <Input id="video_call_link" placeholder="https://..." {...form.register('video_call_link')} />
               </div>
             )}
-          </div>
+          </CardContent>
+        </Card>
 
-          {/* Client Information - Required for contractors, auto-filled for non-contractors */}
-          <div className="space-y-4">
-            <h3 className="font-semibold">
+        {/* Client Information */}
+        <Card>
+          <CardHeader>
+            <CardTitle>
               Client Information
               {isContractor && <span className="text-destructive ml-1">*</span>}
-            </h3>
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
             {isContractor && (
               <p className="text-sm text-muted-foreground">
                 This is a contractor facility. Please enter the client details for this job.
               </p>
             )}
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="client_business_name">Business Name {isContractor && '*'}</Label>
-                <Input 
-                  id="client_business_name" 
-                  {...form.register('client_business_name')} 
-                  disabled={!isContractor}
-                />
+                <Input id="client_business_name" {...form.register('client_business_name')} />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="client_contact_name">Contact Name {isContractor && '*'}</Label>
-                <Input 
-                  id="client_contact_name" 
-                  {...form.register('client_contact_name')} 
-                  disabled={!isContractor}
-                />
+                <Label htmlFor="client_contact_name">Contact Name</Label>
+                <Input id="client_contact_name" {...form.register('client_contact_name')} />
               </div>
             </div>
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label htmlFor="client_contact_phone">Contact Phone {isContractor && '*'}</Label>
-                <Input 
-                  id="client_contact_phone" 
-                  {...form.register('client_contact_phone')} 
-                  disabled={!isContractor}
-                />
+                <Label htmlFor="client_contact_phone">Phone</Label>
+                <Input id="client_contact_phone" {...form.register('client_contact_phone')} />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="client_contact_email">Contact Email {isContractor && '*'}</Label>
-                <Input 
-                  id="client_contact_email" 
-                  type="email"
-                  {...form.register('client_contact_email')} 
-                  disabled={!isContractor}
-                />
+                <Label htmlFor="client_contact_email">Email</Label>
+                <Input id="client_contact_email" type="email" {...form.register('client_contact_email')} />
               </div>
             </div>
-          </div>
+          </CardContent>
+        </Card>
 
-          {/* Rates & Fees - Billable Calculation */}
-          {hoursSplit && billableTotal && selectedFacility && (
-            <div className="space-y-4">
-              <h3 className="font-semibold">Estimated Billable</h3>
-              <div className="rounded-lg border bg-muted/50 p-4 space-y-3">
-                <div className="grid grid-cols-2 gap-4 text-sm">
-                  <div>
-                    <span className="text-muted-foreground">Job Duration:</span>
-                    <span className="ml-2 font-medium">{hoursSplit.totalHours.toFixed(2)} hrs</span>
-                  </div>
-                  <div>
-                    <span className="text-muted-foreground">Billable Hours:</span>
-                    <span className="ml-2 font-medium">{hoursSplit.billableHours.toFixed(2)} hrs</span>
-                    {hoursSplit.minimumApplied > 0 && (
-                      <span className="ml-1 text-xs text-muted-foreground">(min applied)</span>
-                    )}
-                  </div>
+        {/* Fees */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Fees</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="emergency_fee">Emergency Fee</Label>
+                <div className="relative">
+                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">$</span>
+                  <Input
+                    id="emergency_fee"
+                    type="number"
+                    step="0.01"
+                    className="pl-7"
+                    {...form.register('emergency_fee')}
+                  />
+                </div>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="holiday_fee">Holiday Fee</Label>
+                <div className="relative">
+                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">$</span>
+                  <Input
+                    id="holiday_fee"
+                    type="number"
+                    step="0.01"
+                    className="pl-7"
+                    {...form.register('holiday_fee')}
+                  />
+                </div>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Estimated Billable */}
+        {hoursSplit && billableTotal && (
+          <Card>
+            <CardHeader>
+              <CardTitle>Estimated Billable</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-2">
+              <div className="grid grid-cols-2 gap-4 text-sm">
+                <div className="text-muted-foreground">Job Duration</div>
+                <div className="text-right font-medium">{hoursSplit.totalHours.toFixed(2)} hrs</div>
+                
+                <div className="text-muted-foreground">Billable Hours</div>
+                <div className="text-right font-medium">
+                  {hoursSplit.billableHours.toFixed(2)} hrs
+                  {hoursSplit.minimumApplied > 0 && (
+                    <span className="text-muted-foreground ml-1">
+                      (min +{hoursSplit.minimumApplied.toFixed(2)})
+                    </span>
+                  )}
                 </div>
                 
-                <div className="border-t pt-3 space-y-2 text-sm">
-                  <div className="flex justify-between">
-                    <span>Business Hours (8am-5pm):</span>
-                    <span>
-                      {hoursSplit.businessHours.toFixed(2)} hrs × ${billableTotal.businessRate.toFixed(2)} = 
-                      <span className="font-medium ml-1">${billableTotal.businessTotal.toFixed(2)}</span>
-                    </span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span>After Hours:</span>
-                    <span>
-                      {hoursSplit.afterHours.toFixed(2)} hrs × ${billableTotal.afterHoursRate.toFixed(2)} = 
-                      <span className="font-medium ml-1">${billableTotal.afterHoursTotal.toFixed(2)}</span>
-                    </span>
-                  </div>
+                <div className="text-muted-foreground">Business Hours</div>
+                <div className="text-right">
+                  {hoursSplit.businessHours.toFixed(2)} hrs × ${billableTotal.businessRate.toFixed(2)} = ${billableTotal.businessTotal.toFixed(2)}
                 </div>
                 
-                <div className="border-t pt-3 flex justify-between font-semibold">
-                  <span>Estimated Total:</span>
-                  <span>${billableTotal.total.toFixed(2)}</span>
-                </div>
+                {hoursSplit.afterHours > 0 && (
+                  <>
+                    <div className="text-muted-foreground">After Hours</div>
+                    <div className="text-right">
+                      {hoursSplit.afterHours.toFixed(2)} hrs × ${billableTotal.afterHoursRate.toFixed(2)} = ${billableTotal.afterHoursTotal.toFixed(2)}
+                    </div>
+                  </>
+                )}
+                
+                <div className="text-muted-foreground font-semibold pt-2 border-t">Estimated Total</div>
+                <div className="text-right font-bold pt-2 border-t">${billableTotal.total.toFixed(2)}</div>
               </div>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Notes */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Notes</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-2">
+              <Label htmlFor="internal_notes">Internal Notes</Label>
+              <Textarea
+                id="internal_notes"
+                rows={4}
+                placeholder="Internal notes about this job..."
+                {...form.register('internal_notes')}
+              />
             </div>
-          )}
-
-          {/* Notes */}
-          <div className="space-y-2">
-            <Label htmlFor="internal_notes">Internal Notes</Label>
-            <Textarea id="internal_notes" {...form.register('internal_notes')} />
-          </div>
-
-          <div className="flex justify-end gap-2">
-            <Button type="button" variant="outline" onClick={onOpenChange}>
-              Cancel
-            </Button>
-            <Button type="submit" disabled={mutation.isPending}>
-              {mutation.isPending ? 'Saving...' : job ? 'Update' : 'Create'}
-            </Button>
-          </div>
-        </form>
-      </DialogContent>
-    </Dialog>
+          </CardContent>
+        </Card>
+      </form>
+    </div>
   );
 }

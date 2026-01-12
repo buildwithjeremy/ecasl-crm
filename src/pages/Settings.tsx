@@ -1,5 +1,6 @@
 import { useAuth } from '@/contexts/AuthContext';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useUnsavedChangesWarning, UnsavedChangesDialog } from '@/hooks/use-unsaved-changes-warning';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -14,6 +15,7 @@ export default function Settings() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [mileageRate, setMileageRate] = useState<string>('0.7');
+  const [originalMileageRate, setOriginalMileageRate] = useState<string>('0.7');
 
   // Fetch default mileage rate setting
   const { data: defaultMileageRateSetting, isLoading: settingsLoading } = useQuery({
@@ -32,9 +34,17 @@ export default function Settings() {
   // Update mileageRate when setting loads
   useEffect(() => {
     if (defaultMileageRateSetting && defaultMileageRateSetting.value !== undefined && defaultMileageRateSetting.value !== null) {
-      setMileageRate(String(defaultMileageRateSetting.value));
+      const rateString = String(defaultMileageRateSetting.value);
+      setMileageRate(rateString);
+      setOriginalMileageRate(rateString);
     }
   }, [defaultMileageRateSetting]);
+
+  // Track if there are unsaved changes
+  const hasUnsavedChanges = mileageRate !== originalMileageRate;
+
+  // Unsaved changes warning
+  const blocker = useUnsavedChangesWarning({ isDirty: hasUnsavedChanges });
 
   const updateMileageRateMutation = useMutation({
     mutationFn: async (newRate: number) => {
@@ -46,6 +56,7 @@ export default function Settings() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['settings'] });
+      setOriginalMileageRate(mileageRate); // Reset original to current after successful save
       toast({ title: 'Default mileage rate updated' });
     },
     onError: (error: Error) => {
@@ -137,6 +148,8 @@ export default function Settings() {
           </CardContent>
         </Card>
       )}
+
+      <UnsavedChangesDialog blocker={blocker} />
     </div>
   );
 }

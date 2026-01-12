@@ -18,7 +18,7 @@ import {
   type FacilityOption,
 } from '@/components/jobs/fields';
 import { jobBaseSchema, type JobBaseFormData } from '@/lib/schemas/job.schema';
-import { HoursSplit, toSafeNumber } from '@/lib/utils/job-calculations';
+import { HoursSplit } from '@/lib/utils/job-calculations';
 
 export default function NewJob() {
   const navigate = useNavigate();
@@ -38,8 +38,8 @@ export default function NewJob() {
     },
   });
 
-  const watchedEmergencyFee = form.watch('emergency_fee');
-  const watchedHolidayFee = form.watch('holiday_fee');
+  const watchedEmergencyFeeApplied = form.watch('emergency_fee_applied');
+  const watchedHolidayFeeApplied = form.watch('holiday_fee_applied');
 
   // Handle facility selection
   const handleFacilityChange = useCallback((facility: FacilityOption | null) => {
@@ -61,8 +61,8 @@ export default function NewJob() {
     const afterHoursTotal = hoursSplit.afterHours * afterHoursRate;
     const hoursSubtotal = businessTotal + afterHoursTotal;
     
-    const emergencyFee = toSafeNumber(watchedEmergencyFee);
-    const holidayFee = toSafeNumber(watchedHolidayFee);
+    const emergencyFee = watchedEmergencyFeeApplied ? (selectedFacility?.emergency_fee ?? 0) : 0;
+    const holidayFee = watchedHolidayFeeApplied ? (selectedFacility?.holiday_fee ?? 0) : 0;
     const feesTotal = emergencyFee + holidayFee;
 
     return {
@@ -76,7 +76,7 @@ export default function NewJob() {
       feesTotal,
       total: hoursSubtotal + feesTotal,
     };
-  }, [hoursSplit, selectedFacility, watchedEmergencyFee, watchedHolidayFee]);
+  }, [hoursSplit, selectedFacility, watchedEmergencyFeeApplied, watchedHolidayFeeApplied]);
 
   const mutation = useMutation({
     mutationFn: async (data: JobBaseFormData) => {
@@ -98,8 +98,8 @@ export default function NewJob() {
         client_contact_name: data.client_contact_name || null,
         client_contact_phone: data.client_contact_phone || null,
         client_contact_email: data.client_contact_email || null,
-        emergency_fee: data.emergency_fee || null,
-        holiday_fee: data.holiday_fee || null,
+        emergency_fee_applied: data.emergency_fee_applied || false,
+        holiday_fee_applied: data.holiday_fee_applied || false,
       };
 
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -176,7 +176,12 @@ export default function NewJob() {
         />
 
         {/* Fees */}
-        <JobFeesFields form={form} mode="create" />
+        <JobFeesFields
+          form={form}
+          mode="create"
+          facilityEmergencyFee={selectedFacility?.emergency_fee}
+          facilityHolidayFee={selectedFacility?.holiday_fee}
+        />
 
         {/* Estimated Billable */}
         {hoursSplit && billableTotal && (

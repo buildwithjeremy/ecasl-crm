@@ -162,12 +162,13 @@ export default function FacilityDetail() {
   const watchedPhysicalState = form.watch('physical_state');
   const detectedTimezone = getTimezoneFromState(watchedPhysicalState);
 
-  // Auto-update timezone when physical state changes
+  // Auto-update timezone when physical state changes (only mark dirty if user changed the state)
   useEffect(() => {
-    if (detectedTimezone) {
+    if (detectedTimezone && form.formState.dirtyFields.physical_state) {
       form.setValue('timezone', detectedTimezone, { shouldDirty: true });
     }
-  }, [detectedTimezone, form]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [detectedTimezone]);
 
   // Update URL when facility changes
   useEffect(() => {
@@ -221,7 +222,8 @@ export default function FacilityDetail() {
       }
       setContactErrors({});
     }
-  }, [facility, form]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [facility]);
 
   const copyBillingToPhysical = () => {
     const billingAddress = form.getValues('billing_address');

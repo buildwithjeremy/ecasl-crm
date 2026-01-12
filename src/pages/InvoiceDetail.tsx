@@ -202,7 +202,8 @@ export default function InvoiceDetail() {
       }, { keepDefaultValues: false });
       setPdfUrl(invoice.pdf_url ?? null);
     }
-  }, [invoice, form]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [invoice]);
 
   const mutation = useMutation({
     mutationFn: async (data: FormData) => {

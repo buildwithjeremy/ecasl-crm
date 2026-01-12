@@ -261,10 +261,10 @@ export default function NewJob() {
       const facility = facilities.find((f) => f.id === watchedFacilityId);
       if (facility) {
         // Auto-fill client info for ALL facilities
-        form.setValue('client_business_name', facility.name || '');
-        form.setValue('client_contact_name', facility.admin_contact_name || '');
-        form.setValue('client_contact_phone', facility.admin_contact_phone || '');
-        form.setValue('client_contact_email', facility.admin_contact_email || '');
+        form.setValue('client_business_name', facility.name || '', { shouldDirty: true });
+        form.setValue('client_contact_name', facility.admin_contact_name || '', { shouldDirty: true });
+        form.setValue('client_contact_phone', facility.admin_contact_phone || '', { shouldDirty: true });
+        form.setValue('client_contact_email', facility.admin_contact_email || '', { shouldDirty: true });
 
         if (!facility.contractor) {
           // Non-contractor: also auto-fill location from facility
@@ -274,21 +274,22 @@ export default function NewJob() {
             const state = facility.physical_state || facility.billing_state;
             const zip = facility.physical_zip || facility.billing_zip;
 
-            form.setValue('location_address', address || '');
-            form.setValue('location_city', city || '');
-            form.setValue('location_state', state || '');
-            form.setValue('location_zip', zip || '');
+            form.setValue('location_address', address || '', { shouldDirty: true });
+            form.setValue('location_city', city || '', { shouldDirty: true });
+            form.setValue('location_state', state || '', { shouldDirty: true });
+            form.setValue('location_zip', zip || '', { shouldDirty: true });
           }
         } else {
           // Contractor: clear location fields for manual entry
-          form.setValue('location_address', '');
-          form.setValue('location_city', '');
-          form.setValue('location_state', '');
-          form.setValue('location_zip', '');
+          form.setValue('location_address', '', { shouldDirty: true });
+          form.setValue('location_city', '', { shouldDirty: true });
+          form.setValue('location_state', '', { shouldDirty: true });
+          form.setValue('location_zip', '', { shouldDirty: true });
         }
       }
     }
-  }, [watchedFacilityId, watchedLocationType, facilities, form]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [watchedFacilityId, watchedLocationType, facilities]);
 
   // Track previous start time to detect changes
   const prevStartTimeRef = useRef(watchedStartTime);
@@ -326,8 +327,9 @@ export default function NewJob() {
     const newEndM = newEndMinutes % 60;
     const newEndTime = `${newEndH.toString().padStart(2, '0')}:${newEndM.toString().padStart(2, '0')}`;
     
-    form.setValue('end_time', newEndTime);
-  }, [watchedStartTime, watchedEndTime, form]);
+    form.setValue('end_time', newEndTime, { shouldDirty: true });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [watchedStartTime, watchedEndTime]);
 
   // Track previous end time to detect changes
   const prevEndTimeRef = useRef(watchedEndTime);
@@ -356,9 +358,10 @@ export default function NewJob() {
       const newEndH = Math.floor(newEndMinutes / 60);
       const newEndM = newEndMinutes % 60;
       const newEndTime = `${newEndH.toString().padStart(2, '0')}:${newEndM.toString().padStart(2, '0')}`;
-      form.setValue('end_time', newEndTime);
+      form.setValue('end_time', newEndTime, { shouldDirty: true });
     }
-  }, [watchedEndTime, watchedStartTime, form]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [watchedEndTime, watchedStartTime]);
 
   // Calculate billable hours split
   const hoursSplit = useMemo(() => {

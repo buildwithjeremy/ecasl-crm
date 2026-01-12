@@ -168,7 +168,8 @@ export default function PayableDetail() {
         notes: payable.notes ?? '',
       }, { keepDefaultValues: false });
     }
-  }, [payable, form]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [payable]);
 
   const mutation = useMutation({
     mutationFn: async (data: FormData) => {

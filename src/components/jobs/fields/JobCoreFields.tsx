@@ -30,6 +30,9 @@ import { Check, ChevronsUpDown } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { FormMode, OPPORTUNITY_SOURCES } from '@/lib/schemas/shared';
 
+// Sentinel value for "no selection" to keep Select controlled
+const OPPORTUNITY_SOURCE_NONE = '__none__';
+
 // ==========================================
 // Types
 // ==========================================
@@ -182,14 +185,20 @@ export function JobCoreFields({
           <div className="space-y-2">
             <Label htmlFor="opportunity_source">Job Source</Label>
             <Select
-              value={form.watch('opportunity_source') ?? undefined}
-              onValueChange={(value) => form.setValue('opportunity_source', value || null, { shouldDirty: true })}
+              value={form.watch('opportunity_source') || OPPORTUNITY_SOURCE_NONE}
+              onValueChange={(value) => {
+                const newValue = value === OPPORTUNITY_SOURCE_NONE ? null : value;
+                form.setValue('opportunity_source', newValue, { shouldDirty: true });
+              }}
               disabled={disabled}
             >
               <SelectTrigger>
                 <SelectValue placeholder="Select source" />
               </SelectTrigger>
               <SelectContent>
+                <SelectItem value={OPPORTUNITY_SOURCE_NONE}>
+                  <span className="text-muted-foreground">Unspecified</span>
+                </SelectItem>
                 {OPPORTUNITY_SOURCES.map((source) => (
                   <SelectItem key={source.value} value={source.value}>
                     {source.label}

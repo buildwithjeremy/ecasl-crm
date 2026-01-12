@@ -31,6 +31,10 @@ import {
   calculateEndTime,
   clampDuration,
 } from '@/lib/utils/form-helpers';
+import { normalizeTimeToHHMM, needsTimeNormalization } from '@/lib/utils/time-helpers';
+
+// Sentinel value for "no selection" to keep Select controlled
+const DURATION_NONE = '__none__';
 
 // ==========================================
 // Types
@@ -65,15 +69,40 @@ export function JobScheduleFields({
   const prevStartTimeRef = useRef(watchedStartTime);
   const prevEndTimeRef = useRef(watchedEndTime);
 
+  // Normalize times if they have seconds (e.g., from DB "HH:MM:SS" format)
+  // This ensures Select components always have matching values
+  useEffect(() => {
+    if (needsTimeNormalization(watchedStartTime)) {
+      const normalized = normalizeTimeToHHMM(watchedStartTime);
+      if (normalized) {
+        form.setValue('start_time', normalized, { shouldDirty: false });
+      }
+    }
+    if (needsTimeNormalization(watchedEndTime)) {
+      const normalized = normalizeTimeToHHMM(watchedEndTime);
+      if (normalized) {
+        form.setValue('end_time', normalized, { shouldDirty: false });
+      }
+    }
+  }, [watchedStartTime, watchedEndTime, form]);
+
   // Calculate job duration in hours
   const jobDuration = useMemo(() => {
     if (!watchedStartTime || !watchedEndTime) return null;
+    // Only calculate if times are in correct format
+    if (needsTimeNormalization(watchedStartTime) || needsTimeNormalization(watchedEndTime)) {
+      return null;
+    }
     return calculateDurationMinutes(watchedStartTime, watchedEndTime) / 60;
   }, [watchedStartTime, watchedEndTime]);
 
   // Calculate hours split for display
   const hoursSplit = useMemo(() => {
     if (!watchedStartTime || !watchedEndTime) return null;
+    // Only calculate if times are in correct format
+    if (needsTimeNormalization(watchedStartTime) || needsTimeNormalization(watchedEndTime)) {
+      return null;
+    }
     return calculateHoursSplit(watchedStartTime, watchedEndTime, minimumHours);
   }, [watchedStartTime, watchedEndTime, minimumHours]);
 
@@ -175,7 +204,7 @@ export function JobScheduleFields({
           <div className="space-y-2">
             <Label>Start Time *</Label>
             <Select
-              value={watchedStartTime}
+              value={watchedStartTime || ''}
               onValueChange={(value) => form.setValue('start_time', value, { shouldDirty: true })}
               disabled={disabled}
             >
@@ -201,7 +230,7 @@ export function JobScheduleFields({
           <div className="space-y-2">
             <Label>End Time *</Label>
             <Select
-              value={watchedEndTime}
+              value={watchedEndTime || ''}
               onValueChange={(value) => form.setValue('end_time', value, { shouldDirty: true })}
               disabled={disabled}
             >
@@ -227,14 +256,21 @@ export function JobScheduleFields({
           <div className="space-y-2">
             <Label>Duration</Label>
             <Select
-              value={jobDuration !== null ? String(Math.round((jobDuration * 60) / 15) * 15) : undefined}
-              onValueChange={handleDurationChange}
+              value={jobDuration !== null ? String(Math.round((jobDuration * 60) / 15) * 15) : DURATION_NONE}
+              onValueChange={(value) => {
+                if (value !== DURATION_NONE) {
+                  handleDurationChange(value);
+                }
+              }}
               disabled={disabled}
             >
               <SelectTrigger>
                 <SelectValue placeholder="Select duration" />
               </SelectTrigger>
               <SelectContent className="max-h-[300px]">
+                <SelectItem value={DURATION_NONE}>
+                  <span className="text-muted-foreground">—</span>
+                </SelectItem>
                 {DURATION_OPTIONS.map((option) => (
                   <SelectItem key={option.value} value={String(option.value)}>
                     {option.label}

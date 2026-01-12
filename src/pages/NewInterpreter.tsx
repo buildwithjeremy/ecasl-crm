@@ -1,6 +1,5 @@
 import { useNavigate } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
-import { useUnsavedChangesWarning, UnsavedChangesDialog } from '@/hooks/use-unsaved-changes-warning';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
@@ -77,9 +76,6 @@ export default function NewInterpreter() {
       insurance_end_date: null,
     },
   });
-
-  // Unsaved changes warning
-  const blocker = useUnsavedChangesWarning({ isDirty: form.formState.isDirty });
 
   const mutation = useMutation({
     mutationFn: async (data: FormData) => {
@@ -374,8 +370,6 @@ export default function NewInterpreter() {
           </CardContent>
         </Card>
       </form>
-
-      <UnsavedChangesDialog blocker={blocker} />
     </div>
   );
 }

@@ -1,6 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useUnsavedChangesWarning, UnsavedChangesDialog } from '@/hooks/use-unsaved-changes-warning';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -240,9 +239,6 @@ export default function NewJob() {
       end_time: '11:00', // Default 2-hour job
     },
   });
-
-  // Unsaved changes warning
-  const blocker = useUnsavedChangesWarning({ isDirty: form.formState.isDirty });
 
   const watchedFacilityId = form.watch('facility_id');
   const watchedLocationType = form.watch('location_type');
@@ -1267,8 +1263,6 @@ export default function NewJob() {
           </CardContent>
         </Card>
       </form>
-
-      <UnsavedChangesDialog blocker={blocker} />
     </div>
   );
 }

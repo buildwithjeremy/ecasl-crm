@@ -157,7 +157,7 @@ export default function JobDetail() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('facilities')
-        .select('id, name, rate_business_hours, rate_after_hours, minimum_billable_hours, contractor, physical_address, physical_city, physical_state, physical_zip, billing_address, billing_city, billing_state, billing_zip, admin_contact_name, admin_contact_phone, admin_contact_email')
+        .select('id, name, rate_business_hours, rate_after_hours, minimum_billable_hours, contractor, physical_address, physical_city, physical_state, physical_zip, billing_address, billing_city, billing_state, billing_zip, admin_contact_name, admin_contact_phone, admin_contact_email, emergency_fee, holiday_fee')
         .order('name');
       if (error) throw error;
       return data as FacilityOption[];

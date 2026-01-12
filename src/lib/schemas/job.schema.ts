@@ -29,9 +29,9 @@ export const jobBaseSchema = z.object({
   client_contact_phone: phoneField,
   client_contact_email: emailField,
   
-  // Fees (optional on creation)
-  emergency_fee: currencyField,
-  holiday_fee: currencyField,
+  // Fee flags (optional on creation)
+  emergency_fee_applied: z.boolean().optional().default(false),
+  holiday_fee_applied: z.boolean().optional().default(false),
 }).refine((data) => {
   // Validate minimum 2 hour and maximum 8 hour job length
   const [startH, startM] = data.start_time.split(':').map(Number);
@@ -105,8 +105,8 @@ const jobBaseWithoutRefinement = z.object({
   client_contact_name: z.string().optional(),
   client_contact_phone: phoneField,
   client_contact_email: emailField,
-  emergency_fee: currencyField,
-  holiday_fee: currencyField,
+  emergency_fee_applied: z.boolean().optional().default(false),
+  holiday_fee_applied: z.boolean().optional().default(false),
 });
 
 export const jobFullSchema = jobBaseWithoutRefinement.merge(jobExtendedSchema);

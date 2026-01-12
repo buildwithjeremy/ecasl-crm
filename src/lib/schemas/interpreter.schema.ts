@@ -28,7 +28,7 @@ export const interpreterBaseSchema = z.object({
   rate_after_hours: requiredCurrencyField,
   
   // Payment
-  payment_method: z.enum(['zelle', 'check'], { required_error: 'Payment method is required' }),
+  payment_method: z.enum(['zelle', 'check']).nullable().optional(),
   payment_details: z.string().optional(),
   
   // Compliance

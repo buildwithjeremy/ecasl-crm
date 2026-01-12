@@ -1,99 +1,32 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { useUnsavedChangesWarning, UnsavedChangesDialog } from '@/hooks/use-unsaved-changes-warning';
+import { useUnsavedChangesWarning } from '@/hooks/use-unsaved-changes-warning';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { z } from 'zod';
 import { format } from 'date-fns';
 import { supabase } from '@/integrations/supabase/client';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
-import { Checkbox } from '@/components/ui/checkbox';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Calendar } from '@/components/ui/calendar';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
-import {
-  Command,
-  CommandEmpty,
-  CommandGroup,
-  CommandInput,
-  CommandItem,
-  CommandList,
-} from '@/components/ui/command';
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from '@/components/ui/popover';
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-  AlertDialogTrigger,
-} from '@/components/ui/alert-dialog';
+import { Card, CardContent } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
-import { ArrowLeft, CalendarIcon, Check, ChevronsUpDown, Trash2 } from 'lucide-react';
-import { cn } from '@/lib/utils';
-import { Badge } from '@/components/ui/badge';
+import { RecordPageLayout } from '@/components/layout/RecordPageLayout';
 import { ContractComplianceSection } from '@/components/interpreters/ContractComplianceSection';
-import type { Database } from '@/types/database';
+import {
+  InterpreterCoreFields,
+  InterpreterAddressFields,
+  InterpreterCertifications,
+  InterpreterRatesFields,
+  InterpreterPaymentFields,
+  InterpreterNotesFields,
+} from '@/components/interpreters/fields';
+import {
+  interpreterFullSchema,
+  type InterpreterFullFormData,
+  getInterpreterFullDefaults,
+} from '@/lib/schemas/interpreter.schema';
+import type { Tables, TablesUpdate } from '@/integrations/supabase/types';
 
-type Interpreter = Database['public']['Tables']['interpreters']['Row'];
-
-const interpreterSchema = z.object({
-  first_name: z.string().min(1, 'First name is required'),
-  last_name: z.string().min(1, 'Last name is required'),
-  email: z.string().email('Valid email is required'),
-  phone: z.string().optional().refine(
-    val => !val || /^(\+1)?[\s.-]?\(?\d{3}\)?[\s.-]?\d{3}[\s.-]?\d{4}$/.test(val.replace(/\s/g, '')),
-    'Please enter a valid phone number'
-  ),
-  address: z.string().optional(),
-  city: z.string().optional(),
-  state: z.string().optional(),
-  zip_code: z.string().optional().refine(
-    val => !val || /^\d{5}(-\d{4})?$/.test(val),
-    'Please enter a valid ZIP code (e.g., 12345 or 12345-6789)'
-  ),
-  timezone: z.string().optional(),
-  status: z.enum(['active', 'inactive', 'pending']),
-  rid_certified: z.boolean(),
-  nic_certified: z.boolean(),
-  other_certifications: z.string().optional(),
-  rate_business_hours: z.coerce.number().optional(),
-  rate_after_hours: z.coerce.number().optional(),
-  minimum_hours: z.coerce.number().optional().default(2),
-  eligible_emergency_fee: z.boolean().optional().default(false),
-  eligible_holiday_fee: z.boolean().optional().default(false),
-  payment_method: z.enum(['zelle', 'check']).nullable().optional(),
-  payment_details: z.string().optional(),
-  contract_status: z.enum(['not_sent', 'sent', 'signed']),
-  w9_received: z.boolean(),
-  insurance_end_date: z.date().optional().nullable(),
-  notes: z.string().optional(),
-});
-
-type FormData = z.infer<typeof interpreterSchema>;
-
-const statusLabels: Record<string, string> = {
-  active: 'Active',
-  inactive: 'Inactive',
-  pending: 'Pending',
-};
+type Interpreter = Tables<'interpreters'>;
+type InterpreterUpdate = TablesUpdate<'interpreters'>;
 
 export default function InterpreterDetail() {
   const { id } = useParams<{ id: string }>();
@@ -132,22 +65,9 @@ export default function InterpreterDetail() {
     enabled: !!selectedInterpreterId,
   });
 
-  const form = useForm<FormData>({
-    resolver: zodResolver(interpreterSchema),
-    defaultValues: {
-      first_name: '',
-      last_name: '',
-      email: '',
-      status: 'pending',
-      rid_certified: false,
-      nic_certified: false,
-      minimum_hours: 2,
-      eligible_emergency_fee: false,
-      eligible_holiday_fee: false,
-      contract_status: 'not_sent',
-      w9_received: false,
-      insurance_end_date: null,
-    },
+  const form = useForm<InterpreterFullFormData>({
+    resolver: zodResolver(interpreterFullSchema),
+    defaultValues: getInterpreterFullDefaults(),
   });
 
   // Unsaved changes warning
@@ -186,7 +106,7 @@ export default function InterpreterDetail() {
         payment_details: interpreter.payment_details ?? '',
         contract_status: interpreter.contract_status ?? 'not_sent',
         w9_received: interpreter.w9_received ?? false,
-        insurance_end_date: (interpreter as any).insurance_end_date ? new Date((interpreter as any).insurance_end_date) : null,
+        insurance_end_date: interpreter.insurance_end_date ? new Date(interpreter.insurance_end_date) : null,
         notes: interpreter.notes ?? '',
       }, { keepDefaultValues: false });
     }
@@ -194,10 +114,10 @@ export default function InterpreterDetail() {
   }, [interpreter]);
 
   const mutation = useMutation({
-    mutationFn: async (data: FormData) => {
+    mutationFn: async (data: InterpreterFullFormData) => {
       if (!selectedInterpreterId) return;
 
-      const payload = {
+      const updatePayload: InterpreterUpdate = {
         first_name: data.first_name,
         last_name: data.last_name,
         email: data.email,
@@ -207,18 +127,18 @@ export default function InterpreterDetail() {
         state: data.state || null,
         zip_code: data.zip_code || null,
         timezone: data.timezone || null,
-        status: data.status,
+        status: data.status || null,
         rid_certified: data.rid_certified,
         nic_certified: data.nic_certified,
         other_certifications: data.other_certifications || null,
-        rate_business_hours: data.rate_business_hours || null,
-        rate_after_hours: data.rate_after_hours || null,
+        rate_business_hours: data.rate_business_hours ?? null,
+        rate_after_hours: data.rate_after_hours ?? null,
         minimum_hours: data.minimum_hours ?? 2,
         eligible_emergency_fee: data.eligible_emergency_fee ?? false,
         eligible_holiday_fee: data.eligible_holiday_fee ?? false,
         payment_method: data.payment_method || null,
         payment_details: data.payment_details || null,
-        contract_status: data.contract_status,
+        contract_status: data.contract_status || null,
         w9_received: data.w9_received,
         insurance_end_date: data.insurance_end_date ? format(data.insurance_end_date, 'yyyy-MM-dd') : null,
         notes: data.notes || null,
@@ -226,7 +146,7 @@ export default function InterpreterDetail() {
 
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const { error } = await (supabase.from('interpreters') as any)
-        .update(payload)
+        .update(updatePayload)
         .eq('id', selectedInterpreterId);
       if (error) throw error;
     },
@@ -241,348 +161,83 @@ export default function InterpreterDetail() {
     },
   });
 
-  const onSubmit = (data: FormData) => {
+  const onSubmit = (data: InterpreterFullFormData) => {
     mutation.mutate(data);
   };
 
-  const selectedInterpreter = interpreters?.find(i => i.id === selectedInterpreterId);
+  const handleDelete = useCallback(async () => {
+    if (!interpreter) return;
+    const { error } = await supabase.from('interpreters').delete().eq('id', interpreter.id);
+    if (error) {
+      toast({ title: 'Error deleting interpreter', description: error.message, variant: 'destructive' });
+    } else {
+      toast({ title: 'Interpreter deleted successfully' });
+      navigate('/interpreters');
+    }
+  }, [interpreter, navigate, toast]);
+
+  // Build options for the selector
+  const selectorOptions = (interpreters ?? []).map((i) => ({
+    id: i.id,
+    label: `${i.first_name} ${i.last_name}`,
+    searchValue: `${i.first_name} ${i.last_name}`,
+  }));
+
+  const interpreterName = interpreter 
+    ? `${interpreter.first_name} ${interpreter.last_name}` 
+    : 'Interpreter Details';
 
   return (
-    <div className="space-y-4">
-      {/* Sticky Header */}
-      <div className="sticky top-14 z-10 bg-background py-3 border-b -mx-6 px-6 -mt-6 mb-4">
-        <div className="flex items-center gap-3">
-          <Button variant="ghost" size="icon" onClick={() => navigate('/interpreters')}>
-            <ArrowLeft className="h-4 w-4" />
-          </Button>
-          <h1 className="text-xl font-bold text-foreground">
-            {interpreter ? `${interpreter.first_name} ${interpreter.last_name}` : 'Interpreter Details'}
-          </h1>
-          
-          {/* Compact Interpreter Selector */}
-          <Popover open={searchOpen} onOpenChange={setSearchOpen}>
-            <PopoverTrigger asChild>
-              <Button
-                variant="outline"
-                role="combobox"
-                className="w-[200px] justify-between text-sm"
-              >
-                <span className="truncate">
-                  {selectedInterpreter
-                    ? `${selectedInterpreter.first_name} ${selectedInterpreter.last_name}`
-                    : 'Select interpreter...'}
-                </span>
-                <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-              </Button>
-            </PopoverTrigger>
-            <PopoverContent className="w-[300px] p-0">
-              <Command>
-                <CommandInput placeholder="Search interpreters..." />
-                <CommandList>
-                  <CommandEmpty>No interpreter found.</CommandEmpty>
-                  <CommandGroup>
-                    {interpreters?.map((i) => (
-                      <CommandItem
-                        key={i.id}
-                        value={`${i.first_name} ${i.last_name}`}
-                        onSelect={() => {
-                          setSelectedInterpreterId(i.id);
-                          setSearchOpen(false);
-                        }}
-                      >
-                        <Check
-                          className={cn(
-                            'mr-2 h-4 w-4',
-                            selectedInterpreterId === i.id ? 'opacity-100' : 'opacity-0'
-                          )}
-                        />
-                        {i.first_name} {i.last_name}
-                      </CommandItem>
-                    ))}
-                  </CommandGroup>
-                </CommandList>
-              </Command>
-            </PopoverContent>
-          </Popover>
-
-          {/* Save and Delete buttons in header */}
-          {interpreter && (
-            <div className="ml-auto flex items-center gap-2">
-              {form.formState.isDirty && (
-                <span className="flex items-center gap-1 text-sm text-muted-foreground">
-                  <span className="h-2 w-2 rounded-full bg-orange-500" />
-                  Unsaved
-                </span>
-              )}
-              <AlertDialog>
-                <AlertDialogTrigger asChild>
-                  <Button variant="outline" size="icon">
-                    <Trash2 className="h-4 w-4" />
-                  </Button>
-                </AlertDialogTrigger>
-                <AlertDialogContent>
-                  <AlertDialogHeader>
-                    <AlertDialogTitle>Delete Interpreter</AlertDialogTitle>
-                    <AlertDialogDescription>
-                      Are you sure you want to delete {interpreter.first_name} {interpreter.last_name}? This action cannot be undone.
-                    </AlertDialogDescription>
-                  </AlertDialogHeader>
-                  <AlertDialogFooter>
-                    <AlertDialogCancel>Cancel</AlertDialogCancel>
-                    <AlertDialogAction
-                      onClick={async () => {
-                        const { error } = await supabase.from('interpreters').delete().eq('id', interpreter.id);
-                        if (error) {
-                          toast({ title: 'Error deleting interpreter', description: error.message, variant: 'destructive' });
-                        } else {
-                          toast({ title: 'Interpreter deleted successfully' });
-                          navigate('/interpreters');
-                        }
-                      }}
-                    >
-                      Delete
-                    </AlertDialogAction>
-                  </AlertDialogFooter>
-                </AlertDialogContent>
-              </AlertDialog>
-              <Button 
-                type="submit" 
-                form="interpreter-detail-form"
-                disabled={mutation.isPending}
-              >
-                {mutation.isPending ? 'Saving...' : 'Save Changes'}
-              </Button>
-            </div>
-          )}
-        </div>
-      </div>
-
-      {isLoading && selectedInterpreterId && (
-        <div className="text-muted-foreground">Loading interpreter details...</div>
-      )}
-
+    <RecordPageLayout
+      title={interpreterName}
+      backRoute="/interpreters"
+      isDirty={form.formState.isDirty}
+      blocker={blocker}
+      isLoading={isLoading}
+      hasRecord={!!interpreter}
+      isSaving={mutation.isPending}
+      formId="interpreter-detail-form"
+      selector={{
+        selectedId: selectedInterpreterId,
+        options: selectorOptions,
+        isOpen: searchOpen,
+        onOpenChange: setSearchOpen,
+        onSelect: setSelectedInterpreterId,
+        placeholder: 'Select interpreter...',
+        searchPlaceholder: 'Search interpreters...',
+        emptyMessage: 'No interpreter found.',
+        width: 'w-[200px]',
+      }}
+      deleteConfig={{
+        title: 'Delete Interpreter',
+        description: `Are you sure you want to delete ${interpreterName}? This action cannot be undone.`,
+        onDelete: handleDelete,
+      }}
+    >
       {interpreter && (
         <form id="interpreter-detail-form" onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
           {/* Personal Information */}
-          <Card>
-            <CardHeader className="pb-4">
-              <CardTitle className="text-lg">Personal Information</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="first_name">First Name *</Label>
-                  <Input id="first_name" {...form.register('first_name')} />
-                  {form.formState.errors.first_name && (
-                    <p className="text-sm text-destructive">{form.formState.errors.first_name.message}</p>
-                  )}
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="last_name">Last Name *</Label>
-                  <Input id="last_name" {...form.register('last_name')} />
-                  {form.formState.errors.last_name && (
-                    <p className="text-sm text-destructive">{form.formState.errors.last_name.message}</p>
-                  )}
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="email">Email *</Label>
-                  <Input id="email" type="email" {...form.register('email')} />
-                  {form.formState.errors.email && (
-                    <p className="text-sm text-destructive">{form.formState.errors.email.message}</p>
-                  )}
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="phone">Phone</Label>
-                  <Input id="phone" {...form.register('phone')} placeholder="(555) 123-4567" />
-                  {form.formState.errors.phone && (
-                    <p className="text-sm text-destructive">{form.formState.errors.phone.message}</p>
-                  )}
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="status">Status</Label>
-                  <Select
-                    value={form.watch('status')}
-                    onValueChange={(value) => form.setValue('status', value as 'active' | 'inactive' | 'pending', { shouldDirty: true })}
-                  >
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="active">Active</SelectItem>
-                      <SelectItem value="inactive">Inactive</SelectItem>
-                      <SelectItem value="pending">Pending</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="timezone">Timezone</Label>
-                  <Input id="timezone" {...form.register('timezone')} />
-                </div>
-              </div>
-            </CardContent>
-          </Card>
+          <InterpreterCoreFields form={form} mode="edit" />
 
           {/* Address */}
-          <Card>
-            <CardHeader className="pb-4">
-              <CardTitle className="text-lg">Address</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="address">Street Address</Label>
-                <Input id="address" {...form.register('address')} />
-              </div>
-              <div className="grid grid-cols-3 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="city">City</Label>
-                  <Input id="city" {...form.register('city')} />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="state">State</Label>
-                  <Input id="state" {...form.register('state')} />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="zip_code">Zip Code</Label>
-                  <Input id="zip_code" {...form.register('zip_code')} placeholder="12345" />
-                  {form.formState.errors.zip_code && (
-                    <p className="text-sm text-destructive">{form.formState.errors.zip_code.message}</p>
-                  )}
-                </div>
-              </div>
-            </CardContent>
-          </Card>
+          <InterpreterAddressFields form={form} mode="edit" />
 
           {/* Certifications */}
-          <Card>
-            <CardHeader className="pb-4">
-              <CardTitle className="text-lg">Certifications</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="flex gap-6">
-                <div className="flex items-center space-x-2">
-                  <Checkbox
-                    id="rid_certified"
-                    checked={form.watch('rid_certified')}
-                    onCheckedChange={(checked) => form.setValue('rid_certified', !!checked, { shouldDirty: true })}
-                  />
-                  <Label htmlFor="rid_certified">RID Certified</Label>
-                </div>
-                <div className="flex items-center space-x-2">
-                  <Checkbox
-                    id="nic_certified"
-                    checked={form.watch('nic_certified')}
-                    onCheckedChange={(checked) => form.setValue('nic_certified', !!checked, { shouldDirty: true })}
-                  />
-                  <Label htmlFor="nic_certified">NIC Certified</Label>
-                </div>
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="other_certifications">Other Certifications</Label>
-                <Input id="other_certifications" {...form.register('other_certifications')} />
-              </div>
-            </CardContent>
-          </Card>
+          <InterpreterCertifications form={form} mode="edit" />
 
           {/* Rates */}
-          <Card>
-            <CardHeader className="pb-4">
-              <CardTitle className="text-lg">Rates (What We Pay)</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="rate_business_hours">Business Hours Rate</Label>
-                  <div className="relative">
-                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">$</span>
-                    <Input id="rate_business_hours" type="number" step="0.01" className="pl-7" {...form.register('rate_business_hours')} />
-                  </div>
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="rate_after_hours">After Hours Rate</Label>
-                  <div className="relative">
-                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">$</span>
-                    <Input id="rate_after_hours" type="number" step="0.01" className="pl-7" {...form.register('rate_after_hours')} />
-                  </div>
-                </div>
-              </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="minimum_hours">Minimum Hours</Label>
-                  <Input id="minimum_hours" type="number" step="0.5" {...form.register('minimum_hours')} />
-                </div>
-                <div className="space-y-2">
-                  <Label>Insurance End Date</Label>
-                  <Popover>
-                    <PopoverTrigger asChild>
-                      <Button
-                        variant="outline"
-                        className={cn(
-                          "w-full justify-start text-left font-normal",
-                          !form.watch('insurance_end_date') && "text-muted-foreground"
-                        )}
-                      >
-                        <CalendarIcon className="mr-2 h-4 w-4" />
-                        {form.watch('insurance_end_date') ? format(form.watch('insurance_end_date')!, 'PPP') : <span>Select date</span>}
-                      </Button>
-                    </PopoverTrigger>
-                    <PopoverContent className="w-auto p-0" align="start">
-                      <Calendar
-                        mode="single"
-                        selected={form.watch('insurance_end_date') ?? undefined}
-                        onSelect={(date) => form.setValue('insurance_end_date', date ?? null, { shouldDirty: true })}
-                        initialFocus
-                        className={cn("p-3 pointer-events-auto")}
-                      />
-                    </PopoverContent>
-                  </Popover>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
+          <InterpreterRatesFields form={form} mode="edit" />
 
           {/* Payment */}
-          <Card>
-            <CardHeader className="pb-4">
-              <CardTitle className="text-lg">Payment Information</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="payment_method">Payment Method</Label>
-                  <Select
-                    value={form.watch('payment_method') || ''}
-                    onValueChange={(value) => form.setValue('payment_method', value as 'zelle' | 'check' | null, { shouldDirty: true })}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select method" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="zelle">Zelle</SelectItem>
-                      <SelectItem value="check">Check</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="payment_details">Payment Details</Label>
-                  <Input id="payment_details" {...form.register('payment_details')} placeholder="Zelle email or mailing address" />
-                </div>
-              </div>
-            </CardContent>
-          </Card>
+          <InterpreterPaymentFields form={form} mode="edit" />
 
           {/* Contract & Compliance */}
           <ContractComplianceSection 
             form={form} 
             interpreter={{
               id: interpreter.id,
-              contract_pdf_url: (interpreter as any).contract_pdf_url,
-              signed_contract_pdf_url: (interpreter as any).signed_contract_pdf_url
+              contract_pdf_url: interpreter.contract_pdf_url,
+              signed_contract_pdf_url: interpreter.signed_contract_pdf_url
             }}
             onContractGenerated={() => {
               queryClient.invalidateQueries({ queryKey: ['interpreter', selectedInterpreterId] });
@@ -590,14 +245,7 @@ export default function InterpreterDetail() {
           />
 
           {/* Notes */}
-          <Card>
-            <CardHeader className="pb-4">
-              <CardTitle className="text-lg">Notes</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <Textarea id="notes" {...form.register('notes')} rows={4} />
-            </CardContent>
-          </Card>
+          <InterpreterNotesFields form={form} mode="edit" />
         </form>
       )}
 
@@ -608,8 +256,6 @@ export default function InterpreterDetail() {
           </CardContent>
         </Card>
       )}
-
-      <UnsavedChangesDialog blocker={blocker} />
-    </div>
+    </RecordPageLayout>
   );
 }

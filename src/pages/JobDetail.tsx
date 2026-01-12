@@ -378,7 +378,12 @@ export default function JobDetail() {
       interpreterBillableTotal = result.interpreterTotal;
     }
 
-    return { facilityHourlyTotal, facilityBillableTotal, interpreterHourlyTotal, interpreterBillableTotal };
+    return { 
+      facility_hourly_total: facilityHourlyTotal, 
+      facility_billable_total: facilityBillableTotal, 
+      interpreter_hourly_total: interpreterHourlyTotal, 
+      interpreter_billable_total: interpreterBillableTotal 
+    };
   }, [defaultMileageRate]);
 
   // ==========================================

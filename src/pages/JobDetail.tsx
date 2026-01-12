@@ -398,7 +398,20 @@ export default function JobDetail() {
 
   const mutation = useMutation({
     mutationFn: async (data: FormData) => {
-      if (!selectedJobId) return null;
+      if (!selectedJobId) throw new Error('No job selected');
+      
+      // Normalize and validate times before saving
+      const normalizedStartTime = normalizeTimeToHHMM(data.start_time);
+      const normalizedEndTime = normalizeTimeToHHMM(data.end_time);
+      
+      if (!normalizedStartTime || !normalizedEndTime) {
+        throw new Error('Invalid start or end time. Please select valid times.');
+      }
+      
+      // Sanitize opportunity_source (ensure sentinel values don't reach DB)
+      const opportunitySource = (data.opportunity_source as unknown) === '__none__' || !data.opportunity_source
+        ? null 
+        : data.opportunity_source;
       
       const totals = buildTotalsPayload(data, hoursSplit, job);
       
@@ -407,8 +420,8 @@ export default function JobDetail() {
         interpreter_id: data.interpreter_id || null,
         deaf_client_name: data.deaf_client_name || null,
         job_date: data.job_date,
-        start_time: data.start_time,
-        end_time: data.end_time,
+        start_time: normalizedStartTime,
+        end_time: normalizedEndTime,
         location_type: data.location_type,
         location_address: data.location_address || null,
         location_city: data.location_city || null,
@@ -416,7 +429,7 @@ export default function JobDetail() {
         location_zip: data.location_zip || null,
         video_call_link: data.video_call_link || null,
         status: data.status,
-        opportunity_source: data.opportunity_source || null,
+        opportunity_source: opportunitySource,
         billable_hours: data.billable_hours ?? null,
         mileage: data.mileage ?? null,
         parking: data.parking ?? null,
@@ -455,13 +468,14 @@ export default function JobDetail() {
     onSuccess: (savedJob) => {
       queryClient.invalidateQueries({ queryKey: ['job', selectedJobId] });
       queryClient.invalidateQueries({ queryKey: ['jobs'] });
+      queryClient.invalidateQueries({ queryKey: ['jobs-list'] });
       // Reset form from the authoritative DB response to ensure UI matches DB
       if (savedJob) {
         form.reset(jobToFormValues(savedJob), { keepDefaultValues: false });
       }
       toast({ title: 'Job updated successfully' });
     },
-    onError: (error) => {
+    onError: (error: Error) => {
       toast({ title: 'Error updating job', description: error.message, variant: 'destructive' });
     },
   });
@@ -471,6 +485,20 @@ export default function JobDetail() {
       if (!selectedJobId) throw new Error('No job selected');
       
       const data = form.getValues();
+      
+      // Normalize and validate times before saving
+      const normalizedStartTime = normalizeTimeToHHMM(data.start_time);
+      const normalizedEndTime = normalizeTimeToHHMM(data.end_time);
+      
+      if (!normalizedStartTime || !normalizedEndTime) {
+        throw new Error('Invalid start or end time. Please select valid times.');
+      }
+      
+      // Sanitize opportunity_source
+      const opportunitySource = (data.opportunity_source as unknown) === '__none__' || !data.opportunity_source
+        ? null 
+        : data.opportunity_source;
+      
       const totals = buildTotalsPayload(data, hoursSplit, job);
       
       const payload: Record<string, unknown> = {
@@ -478,8 +506,8 @@ export default function JobDetail() {
         interpreter_id: data.interpreter_id || null,
         deaf_client_name: data.deaf_client_name || null,
         job_date: data.job_date,
-        start_time: data.start_time,
-        end_time: data.end_time,
+        start_time: normalizedStartTime,
+        end_time: normalizedEndTime,
         location_type: data.location_type,
         location_address: data.location_address || null,
         location_city: data.location_city || null,
@@ -487,7 +515,7 @@ export default function JobDetail() {
         location_zip: data.location_zip || null,
         video_call_link: data.video_call_link || null,
         status: 'outreach_in_progress',
-        opportunity_source: data.opportunity_source || null,
+        opportunity_source: opportunitySource,
         billable_hours: data.billable_hours ?? null,
         mileage: data.mileage ?? null,
         parking: data.parking ?? null,
@@ -525,6 +553,7 @@ export default function JobDetail() {
     onSuccess: (savedJob) => {
       queryClient.invalidateQueries({ queryKey: ['job', selectedJobId] });
       queryClient.invalidateQueries({ queryKey: ['jobs'] });
+      queryClient.invalidateQueries({ queryKey: ['jobs-list'] });
       if (savedJob) {
         form.reset(jobToFormValues(savedJob), { keepDefaultValues: false });
       }
@@ -547,6 +576,19 @@ export default function JobDetail() {
       
       if (!interpreterId) throw new Error('No interpreter selected');
       
+      // Normalize and validate times before saving
+      const normalizedStartTime = normalizeTimeToHHMM(data.start_time);
+      const normalizedEndTime = normalizeTimeToHHMM(data.end_time);
+      
+      if (!normalizedStartTime || !normalizedEndTime) {
+        throw new Error('Invalid start or end time. Please select valid times.');
+      }
+      
+      // Sanitize opportunity_source
+      const opportunitySource = (data.opportunity_source as unknown) === '__none__' || !data.opportunity_source
+        ? null 
+        : data.opportunity_source;
+      
       const interpreter = interpreters?.find((i) => i.id === interpreterId);
       const interpreterMinHours = interpreter?.minimum_hours ?? 2;
       const facilityMinHours = selectedFacility?.minimum_billable_hours ?? 2;
@@ -564,8 +606,8 @@ export default function JobDetail() {
         interpreter_id: interpreterId,
         deaf_client_name: data.deaf_client_name || null,
         job_date: data.job_date,
-        start_time: data.start_time,
-        end_time: data.end_time,
+        start_time: normalizedStartTime,
+        end_time: normalizedEndTime,
         location_type: data.location_type,
         location_address: data.location_address || null,
         location_city: data.location_city || null,
@@ -573,7 +615,7 @@ export default function JobDetail() {
         location_zip: data.location_zip || null,
         video_call_link: data.video_call_link || null,
         status: 'confirmed',
-        opportunity_source: data.opportunity_source || null,
+        opportunity_source: opportunitySource,
         billable_hours: newBillableHours,
         mileage: data.mileage ?? null,
         parking: data.parking ?? null,
@@ -612,6 +654,7 @@ export default function JobDetail() {
     onSuccess: (savedJob) => {
       queryClient.invalidateQueries({ queryKey: ['job', selectedJobId] });
       queryClient.invalidateQueries({ queryKey: ['jobs'] });
+      queryClient.invalidateQueries({ queryKey: ['jobs-list'] });
       if (savedJob) {
         form.reset(jobToFormValues(savedJob), { keepDefaultValues: false });
       }
@@ -634,6 +677,19 @@ export default function JobDetail() {
       
       if (!interpreterId) throw new Error('No interpreter assigned');
       
+      // Normalize and validate times before saving
+      const normalizedStartTime = normalizeTimeToHHMM(data.start_time);
+      const normalizedEndTime = normalizeTimeToHHMM(data.end_time);
+      
+      if (!normalizedStartTime || !normalizedEndTime) {
+        throw new Error('Invalid start or end time. Please select valid times.');
+      }
+      
+      // Sanitize opportunity_source
+      const opportunitySource = (data.opportunity_source as unknown) === '__none__' || !data.opportunity_source
+        ? null 
+        : data.opportunity_source;
+      
       const totals = buildTotalsPayload(data, hoursSplit, job);
       
       const payload: Record<string, unknown> = {
@@ -641,8 +697,8 @@ export default function JobDetail() {
         interpreter_id: interpreterId,
         deaf_client_name: data.deaf_client_name || null,
         job_date: data.job_date,
-        start_time: data.start_time,
-        end_time: data.end_time,
+        start_time: normalizedStartTime,
+        end_time: normalizedEndTime,
         location_type: data.location_type,
         location_address: data.location_address || null,
         location_city: data.location_city || null,
@@ -650,20 +706,20 @@ export default function JobDetail() {
         location_zip: data.location_zip || null,
         video_call_link: data.video_call_link || null,
         status: 'ready_to_bill',
-        opportunity_source: data.opportunity_source || null,
-        billable_hours: data.billable_hours || null,
-        mileage: data.mileage || null,
-        parking: data.parking || null,
-        tolls: data.tolls || null,
-        misc_fee: data.misc_fee || null,
-        travel_time_hours: data.travel_time_hours || null,
-        facility_rate_business: data.facility_rate_business || null,
-        facility_rate_after_hours: data.facility_rate_after_hours || null,
-        facility_rate_mileage: data.facility_rate_mileage || null,
+        opportunity_source: opportunitySource,
+        billable_hours: data.billable_hours ?? null,
+        mileage: data.mileage ?? null,
+        parking: data.parking ?? null,
+        tolls: data.tolls ?? null,
+        misc_fee: data.misc_fee ?? null,
+        travel_time_hours: data.travel_time_hours ?? null,
+        facility_rate_business: data.facility_rate_business ?? null,
+        facility_rate_after_hours: data.facility_rate_after_hours ?? null,
+        facility_rate_mileage: data.facility_rate_mileage ?? null,
         facility_rate_adjustment: data.facility_rate_adjustment ?? 0,
-        interpreter_rate_business: data.interpreter_rate_business || null,
-        interpreter_rate_after_hours: data.interpreter_rate_after_hours || null,
-        interpreter_rate_mileage: data.interpreter_rate_mileage || null,
+        interpreter_rate_business: data.interpreter_rate_business ?? null,
+        interpreter_rate_after_hours: data.interpreter_rate_after_hours ?? null,
+        interpreter_rate_mileage: data.interpreter_rate_mileage ?? null,
         interpreter_rate_adjustment: data.interpreter_rate_adjustment ?? 0,
         emergency_fee_applied: data.emergency_fee_applied || false,
         holiday_fee_applied: data.holiday_fee_applied || false,

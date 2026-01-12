@@ -79,7 +79,6 @@ const facilitySchema = z.object({
   status: z.enum(['active', 'inactive', 'pending']),
   rate_business_hours: z.coerce.number().optional(),
   rate_after_hours: z.coerce.number().optional(),
-  rate_mileage: z.coerce.number().optional(),
   // Keep these in schema for database compatibility but don't show in UI
   minimum_billable_hours: z.coerce.number().optional().default(2),
   emergency_fee: z.coerce.number().optional(),
@@ -182,7 +181,6 @@ export default function FacilityDetail() {
         status: facility.status ?? 'pending',
         rate_business_hours: facility.rate_business_hours ?? undefined,
         rate_after_hours: facility.rate_after_hours ?? undefined,
-        rate_mileage: facility.rate_mileage ?? undefined,
         minimum_billable_hours: facility.minimum_billable_hours ?? 2,
         emergency_fee: facility.emergency_fee ?? undefined,
         holiday_fee: facility.holiday_fee ?? undefined,
@@ -230,7 +228,6 @@ export default function FacilityDetail() {
           status: data.status,
           rate_business_hours: data.rate_business_hours ?? null,
           rate_after_hours: data.rate_after_hours ?? null,
-          rate_mileage: data.rate_mileage ?? null,
           minimum_billable_hours: data.minimum_billable_hours,
           emergency_fee: data.emergency_fee ?? null,
           holiday_fee: data.holiday_fee ?? null,
@@ -572,7 +569,7 @@ export default function FacilityDetail() {
               <CardTitle className="text-lg">Rates (What We Charge)</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div className="grid grid-cols-3 gap-4">
+              <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label htmlFor="rate_business_hours">Business Hours Rate</Label>
                   <div className="relative">
@@ -596,19 +593,6 @@ export default function FacilityDetail() {
                       step="0.01"
                       className="pl-7"
                       {...form.register('rate_after_hours', { valueAsNumber: true })}
-                    />
-                  </div>
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="rate_mileage">Mileage Rate</Label>
-                  <div className="relative">
-                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">$</span>
-                    <Input
-                      id="rate_mileage"
-                      type="number"
-                      step="0.01"
-                      className="pl-7"
-                      {...form.register('rate_mileage', { valueAsNumber: true })}
                     />
                   </div>
                 </div>

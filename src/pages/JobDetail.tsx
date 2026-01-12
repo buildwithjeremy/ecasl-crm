@@ -247,7 +247,7 @@ export default function JobDetail() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('facilities')
-        .select('id, name, rate_business_hours, rate_after_hours, rate_mileage, minimum_billable_hours, contractor, physical_address, physical_city, physical_state, physical_zip, billing_address, billing_city, billing_state, billing_zip, admin_contact_name, admin_contact_phone, admin_contact_email')
+        .select('id, name, rate_business_hours, rate_after_hours, minimum_billable_hours, contractor, physical_address, physical_city, physical_state, physical_zip, billing_address, billing_city, billing_state, billing_zip, admin_contact_name, admin_contact_phone, admin_contact_email')
         .order('name');
       if (error) throw error;
       return data as { 
@@ -255,7 +255,6 @@ export default function JobDetail() {
         name: string; 
         rate_business_hours: number | null; 
         rate_after_hours: number | null; 
-        rate_mileage: number | null;
         minimum_billable_hours: number | null;
         contractor: boolean | null;
         physical_address: string | null;
@@ -279,12 +278,28 @@ export default function JobDetail() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('interpreters')
-        .select('id, first_name, last_name, rate_business_hours, rate_after_hours, rate_mileage, minimum_hours')
+        .select('id, first_name, last_name, rate_business_hours, rate_after_hours, minimum_hours')
         .order('last_name');
       if (error) throw error;
-      return data as { id: string; first_name: string; last_name: string; rate_business_hours: number | null; rate_after_hours: number | null; rate_mileage: number | null; minimum_hours: number | null }[];
+      return data as { id: string; first_name: string; last_name: string; rate_business_hours: number | null; rate_after_hours: number | null; minimum_hours: number | null }[];
     },
   });
+
+  // Fetch default mileage rate from settings
+  const { data: defaultMileageRateSetting } = useQuery({
+    queryKey: ['settings', 'default_mileage_rate'],
+    queryFn: async () => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const { data, error } = await (supabase.from('settings') as any)
+        .select('*')
+        .eq('key', 'default_mileage_rate')
+        .maybeSingle();
+      if (error) throw error;
+      return data as { id: string; key: string; value: number; description: string | null } | null;
+    },
+  });
+
+  const defaultMileageRate = defaultMileageRateSetting?.value ?? 0.7;
 
   // Fetch selected job
   const { data: job, isLoading: jobLoading } = useQuery({
@@ -462,7 +477,6 @@ export default function JobDetail() {
         // Always set rates
         form.setValue('facility_rate_business', facility.rate_business_hours || 0);
         form.setValue('facility_rate_after_hours', facility.rate_after_hours || 0);
-        form.setValue('facility_rate_mileage', facility.rate_mileage || 0);
         
         if (!facility.contractor) {
           // Non-contractor: auto-fill from facility data
@@ -505,7 +519,6 @@ export default function JobDetail() {
       if (interpreter) {
         form.setValue('interpreter_rate_business', interpreter.rate_business_hours || 0);
         form.setValue('interpreter_rate_after_hours', interpreter.rate_after_hours || 0);
-        form.setValue('interpreter_rate_mileage', interpreter.rate_mileage || 0);
       }
     }
   }, [watchedInterpreterId, interpreters, form]);
@@ -579,7 +592,7 @@ export default function JobDetail() {
       : (selectedFacility?.rate_after_hours ?? 0);
     const facilityMileageRate = hasValue(rawFacilityRateMileage)
       ? watchedFacilityRateMileage 
-      : (selectedFacility?.rate_mileage ?? 0);
+      : defaultMileageRate;
     const interpreterBusinessRate = hasValue(rawInterpreterRateBusiness)
       ? watchedInterpreterRateBusiness 
       : (selectedInterpreter?.rate_business_hours ?? 0);
@@ -588,7 +601,7 @@ export default function JobDetail() {
       : (selectedInterpreter?.rate_after_hours ?? 0);
     const interpreterMileageRate = hasValue(rawInterpreterRateMileage)
       ? watchedInterpreterRateMileage 
-      : (selectedInterpreter?.rate_mileage ?? 0);
+      : defaultMileageRate;
     
     // Apply rate adjustments to hourly rates (added before multiplying by hours)
     const adjustedFacilityBusinessRate = facilityBusinessRate + watchedFacilityRateAdjustment;
@@ -656,10 +669,10 @@ export default function JobDetail() {
       if (hoursSplit) {
         const facilityBusinessRate = data.facility_rate_business ?? selectedFacility?.rate_business_hours ?? 0;
         const facilityAfterHoursRate = data.facility_rate_after_hours ?? selectedFacility?.rate_after_hours ?? 0;
-        const facilityMileageRate = data.facility_rate_mileage ?? selectedFacility?.rate_mileage ?? 0;
+        const facilityMileageRate = data.facility_rate_mileage ?? defaultMileageRate;
         const interpreterBusinessRate = data.interpreter_rate_business ?? selectedInterpreter?.rate_business_hours ?? 0;
         const interpreterAfterHoursRate = data.interpreter_rate_after_hours ?? selectedInterpreter?.rate_after_hours ?? 0;
-        const interpreterMileageRate = data.interpreter_rate_mileage ?? selectedInterpreter?.rate_mileage ?? 0;
+        const interpreterMileageRate = data.interpreter_rate_mileage ?? defaultMileageRate;
         
         // Get rate adjustments
         const facilityRateAdjustment = data.facility_rate_adjustment ?? 0;
@@ -778,10 +791,10 @@ export default function JobDetail() {
       if (hoursSplit) {
         const facilityBusinessRate = data.facility_rate_business ?? selectedFacility?.rate_business_hours ?? 0;
         const facilityAfterHoursRate = data.facility_rate_after_hours ?? selectedFacility?.rate_after_hours ?? 0;
-        const facilityMileageRate = data.facility_rate_mileage ?? selectedFacility?.rate_mileage ?? 0;
+        const facilityMileageRate = data.facility_rate_mileage ?? defaultMileageRate;
         const interpreterBusinessRate = data.interpreter_rate_business ?? selectedInterpreter?.rate_business_hours ?? 0;
         const interpreterAfterHoursRate = data.interpreter_rate_after_hours ?? selectedInterpreter?.rate_after_hours ?? 0;
-        const interpreterMileageRate = data.interpreter_rate_mileage ?? selectedInterpreter?.rate_mileage ?? 0;
+        const interpreterMileageRate = data.interpreter_rate_mileage ?? defaultMileageRate;
         
         // Get rate adjustments
         const facilityRateAdjustment = data.facility_rate_adjustment ?? 0;
@@ -912,10 +925,10 @@ export default function JobDetail() {
       if (hoursSplit) {
         const facilityBusinessRate = data.facility_rate_business ?? selectedFacility?.rate_business_hours ?? 0;
         const facilityAfterHoursRate = data.facility_rate_after_hours ?? selectedFacility?.rate_after_hours ?? 0;
-        const facilityMileageRate = data.facility_rate_mileage ?? selectedFacility?.rate_mileage ?? 0;
+        const facilityMileageRate = data.facility_rate_mileage ?? defaultMileageRate;
         const interpreterBusinessRate = data.interpreter_rate_business ?? selectedInterpreter?.rate_business_hours ?? 0;
         const interpreterAfterHoursRate = data.interpreter_rate_after_hours ?? selectedInterpreter?.rate_after_hours ?? 0;
-        const interpreterMileageRate = data.interpreter_rate_mileage ?? selectedInterpreter?.rate_mileage ?? 0;
+        const interpreterMileageRate = data.interpreter_rate_mileage ?? defaultMileageRate;
         
         const facilityRateAdjustment = data.facility_rate_adjustment ?? 0;
         const interpreterRateAdjustment = data.interpreter_rate_adjustment ?? 0;
@@ -1075,10 +1088,10 @@ export default function JobDetail() {
       if (hoursSplit) {
         const facilityBusinessRate = data.facility_rate_business ?? selectedFacility?.rate_business_hours ?? 0;
         const facilityAfterHoursRate = data.facility_rate_after_hours ?? selectedFacility?.rate_after_hours ?? 0;
-        const facilityMileageRate = data.facility_rate_mileage ?? selectedFacility?.rate_mileage ?? 0;
+        const facilityMileageRate = data.facility_rate_mileage ?? defaultMileageRate;
         const interpreterBusinessRate = data.interpreter_rate_business ?? selectedInterpreter?.rate_business_hours ?? 0;
         const interpreterAfterHoursRate = data.interpreter_rate_after_hours ?? selectedInterpreter?.rate_after_hours ?? 0;
-        const interpreterMileageRate = data.interpreter_rate_mileage ?? selectedInterpreter?.rate_mileage ?? 0;
+        const interpreterMileageRate = data.interpreter_rate_mileage ?? defaultMileageRate;
         
         // Get rate adjustments
         const facilityRateAdjustment = data.facility_rate_adjustment ?? 0;
@@ -1211,13 +1224,11 @@ export default function JobDetail() {
   const facilityRateFields: RateField[] = [
     { key: 'facility_rate_business', label: 'Business ($/hr)', value: watchedFacilityRateBusiness, suffix: '/hr' },
     { key: 'facility_rate_after_hours', label: 'After Hours ($/hr)', value: watchedFacilityRateAfterHours, suffix: '/hr' },
-    { key: 'facility_rate_mileage', label: 'Mileage ($/mi)', value: watchedFacilityRateMileage, suffix: '/mi' },
   ];
 
   const interpreterRateFields: RateField[] = [
     { key: 'interpreter_rate_business', label: 'Business ($/hr)', value: watchedInterpreterRateBusiness, suffix: '/hr' },
     { key: 'interpreter_rate_after_hours', label: 'After Hours ($/hr)', value: watchedInterpreterRateAfterHours, suffix: '/hr' },
-    { key: 'interpreter_rate_mileage', label: 'Mileage ($/mi)', value: watchedInterpreterRateMileage, suffix: '/mi' },
   ];
 
 
@@ -1899,7 +1910,6 @@ export default function JobDetail() {
                     rates={[
                       { label: 'Business', value: watchedFacilityRateBusiness, suffix: '/hr' },
                       { label: 'After Hours', value: watchedFacilityRateAfterHours, suffix: '/hr' },
-                      { label: 'Mileage', value: watchedFacilityRateMileage, suffix: '/mi' },
                     ]}
                     onEditClick={() => setFacilityRatesDialogOpen(true)}
                     disabled={isLocked}
@@ -1914,7 +1924,6 @@ export default function JobDetail() {
                       rates={[
                         { label: 'Business', value: watchedInterpreterRateBusiness, suffix: '/hr' },
                         { label: 'After Hours', value: watchedInterpreterRateAfterHours, suffix: '/hr' },
-                        { label: 'Mileage', value: watchedInterpreterRateMileage, suffix: '/mi' },
                       ]}
                       onEditClick={() => setInterpreterRatesDialogOpen(true)}
                       disabled={isLocked}
@@ -1943,6 +1952,25 @@ export default function JobDetail() {
                         placeholder="0"
                         className="h-8"
                       />
+                    </div>
+                    <div className="space-y-1">
+                      <Label htmlFor="facility_rate_mileage" className="text-xs">Mileage Rate ($/mi)</Label>
+                      <Input
+                        id="facility_rate_mileage"
+                        type="text"
+                        inputMode="decimal"
+                        {...form.register('facility_rate_mileage', {
+                          setValueAs: (v) => {
+                            if (v === '' || v === '-' || v === '-.') return v;
+                            const num = parseFloat(v);
+                            return isNaN(num) ? 0 : num;
+                          }
+                        })}
+                        disabled={isLocked}
+                        placeholder={String(defaultMileageRate)}
+                        className="h-8"
+                      />
+                      <p className="text-[10px] text-muted-foreground">Default: ${defaultMileageRate}/mi</p>
                     </div>
                     <div className="space-y-1">
                       <Label htmlFor="travel_time_hours" className="text-xs">Travel Time (hrs)</Label>

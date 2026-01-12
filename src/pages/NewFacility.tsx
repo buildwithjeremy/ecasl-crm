@@ -56,7 +56,6 @@ const facilitySchema = z.object({
   timezone: z.string().optional().nullable(),
   rate_business_hours: z.coerce.number().min(0.01, 'Business rate is required'),
   rate_after_hours: z.coerce.number().min(0.01, 'After hours rate is required'),
-  rate_mileage: z.coerce.number().optional(),
   is_gsa: z.boolean(),
   contractor: z.boolean(),
   notes: z.string().optional(),
@@ -76,7 +75,6 @@ export default function NewFacility() {
     defaultValues: {
       name: '',
       facility_type: null,
-      rate_mileage: 0.7,
       is_gsa: false,
       contractor: false,
     },
@@ -198,7 +196,6 @@ export default function NewFacility() {
         status: 'pending',
         rate_business_hours: data.rate_business_hours || null,
         rate_after_hours: data.rate_after_hours || null,
-        rate_mileage: data.rate_mileage || null,
         minimum_billable_hours: 2,
         contract_status: 'not_sent',
         is_gsa: data.is_gsa,
@@ -506,7 +503,7 @@ export default function NewFacility() {
             <CardTitle className="text-lg">Rates (What We Charge)</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div className="grid grid-cols-3 gap-4">
+            <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="rate_business_hours">Business Hours Rate *</Label>
                 <div className="relative">
@@ -526,13 +523,6 @@ export default function NewFacility() {
                 {form.formState.errors.rate_after_hours && (
                   <p className="text-sm text-destructive">{form.formState.errors.rate_after_hours.message}</p>
                 )}
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="rate_mileage">Mileage Rate</Label>
-                <div className="relative">
-                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">$</span>
-                  <Input id="rate_mileage" type="number" step="0.01" className="pl-7" {...form.register('rate_mileage')} />
-                </div>
               </div>
             </div>
           </CardContent>

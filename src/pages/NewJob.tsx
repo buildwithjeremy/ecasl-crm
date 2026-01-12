@@ -136,7 +136,7 @@ function formatDuration(hours: number): string {
 }
 
 type Facility = Database['public']['Tables']['facilities']['Row'];
-type FacilitySelect = Pick<Facility, 'id' | 'name' | 'physical_address' | 'physical_city' | 'physical_state' | 'physical_zip' | 'billing_address' | 'billing_city' | 'billing_state' | 'billing_zip' | 'contractor' | 'admin_contact_name' | 'admin_contact_phone' | 'admin_contact_email' | 'rate_business_hours' | 'rate_after_hours' | 'rate_mileage' | 'minimum_billable_hours'>;
+type FacilitySelect = Pick<Facility, 'id' | 'name' | 'physical_address' | 'physical_city' | 'physical_state' | 'physical_zip' | 'billing_address' | 'billing_city' | 'billing_state' | 'billing_zip' | 'contractor' | 'admin_contact_name' | 'admin_contact_phone' | 'admin_contact_email' | 'rate_business_hours' | 'rate_after_hours' | 'minimum_billable_hours'>;
 
 // Generate duration options (2h to 8h in 15-min increments)
 function generateDurationOptions(): { value: number; label: string }[] {
@@ -222,7 +222,7 @@ export default function NewJob() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('facilities')
-        .select('id, name, physical_address, physical_city, physical_state, physical_zip, billing_address, billing_city, billing_state, billing_zip, contractor, admin_contact_name, admin_contact_phone, admin_contact_email, rate_business_hours, rate_after_hours, rate_mileage, minimum_billable_hours')
+        .select('id, name, physical_address, physical_city, physical_state, physical_zip, billing_address, billing_city, billing_state, billing_zip, contractor, admin_contact_name, admin_contact_phone, admin_contact_email, rate_business_hours, rate_after_hours, minimum_billable_hours')
         .eq('status', 'active')
         .order('name');
       if (error) throw error;

@@ -51,7 +51,7 @@ import {
   CommandList,
 } from '@/components/ui/command';
 import { useToast } from '@/hooks/use-toast';
-import { Check, ChevronsUpDown, ArrowLeft, Mail, Pencil, Trash2 } from 'lucide-react';
+import { Check, ChevronsUpDown, ArrowLeft, Mail, Pencil, Trash2, ExternalLink } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
@@ -114,6 +114,9 @@ function calculateHoursSplit(startTime: string, endTime: string, minimumHours: n
   };
 }
 
+// Phone validation regex - allows formats like (123) 456-7890, 123-456-7890, 1234567890
+const phoneRegex = /^(\+?1[-.\s]?)?(\(?\d{3}\)?[-.\s]?)?\d{3}[-.\s]?\d{4}$/;
+
 const formSchema = z.object({
   facility_id: z.string().min(1, 'Facility is required'),
   interpreter_id: z.string().optional(),
@@ -149,8 +152,14 @@ const formSchema = z.object({
   internal_notes: z.string().optional(),
   client_business_name: z.string().optional(),
   client_contact_name: z.string().optional(),
-  client_contact_phone: z.string().optional(),
-  client_contact_email: z.string().optional(),
+  client_contact_phone: z.string().optional().refine(
+    (val) => !val || phoneRegex.test(val),
+    { message: 'Please enter a valid phone number' }
+  ),
+  client_contact_email: z.string().optional().refine(
+    (val) => !val || z.string().email().safeParse(val).success,
+    { message: 'Please enter a valid email address' }
+  ),
 });
 
 type FormData = z.infer<typeof formSchema>;
@@ -1657,6 +1666,31 @@ export default function JobDetail() {
                 <CardTitle className="text-lg">Location & Contact</CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
+                {/* Contractor Info Card - Show when facility is a contractor */}
+                {selectedFacility?.contractor && (
+                  <div className="rounded-lg border bg-muted/50 p-4">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <Badge variant="secondary">Contractor</Badge>
+                        <span className="font-medium">{selectedFacility.name}</span>
+                      </div>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => navigate(`/facilities/${selectedFacility.id}`)}
+                        className="h-7 px-2"
+                      >
+                        View Facility
+                        <ExternalLink className="ml-1 h-3 w-3" />
+                      </Button>
+                    </div>
+                    <p className="text-sm text-muted-foreground mt-2">
+                      Client contact and location are specific to this job, not the contractor record.
+                    </p>
+                  </div>
+                )}
+
                 {/* Location Type */}
                 <FormField
                   control={form.control}
@@ -1682,38 +1716,18 @@ export default function JobDetail() {
 
                 {/* Address Fields or Video Link */}
                 {watchedLocationType === 'in_person' ? (
-                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                    <FormField
-                      control={form.control}
-                      name="location_address"
-                      render={({ field }) => (
-                        <FormItem className="md:col-span-2 space-y-2">
-                          <FormLabel>Address</FormLabel>
-                          <FormControl>
-                            <Input {...field} disabled={isLocked} />
-                          </FormControl>
-                        </FormItem>
-                      )}
-                    />
-                    <FormField
-                      control={form.control}
-                      name="location_city"
-                      render={({ field }) => (
-                        <FormItem className="space-y-2">
-                          <FormLabel>City</FormLabel>
-                          <FormControl>
-                            <Input {...field} disabled={isLocked} />
-                          </FormControl>
-                        </FormItem>
-                      )}
-                    />
-                    <div className="grid grid-cols-2 gap-2">
+                  <div className="space-y-4">
+                    {/* Section Header for Job Location */}
+                    {selectedFacility?.contractor && (
+                      <h4 className="text-sm font-medium text-muted-foreground">Job Location</h4>
+                    )}
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                       <FormField
                         control={form.control}
-                        name="location_state"
+                        name="location_address"
                         render={({ field }) => (
-                          <FormItem className="space-y-2">
-                            <FormLabel>State</FormLabel>
+                          <FormItem className="md:col-span-2 space-y-2">
+                            <FormLabel>Address</FormLabel>
                             <FormControl>
                               <Input {...field} disabled={isLocked} />
                             </FormControl>
@@ -1722,16 +1736,42 @@ export default function JobDetail() {
                       />
                       <FormField
                         control={form.control}
-                        name="location_zip"
+                        name="location_city"
                         render={({ field }) => (
                           <FormItem className="space-y-2">
-                            <FormLabel>Zip</FormLabel>
+                            <FormLabel>City</FormLabel>
                             <FormControl>
                               <Input {...field} disabled={isLocked} />
                             </FormControl>
                           </FormItem>
                         )}
                       />
+                      <div className="grid grid-cols-2 gap-2">
+                        <FormField
+                          control={form.control}
+                          name="location_state"
+                          render={({ field }) => (
+                            <FormItem className="space-y-2">
+                              <FormLabel>State</FormLabel>
+                              <FormControl>
+                                <Input {...field} disabled={isLocked} />
+                              </FormControl>
+                            </FormItem>
+                          )}
+                        />
+                        <FormField
+                          control={form.control}
+                          name="location_zip"
+                          render={({ field }) => (
+                            <FormItem className="space-y-2">
+                              <FormLabel>Zip</FormLabel>
+                              <FormControl>
+                                <Input {...field} disabled={isLocked} />
+                              </FormControl>
+                            </FormItem>
+                          )}
+                        />
+                      </div>
                     </div>
                   </div>
                 ) : (
@@ -1753,7 +1793,9 @@ export default function JobDetail() {
 
                 {/* Client Info as Chips */}
                 <div className="space-y-1">
-                  <h4 className="text-sm font-medium text-muted-foreground">Client Contact</h4>
+                  <h4 className="text-sm font-medium text-muted-foreground">
+                    {selectedFacility?.contractor ? 'Client Contact (for this job)' : 'Client Contact'}
+                  </h4>
                   <div className="flex flex-wrap gap-2 items-center">
                     {watchedClientBusinessName && (
                       <Badge variant="outline" className="font-normal">

@@ -44,13 +44,24 @@ import {
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
 import { useToast } from '@/hooks/use-toast';
-import { ArrowLeft, Check, ChevronsUpDown, Trash2, Copy } from 'lucide-react';
+import { ArrowLeft, Check, ChevronsUpDown, Trash2, Copy, Plus, X } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { getTimezoneFromState, timezoneOptions } from '@/lib/timezone-utils';
 import { FacilityContractSection } from '@/components/facilities/FacilityContractSection';
 import type { Database } from '@/types/database';
 
 type Facility = Database['public']['Tables']['facilities']['Row'];
+
+// Phone validation regex - allows formats like (123) 456-7890, 123-456-7890, 1234567890
+const phoneRegex = /^(\+?1[-.\s]?)?(\(?\d{3}\)?[-.\s]?)?\d{3}[-.\s]?\d{4}$/;
+
+// Billing contact type
+interface BillingContact {
+  id: string;
+  name: string;
+  phone: string;
+  email: string;
+}
 
 const facilityTypeOptions = [
   { value: 'hospital', label: 'Hospital' },
@@ -100,6 +111,8 @@ export default function FacilityDetail() {
   const queryClient = useQueryClient();
   const [searchOpen, setSearchOpen] = useState(false);
   const [selectedFacilityId, setSelectedFacilityId] = useState<string | null>(id || null);
+  const [billingContacts, setBillingContacts] = useState<BillingContact[]>([]);
+  const [contactErrors, setContactErrors] = useState<Record<string, { phone?: string; email?: string }>>({});
 
   // Fetch all facilities for the search
   const { data: facilities } = useQuery({
@@ -194,6 +207,19 @@ export default function FacilityDetail() {
         contractor: facility.contractor ?? false,
         notes: facility.notes ?? '',
       }, { keepDefaultValues: false });
+
+      // Populate billing contacts from existing admin contact data
+      if (facility.admin_contact_name || facility.admin_contact_phone || facility.admin_contact_email) {
+        setBillingContacts([{
+          id: crypto.randomUUID(),
+          name: facility.admin_contact_name ?? '',
+          phone: facility.admin_contact_phone ?? '',
+          email: facility.admin_contact_email ?? '',
+        }]);
+      } else {
+        setBillingContacts([]);
+      }
+      setContactErrors({});
     }
   }, [facility, form]);
 
@@ -209,38 +235,112 @@ export default function FacilityDetail() {
     form.setValue('physical_zip', billingZip || '', { shouldDirty: true });
   };
 
+  // Billing contacts management
+  const addBillingContact = () => {
+    setBillingContacts([
+      ...billingContacts,
+      { id: crypto.randomUUID(), name: '', phone: '', email: '' }
+    ]);
+  };
+
+  const removeBillingContact = (id: string) => {
+    setBillingContacts(billingContacts.filter(c => c.id !== id));
+    setContactErrors(prev => {
+      const newErrors = { ...prev };
+      delete newErrors[id];
+      return newErrors;
+    });
+  };
+
+  const updateBillingContact = (id: string, field: keyof Omit<BillingContact, 'id'>, value: string) => {
+    setBillingContacts(billingContacts.map(c => 
+      c.id === id ? { ...c, [field]: value } : c
+    ));
+
+    // Validate on change
+    if (field === 'phone' && value) {
+      if (!phoneRegex.test(value)) {
+        setContactErrors(prev => ({
+          ...prev,
+          [id]: { ...prev[id], phone: 'Please enter a valid phone number' }
+        }));
+      } else {
+        setContactErrors(prev => ({
+          ...prev,
+          [id]: { ...prev[id], phone: undefined }
+        }));
+      }
+    }
+
+    if (field === 'email' && value) {
+      if (!z.string().email().safeParse(value).success) {
+        setContactErrors(prev => ({
+          ...prev,
+          [id]: { ...prev[id], email: 'Please enter a valid email address' }
+        }));
+      } else {
+        setContactErrors(prev => ({
+          ...prev,
+          [id]: { ...prev[id], email: undefined }
+        }));
+      }
+    }
+  };
+
+  const validateContacts = (): boolean => {
+    let valid = true;
+    const newErrors: Record<string, { phone?: string; email?: string }> = {};
+
+    billingContacts.forEach(contact => {
+      if (contact.phone && !phoneRegex.test(contact.phone)) {
+        newErrors[contact.id] = { ...newErrors[contact.id], phone: 'Please enter a valid phone number' };
+        valid = false;
+      }
+      if (contact.email && !z.string().email().safeParse(contact.email).success) {
+        newErrors[contact.id] = { ...newErrors[contact.id], email: 'Please enter a valid email address' };
+        valid = false;
+      }
+    });
+
+    setContactErrors(newErrors);
+    return valid;
+  };
+
   const mutation = useMutation({
     mutationFn: async (data: FormData) => {
       if (!selectedFacilityId) return;
       
-        const payload = {
-          name: data.name,
-          facility_type: data.facility_type || null,
-          billing_name: data.billing_name || null,
-          billing_address: data.billing_address || null,
-          billing_city: data.billing_city || null,
-          billing_state: data.billing_state || null,
-          billing_zip: data.billing_zip || null,
-          physical_address: data.physical_address || null,
-          physical_city: data.physical_city || null,
-          physical_state: data.physical_state || null,
-          physical_zip: data.physical_zip || null,
-          timezone: data.timezone || null,
-          admin_contact_name: data.admin_contact_name || null,
-          admin_contact_phone: data.admin_contact_phone || null,
-          admin_contact_email: data.admin_contact_email || null,
-          status: data.status,
-          rate_business_hours: data.rate_business_hours ?? null,
-          rate_after_hours: data.rate_after_hours ?? null,
-          minimum_billable_hours: data.minimum_billable_hours,
-          emergency_fee: data.emergency_fee ?? null,
-          holiday_fee: data.holiday_fee ?? null,
-          billing_code: data.billing_code || null,
-          contract_status: data.contract_status,
-          is_gsa: data.is_gsa,
-          contractor: data.contractor,
-          notes: data.notes || null,
-        };
+      // Get primary billing contact (first one) for the main admin fields
+      const primaryContact = billingContacts[0];
+      
+      const payload = {
+        name: data.name,
+        facility_type: data.facility_type || null,
+        billing_name: data.billing_name || null,
+        billing_address: data.billing_address || null,
+        billing_city: data.billing_city || null,
+        billing_state: data.billing_state || null,
+        billing_zip: data.billing_zip || null,
+        physical_address: data.physical_address || null,
+        physical_city: data.physical_city || null,
+        physical_state: data.physical_state || null,
+        physical_zip: data.physical_zip || null,
+        timezone: data.timezone || null,
+        admin_contact_name: primaryContact?.name || null,
+        admin_contact_phone: primaryContact?.phone || null,
+        admin_contact_email: primaryContact?.email || null,
+        status: data.status,
+        rate_business_hours: data.rate_business_hours ?? null,
+        rate_after_hours: data.rate_after_hours ?? null,
+        minimum_billable_hours: data.minimum_billable_hours,
+        emergency_fee: data.emergency_fee ?? null,
+        holiday_fee: data.holiday_fee ?? null,
+        billing_code: data.billing_code || null,
+        contract_status: data.contract_status,
+        is_gsa: data.is_gsa,
+        contractor: data.contractor,
+        notes: data.notes || null,
+      };
 
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const { error } = await (supabase.from('facilities') as any)
@@ -260,6 +360,10 @@ export default function FacilityDetail() {
   });
 
   const onSubmit = (data: FormData) => {
+    if (!validateContacts()) {
+      toast({ title: 'Please fix validation errors', variant: 'destructive' });
+      return;
+    }
     mutation.mutate(data);
   };
 
@@ -457,26 +561,82 @@ export default function FacilityDetail() {
             </CardContent>
           </Card>
 
-          {/* Admin Contact */}
+          {/* Billing Contacts */}
           <Card>
             <CardHeader className="pb-4">
-              <CardTitle className="text-lg">Admin Contact</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="grid grid-cols-3 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="admin_contact_name">Name</Label>
-                  <Input id="admin_contact_name" {...form.register('admin_contact_name')} />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="admin_contact_phone">Phone</Label>
-                  <Input id="admin_contact_phone" {...form.register('admin_contact_phone')} />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="admin_contact_email">Email</Label>
-                  <Input id="admin_contact_email" type="email" {...form.register('admin_contact_email')} />
-                </div>
+              <div className="flex items-center justify-between">
+                <CardTitle className="text-lg">Billing Contacts</CardTitle>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={addBillingContact}
+                  className="h-8"
+                >
+                  <Plus className="h-3 w-3 mr-1" />
+                  Add Billing Contact
+                </Button>
               </div>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {billingContacts.length === 0 ? (
+                <p className="text-sm text-muted-foreground">No billing contacts added yet. Click "Add Billing Contact" to add one.</p>
+              ) : (
+                billingContacts.map((contact, index) => (
+                  <div key={contact.id} className="space-y-3">
+                    {index > 0 && <div className="border-t pt-4" />}
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm font-medium text-muted-foreground">
+                        {index === 0 ? 'Primary Contact' : `Contact ${index + 1}`}
+                      </span>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => removeBillingContact(contact.id)}
+                        className="h-7 w-7 p-0 text-muted-foreground hover:text-destructive"
+                      >
+                        <X className="h-4 w-4" />
+                      </Button>
+                    </div>
+                    <div className="grid grid-cols-3 gap-4">
+                      <div className="space-y-2">
+                        <Label>Name</Label>
+                        <Input
+                          value={contact.name}
+                          onChange={(e) => updateBillingContact(contact.id, 'name', e.target.value)}
+                          placeholder="Contact name"
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label>Phone</Label>
+                        <Input
+                          value={contact.phone}
+                          onChange={(e) => updateBillingContact(contact.id, 'phone', e.target.value)}
+                          placeholder="(555) 123-4567"
+                          className={contactErrors[contact.id]?.phone ? 'border-destructive' : ''}
+                        />
+                        {contactErrors[contact.id]?.phone && (
+                          <p className="text-sm text-destructive">{contactErrors[contact.id].phone}</p>
+                        )}
+                      </div>
+                      <div className="space-y-2">
+                        <Label>Email</Label>
+                        <Input
+                          type="email"
+                          value={contact.email}
+                          onChange={(e) => updateBillingContact(contact.id, 'email', e.target.value)}
+                          placeholder="email@example.com"
+                          className={contactErrors[contact.id]?.email ? 'border-destructive' : ''}
+                        />
+                        {contactErrors[contact.id]?.email && (
+                          <p className="text-sm text-destructive">{contactErrors[contact.id].email}</p>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                ))
+              )}
             </CardContent>
           </Card>
 

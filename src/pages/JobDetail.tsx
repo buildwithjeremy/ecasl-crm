@@ -115,6 +115,14 @@ export default function JobDetail() {
   // State
   const [selectorOpen, setSelectorOpen] = useState(false);
   const [selectedJobId, setSelectedJobId] = useState<string | null>(id || null);
+
+  // Sync URL id to selectedJobId state (for browser back/forward navigation)
+  useEffect(() => {
+    if (id && id !== selectedJobId) {
+      setSelectedJobId(id);
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [id]);
   const [selectedFacility, setSelectedFacility] = useState<FacilityOption | null>(null);
   const [hoursSplit, setHoursSplit] = useState<HoursSplit | null>(null);
   
@@ -445,7 +453,6 @@ export default function JobDetail() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['job', selectedJobId] });
       queryClient.invalidateQueries({ queryKey: ['jobs'] });
-      form.reset(form.getValues());
       toast({ title: 'Job updated successfully' });
     },
     onError: (error) => {
@@ -509,8 +516,6 @@ export default function JobDetail() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['job', selectedJobId] });
       queryClient.invalidateQueries({ queryKey: ['jobs'] });
-      const currentValues = form.getValues();
-      form.reset({ ...currentValues, status: 'outreach_in_progress' as const });
       toast({
         title: 'Outreach Sent',
         description: 'Job saved and status updated to Outreach In Progress.',

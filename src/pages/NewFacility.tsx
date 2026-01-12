@@ -68,7 +68,7 @@ export default function NewFacility() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [billingContacts, setBillingContacts] = useState<BillingContact[]>([]);
-  const [contactErrors, setContactErrors] = useState<Record<string, { phone?: string; email?: string }>>({});
+  const [contactErrors, setContactErrors] = useState<Record<string, { name?: string; phone?: string; email?: string }>>({});
 
   const form = useForm<FormData>({
     resolver: zodResolver(facilitySchema),
@@ -133,7 +133,28 @@ export default function NewFacility() {
 
   const validateContacts = (): boolean => {
     let valid = true;
-    const newErrors: Record<string, { phone?: string; email?: string }> = {};
+    const newErrors: Record<string, { name?: string; phone?: string; email?: string }> = {};
+
+    // Check if at least one contact exists
+    if (billingContacts.length === 0) {
+      toast({
+        title: 'Validation Error',
+        description: 'At least one billing contact with name and email is required',
+        variant: 'destructive',
+      });
+      return false;
+    }
+
+    // First contact must have name and email (primary contact)
+    const primaryContact = billingContacts[0];
+    if (!primaryContact.name || primaryContact.name.trim() === '') {
+      newErrors[primaryContact.id] = { ...newErrors[primaryContact.id], name: 'Name is required for primary contact' };
+      valid = false;
+    }
+    if (!primaryContact.email || primaryContact.email.trim() === '') {
+      newErrors[primaryContact.id] = { ...newErrors[primaryContact.id], email: 'Email is required for primary contact' };
+      valid = false;
+    }
 
     billingContacts.forEach(contact => {
       if (contact.phone && !phoneRegex.test(contact.phone)) {
@@ -327,7 +348,7 @@ export default function NewFacility() {
           </CardHeader>
           <CardContent className="space-y-4">
             {billingContacts.length === 0 ? (
-              <p className="text-sm text-muted-foreground">No billing contacts added yet. Click "Add Billing Contact" to add one.</p>
+              <p className="text-sm text-destructive">At least one billing contact with name and email is required. Click "Add Billing Contact" to add one.</p>
             ) : (
               billingContacts.map((contact, index) => (
                 <div key={contact.id} className="space-y-3">
@@ -348,12 +369,18 @@ export default function NewFacility() {
                   </div>
                   <div className="grid grid-cols-3 gap-4">
                     <div className="space-y-2">
-                      <Label>Name</Label>
+                      <Label>
+                        Name {index === 0 && <span className="text-destructive">*</span>}
+                      </Label>
                       <Input
                         value={contact.name}
                         onChange={(e) => updateBillingContact(contact.id, 'name', e.target.value)}
                         placeholder="Contact name"
+                        className={contactErrors[contact.id]?.name ? 'border-destructive' : ''}
                       />
+                      {contactErrors[contact.id]?.name && (
+                        <p className="text-sm text-destructive">{contactErrors[contact.id].name}</p>
+                      )}
                     </div>
                     <div className="space-y-2">
                       <Label>Phone</Label>
@@ -368,7 +395,9 @@ export default function NewFacility() {
                       )}
                     </div>
                     <div className="space-y-2">
-                      <Label>Email</Label>
+                      <Label>
+                        Email {index === 0 && <span className="text-destructive">*</span>}
+                      </Label>
                       <Input
                         type="email"
                         value={contact.email}

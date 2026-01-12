@@ -4,7 +4,8 @@
 
 /**
  * Normalize time from various formats to "HH:MM" for Select compatibility
- * Handles: "HH:MM:SS", "HH:MM:SS.sss", "HH:MM", or any other format
+ * Handles: "H:MM", "HH:MM", "H:MM:SS", "HH:MM:SS", "HH:MM:SS.sss"
+ * Always returns padded "HH:MM" (e.g., "9:00" → "09:00")
  * Returns empty string for null/undefined/invalid input
  */
 export function normalizeTimeToHHMM(input: unknown): string {
@@ -14,9 +15,14 @@ export function normalizeTimeToHHMM(input: unknown): string {
   const trimmed = input.trim();
   if (!trimmed) return '';
   
-  // Match HH:MM at the start, ignore anything after (like :SS or .sss)
-  const match = trimmed.match(/^(\d{2}:\d{2})/);
-  return match ? match[1] : '';
+  // Match H:MM or HH:MM at the start, with optional :SS or :SS.sss suffix
+  // Captures: group 1 = hour (1 or 2 digits), group 2 = minutes (2 digits)
+  const match = trimmed.match(/^(\d{1,2}):(\d{2})(?::\d{2}(?:\.\d+)?)?$/);
+  if (!match) return '';
+  
+  const hour = match[1].padStart(2, '0');
+  const minute = match[2];
+  return `${hour}:${minute}`;
 }
 
 /**
@@ -28,10 +34,12 @@ export function isValidTimeFormat(time: string | null | undefined): boolean {
 }
 
 /**
- * Check if a time needs normalization (has seconds or other suffix)
+ * Check if a time needs normalization (not exactly HH:MM but still time-like)
  */
 export function needsTimeNormalization(time: string | null | undefined): boolean {
   if (!time) return false;
-  // If it's longer than HH:MM (5 chars) and starts with valid time, it needs normalization
-  return time.length > 5 && /^\d{2}:\d{2}/.test(time);
+  // Already valid HH:MM? No normalization needed
+  if (/^\d{2}:\d{2}$/.test(time)) return false;
+  // Looks like a time (H:MM or HH:MM with optional suffix)? Needs normalization
+  return /^\d{1,2}:\d{2}/.test(time);
 }

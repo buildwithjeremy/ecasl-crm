@@ -69,18 +69,19 @@ export function JobScheduleFields({
   const prevStartTimeRef = useRef(watchedStartTime);
   const prevEndTimeRef = useRef(watchedEndTime);
 
-  // Normalize times if they have seconds (e.g., from DB "HH:MM:SS" format)
-  // This ensures Select components always have matching values
+  // Normalize times from various formats to HH:MM on mount and when values change
   useEffect(() => {
     if (needsTimeNormalization(watchedStartTime)) {
       const normalized = normalizeTimeToHHMM(watchedStartTime);
-      if (normalized) {
+      // Only update if normalized is valid and different from current
+      if (normalized && normalized !== watchedStartTime) {
         form.setValue('start_time', normalized, { shouldDirty: false });
       }
     }
     if (needsTimeNormalization(watchedEndTime)) {
       const normalized = normalizeTimeToHHMM(watchedEndTime);
-      if (normalized) {
+      // Only update if normalized is valid and different from current
+      if (normalized && normalized !== watchedEndTime) {
         form.setValue('end_time', normalized, { shouldDirty: false });
       }
     }

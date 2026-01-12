@@ -85,6 +85,12 @@ type FormData = z.infer<typeof formSchema>;
 // Constants
 // ==========================================
 
+// Helper to normalize time from "HH:MM:SS" to "HH:MM" for Select compatibility
+const normalizeTime = (time: string | null): string => {
+  if (!time) return '';
+  return time.slice(0, 5); // "16:15:00" → "16:15"
+};
+
 const statusLabels: Record<string, string> = {
   new: 'New',
   outreach_in_progress: 'Outreach',
@@ -278,8 +284,8 @@ export default function JobDetail() {
         potential_interpreter_ids: job.potential_interpreter_ids ?? [],
         deaf_client_name: job.deaf_client_name ?? '',
         job_date: job.job_date,
-        start_time: job.start_time,
-        end_time: job.end_time,
+        start_time: normalizeTime(job.start_time),
+        end_time: normalizeTime(job.end_time),
         location_type: job.location_type ?? 'in_person',
         location_address: job.location_address ?? '',
         location_city: job.location_city ?? '',

@@ -6,8 +6,9 @@ import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { format } from 'date-fns';
 import { Button } from '@/components/ui/button';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { useToast } from '@/hooks/use-toast';
-import { ArrowLeft } from 'lucide-react';
+import { ArrowLeft, AlertTriangle } from 'lucide-react';
 import {
   JobCoreFields,
   JobScheduleFields,
@@ -50,6 +51,12 @@ export default function NewJob() {
   const handleHoursSplitChange = useCallback((split: HoursSplit | null) => {
     setHoursSplit(split);
   }, []);
+
+  // Check if facility has rates configured
+  const facilityMissingRates = useMemo(() => {
+    if (!selectedFacility) return false;
+    return !selectedFacility.rate_business_hours && !selectedFacility.rate_after_hours;
+  }, [selectedFacility]);
 
   // Calculate billable total
   const billableTotal = useMemo(() => {
@@ -120,6 +127,14 @@ export default function NewJob() {
   });
 
   const onSubmit = (data: JobBaseFormData) => {
+    // Warn but still allow creation if facility has no rates
+    if (facilityMissingRates) {
+      toast({
+        title: "Warning: No Rates Configured",
+        description: "This facility has no billing rates. The job will be created with $0.00 rates.",
+        variant: "destructive",
+      });
+    }
     mutation.mutate(data);
   };
 
@@ -161,6 +176,18 @@ export default function NewJob() {
           mode="create"
           onFacilityChange={handleFacilityChange}
         />
+
+        {/* Missing Rates Warning */}
+        {facilityMissingRates && (
+          <Alert variant="destructive">
+            <AlertTriangle className="h-4 w-4" />
+            <AlertTitle>No Billing Rates Configured</AlertTitle>
+            <AlertDescription>
+              The selected facility does not have billing rates set up. This job will be created with $0.00 rates. 
+              Consider configuring rates on the facility record first.
+            </AlertDescription>
+          </Alert>
+        )}
 
         {/* Schedule */}
         <JobScheduleFields

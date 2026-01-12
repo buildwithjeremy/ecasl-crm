@@ -75,7 +75,7 @@ const facilityTypeOptions = [
 const facilitySchema = z.object({
   name: z.string().min(1, 'Facility name is required'),
   facility_type: z.enum(['hospital', 'clinic', 'school', 'government', 'business', 'other']).optional().nullable(),
-  billing_name: z.string().optional(),
+  
   billing_address: z.string().optional(),
   billing_city: z.string().optional(),
   billing_state: z.string().optional(),
@@ -112,7 +112,7 @@ export default function FacilityDetail() {
   const [searchOpen, setSearchOpen] = useState(false);
   const [selectedFacilityId, setSelectedFacilityId] = useState<string | null>(id || null);
   const [billingContacts, setBillingContacts] = useState<BillingContact[]>([]);
-  const [contactErrors, setContactErrors] = useState<Record<string, { phone?: string; email?: string }>>({});
+  const [contactErrors, setContactErrors] = useState<Record<string, { name?: string; phone?: string; email?: string }>>({});
 
   // Fetch all facilities for the search
   const { data: facilities } = useQuery({
@@ -183,7 +183,7 @@ export default function FacilityDetail() {
       form.reset({
         name: facility.name,
         facility_type: (facility as any).facility_type || null,
-        billing_name: facility.billing_name ?? '',
+        
         billing_address: facility.billing_address ?? '',
         billing_city: facility.billing_city ?? '',
         billing_state: facility.billing_state ?? '',
@@ -291,7 +291,28 @@ export default function FacilityDetail() {
 
   const validateContacts = (): boolean => {
     let valid = true;
-    const newErrors: Record<string, { phone?: string; email?: string }> = {};
+    const newErrors: Record<string, { name?: string; phone?: string; email?: string }> = {};
+
+    // Check if at least one contact exists
+    if (billingContacts.length === 0) {
+      toast({
+        title: 'Validation Error',
+        description: 'At least one billing contact with name and email is required',
+        variant: 'destructive',
+      });
+      return false;
+    }
+
+    // First contact must have name and email (primary contact)
+    const primaryContact = billingContacts[0];
+    if (!primaryContact.name || primaryContact.name.trim() === '') {
+      newErrors[primaryContact.id] = { ...newErrors[primaryContact.id], name: 'Name is required for primary contact' };
+      valid = false;
+    }
+    if (!primaryContact.email || primaryContact.email.trim() === '') {
+      newErrors[primaryContact.id] = { ...newErrors[primaryContact.id], email: 'Email is required for primary contact' };
+      valid = false;
+    }
 
     billingContacts.forEach(contact => {
       if (contact.phone && !phoneRegex.test(contact.phone)) {
@@ -318,7 +339,7 @@ export default function FacilityDetail() {
       const payload = {
         name: data.name,
         facility_type: data.facility_type || null,
-        billing_name: data.billing_name || null,
+        
         billing_address: data.billing_address || null,
         billing_city: data.billing_city || null,
         billing_state: data.billing_state || null,
@@ -501,10 +522,10 @@ export default function FacilityDetail() {
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="facility_type">Facility Type</Label>
-                  <Select
-                    value={form.watch('facility_type') || ''}
-                    onValueChange={(value) => form.setValue('facility_type', value as FormData['facility_type'], { shouldDirty: true })}
-                  >
+                        <Select
+                          value={form.watch('facility_type') || undefined}
+                          onValueChange={(value) => form.setValue('facility_type', value as FormData['facility_type'], { shouldDirty: true })}
+                        >
                     <SelectTrigger>
                       <SelectValue placeholder="Select type" />
                     </SelectTrigger>
@@ -519,11 +540,6 @@ export default function FacilityDetail() {
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="billing_name">Billing Name</Label>
-                  <Input id="billing_name" {...form.register('billing_name')} />
-                </div>
                 <div className="space-y-2">
                   <Label htmlFor="status">Status</Label>
                   <Select
@@ -540,7 +556,6 @@ export default function FacilityDetail() {
                     </SelectContent>
                   </Select>
                 </div>
-              </div>
 
               <div className="flex items-center gap-6">
                 <div className="flex items-center space-x-2">
@@ -582,7 +597,7 @@ export default function FacilityDetail() {
             </CardHeader>
             <CardContent className="space-y-4">
               {billingContacts.length === 0 ? (
-                <p className="text-sm text-muted-foreground">No billing contacts added yet. Click "Add Billing Contact" to add one.</p>
+                <p className="text-sm text-destructive">At least one billing contact with name and email is required. Click "Add Billing Contact" to add one.</p>
               ) : (
                 billingContacts.map((contact, index) => (
                   <div key={contact.id} className="space-y-3">
@@ -603,12 +618,18 @@ export default function FacilityDetail() {
                     </div>
                     <div className="grid grid-cols-3 gap-4">
                       <div className="space-y-2">
-                        <Label>Name</Label>
+                        <Label>
+                          Name {index === 0 && <span className="text-destructive">*</span>}
+                        </Label>
                         <Input
                           value={contact.name}
                           onChange={(e) => updateBillingContact(contact.id, 'name', e.target.value)}
                           placeholder="Contact name"
+                          className={contactErrors[contact.id]?.name ? 'border-destructive' : ''}
                         />
+                        {contactErrors[contact.id]?.name && (
+                          <p className="text-sm text-destructive">{contactErrors[contact.id].name}</p>
+                        )}
                       </div>
                       <div className="space-y-2">
                         <Label>Phone</Label>
@@ -623,7 +644,9 @@ export default function FacilityDetail() {
                         )}
                       </div>
                       <div className="space-y-2">
-                        <Label>Email</Label>
+                        <Label>
+                          Email {index === 0 && <span className="text-destructive">*</span>}
+                        </Label>
                         <Input
                           type="email"
                           value={contact.email}

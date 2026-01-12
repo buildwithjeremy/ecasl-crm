@@ -35,7 +35,7 @@ import { Calendar } from '@/components/ui/calendar';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { useToast } from '@/hooks/use-toast';
-import { ArrowLeft, Check, ChevronsUpDown, CalendarIcon, ExternalLink, Building2, MapPin, User } from 'lucide-react';
+import { ArrowLeft, Check, ChevronsUpDown, CalendarIcon, ExternalLink, Building2, MapPin, User, Plus, X } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import type { Database } from '@/types/database';
 
@@ -196,6 +196,7 @@ export default function NewJob() {
   const [facilityOpen, setFacilityOpen] = useState(false);
   const [datePickerOpen, setDatePickerOpen] = useState(false);
   const [createdAt] = useState(new Date());
+  const [showAdminContact, setShowAdminContact] = useState(false);
 
   const { data: facilities } = useQuery({
     queryKey: ['facilities-select'],
@@ -559,6 +560,49 @@ export default function NewJob() {
                 </Select>
               </div>
             </div>
+
+            {/* Add Admin Contact Button/Section */}
+            {!showAdminContact ? (
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => setShowAdminContact(true)}
+                className="mt-2"
+              >
+                <Plus className="h-4 w-4 mr-2" />
+                Add Admin Contact
+              </Button>
+            ) : (
+              <div className="rounded-lg border p-4 space-y-4 mt-2">
+                <div className="flex items-center justify-between">
+                  <span className="font-medium text-sm">Admin Contact</span>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setShowAdminContact(false)}
+                    className="-mr-2"
+                  >
+                    <X className="h-4 w-4" />
+                  </Button>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="admin_contact_name">Contact Name</Label>
+                    <Input id="admin_contact_name" placeholder="Name" />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="admin_contact_email">Email</Label>
+                    <Input id="admin_contact_email" type="email" placeholder="Email" />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="admin_contact_phone">Phone</Label>
+                    <Input id="admin_contact_phone" placeholder="Phone" />
+                  </div>
+                </div>
+              </div>
+            )}
           </CardContent>
         </Card>
 
@@ -734,229 +778,286 @@ export default function NewJob() {
             </div>
 
             {watchedLocationType === 'in_person' ? (
-              <div className="rounded-lg border p-4 space-y-4">
-                {/* Header with View Facility link */}
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <span className="font-medium text-sm">Facility Information</span>
-                    {selectedFacility && !isContractor && (
-                      <Badge variant="secondary" className="text-xs">
-                        <Building2 className="h-3 w-3 mr-1" />
-                        From Facility
-                      </Badge>
-                    )}
-                    {isContractor && (
-                      <Badge variant="outline" className="text-xs">
-                        Manual Entry
-                      </Badge>
-                    )}
-                  </div>
-                  {selectedFacility && (
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => window.open(`/facilities/${selectedFacility.id}`, '_blank')}
-                      className="text-muted-foreground hover:text-foreground -mr-2"
-                    >
-                      <ExternalLink className="h-4 w-4 mr-1" />
-                      View Facility
-                    </Button>
-                  )}
-                </div>
-
-                {/* Client Contact Section - FIRST */}
-                <div className="space-y-3">
-                  <div className="flex items-center gap-2">
-                    <User className="h-4 w-4 text-muted-foreground" />
-                    <span className="font-medium text-sm">Client Contact</span>
-                  </div>
-                  
-                  {selectedFacility && !isContractor ? (
-                    // Non-contractor: Show read-only client info
-                    <div className="grid grid-cols-2 gap-4 text-sm pl-6">
-                      <div>
-                        <div className="text-muted-foreground text-xs">Business</div>
-                        <div>{selectedFacility.name || '—'}</div>
+              <>
+                {/* Contractor Card - Show when contractor is selected */}
+                {selectedFacility && isContractor && (
+                  <div className="rounded-lg border bg-muted/30 p-4">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-3">
+                        <div className="flex items-center gap-2">
+                          <Building2 className="h-4 w-4 text-muted-foreground" />
+                          <span className="font-medium">{selectedFacility.name}</span>
+                        </div>
+                        <Badge variant="secondary" className="text-xs">Contractor</Badge>
                       </div>
-                      <div>
-                        <div className="text-muted-foreground text-xs">Contact</div>
-                        <div>{selectedFacility.admin_contact_name || '—'}</div>
-                      </div>
-                      <div>
-                        <div className="text-muted-foreground text-xs">Phone</div>
-                        <div>{selectedFacility.admin_contact_phone || '—'}</div>
-                      </div>
-                      <div>
-                        <div className="text-muted-foreground text-xs">Email</div>
-                        <div>{selectedFacility.admin_contact_email || '—'}</div>
-                      </div>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => window.open(`/facilities/${selectedFacility.id}`, '_blank')}
+                        className="text-muted-foreground hover:text-foreground -mr-2"
+                      >
+                        <ExternalLink className="h-4 w-4 mr-1" />
+                        View Facility
+                      </Button>
                     </div>
-                  ) : (
-                    // Contractor or no facility: Editable client fields
-                    <>
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div className="space-y-2">
-                          <Label htmlFor="client_business_name">Business Name</Label>
-                          <Input id="client_business_name" {...form.register('client_business_name')} />
-                        </div>
-                        <div className="space-y-2">
-                          <Label htmlFor="client_contact_name">Contact Name</Label>
-                          <Input id="client_contact_name" {...form.register('client_contact_name')} />
-                        </div>
-                      </div>
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div className="space-y-2">
-                          <Label htmlFor="client_contact_phone">Phone</Label>
-                          <Input id="client_contact_phone" {...form.register('client_contact_phone')} />
-                        </div>
-                        <div className="space-y-2">
-                          <Label htmlFor="client_contact_email">Email</Label>
-                          <Input id="client_contact_email" type="email" {...form.register('client_contact_email')} />
-                        </div>
-                      </div>
-                    </>
-                  )}
-                </div>
-
-                <Separator />
-
-                {/* Address Section - SECOND */}
-                <div className="space-y-3">
-                  <div className="flex items-center gap-2">
-                    <MapPin className="h-4 w-4 text-muted-foreground" />
-                    <span className="font-medium text-sm">Address</span>
                   </div>
-                  
-                  {selectedFacility && !isContractor ? (
-                    // Non-contractor: Show read-only facility address
-                    <div className="text-sm text-muted-foreground pl-6">
-                      {facilityLocation?.address && <div>{facilityLocation.address}</div>}
-                      {(facilityLocation?.city || facilityLocation?.state || facilityLocation?.zip) && (
-                        <div>
-                          {[facilityLocation?.city, facilityLocation?.state].filter(Boolean).join(', ')}
-                          {facilityLocation?.zip && ` ${facilityLocation.zip}`}
+                )}
+
+                {/* Facility Information Card - Only show when facility is selected */}
+                {selectedFacility && (
+                  <div className="rounded-lg border p-4 space-y-4">
+                    {/* Header with View Facility link - only for non-contractors */}
+                    {!isContractor && (
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <span className="font-medium text-sm">Facility Information</span>
+                          <Badge variant="secondary" className="text-xs">
+                            <Building2 className="h-3 w-3 mr-1" />
+                            From Facility
+                          </Badge>
                         </div>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => window.open(`/facilities/${selectedFacility.id}`, '_blank')}
+                          className="text-muted-foreground hover:text-foreground -mr-2"
+                        >
+                          <ExternalLink className="h-4 w-4 mr-1" />
+                          View Facility
+                        </Button>
+                      </div>
+                    )}
+
+                    {/* Client Contact Section */}
+                    <div className="space-y-3">
+                      <div className="flex items-center gap-2">
+                        <User className="h-4 w-4 text-muted-foreground" />
+                        <span className="font-medium text-sm">
+                          {isContractor ? 'Client Contact (for this job)' : 'Client Contact'}
+                        </span>
+                      </div>
+                      
+                      {!isContractor ? (
+                        // Non-contractor: Show read-only client info
+                        <div className="grid grid-cols-2 gap-4 text-sm pl-6">
+                          <div>
+                            <div className="text-muted-foreground text-xs">Business</div>
+                            <div>{selectedFacility.name || '—'}</div>
+                          </div>
+                          <div>
+                            <div className="text-muted-foreground text-xs">Contact</div>
+                            <div>{selectedFacility.admin_contact_name || '—'}</div>
+                          </div>
+                          <div>
+                            <div className="text-muted-foreground text-xs">Phone</div>
+                            <div>{selectedFacility.admin_contact_phone || '—'}</div>
+                          </div>
+                          <div>
+                            <div className="text-muted-foreground text-xs">Email</div>
+                            <div>{selectedFacility.admin_contact_email || '—'}</div>
+                          </div>
+                        </div>
+                      ) : (
+                        // Contractor: Editable client fields
+                        <>
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div className="space-y-2">
+                              <Label htmlFor="client_business_name">Business Name</Label>
+                              <Input id="client_business_name" {...form.register('client_business_name')} />
+                            </div>
+                            <div className="space-y-2">
+                              <Label htmlFor="client_contact_name">Contact Name</Label>
+                              <Input id="client_contact_name" {...form.register('client_contact_name')} />
+                            </div>
+                          </div>
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div className="space-y-2">
+                              <Label htmlFor="client_contact_phone">Phone</Label>
+                              <Input id="client_contact_phone" {...form.register('client_contact_phone')} />
+                            </div>
+                            <div className="space-y-2">
+                              <Label htmlFor="client_contact_email">Email</Label>
+                              <Input id="client_contact_email" type="email" {...form.register('client_contact_email')} />
+                            </div>
+                          </div>
+                        </>
                       )}
-                      {!facilityLocation?.address && <div className="italic">No address on file</div>}
                     </div>
-                  ) : (
-                    // Contractor or no facility: Editable address fields
-                    <>
-                      <div className="space-y-2">
-                        <Input 
-                          placeholder="Address" 
-                          {...form.register('location_address')} 
-                        />
+
+                    <Separator />
+
+                    {/* Address Section */}
+                    <div className="space-y-3">
+                      <div className="flex items-center gap-2">
+                        <MapPin className="h-4 w-4 text-muted-foreground" />
+                        <span className="font-medium text-sm">
+                          {isContractor ? 'Job Location' : 'Address'}
+                        </span>
                       </div>
-                      <div className="grid grid-cols-3 gap-4">
-                        <Input 
-                          placeholder="City" 
-                          {...form.register('location_city')} 
-                        />
-                        <Input 
-                          placeholder="State" 
-                          {...form.register('location_state')} 
-                        />
-                        <Input 
-                          placeholder="Zip" 
-                          {...form.register('location_zip')} 
-                        />
-                      </div>
-                    </>
-                  )}
-                </div>
-              </div>
+                      
+                      {!isContractor ? (
+                        // Non-contractor: Show read-only facility address
+                        <div className="text-sm text-muted-foreground pl-6">
+                          {facilityLocation?.address && <div>{facilityLocation.address}</div>}
+                          {(facilityLocation?.city || facilityLocation?.state || facilityLocation?.zip) && (
+                            <div>
+                              {[facilityLocation?.city, facilityLocation?.state].filter(Boolean).join(', ')}
+                              {facilityLocation?.zip && ` ${facilityLocation.zip}`}
+                            </div>
+                          )}
+                          {!facilityLocation?.address && <div className="italic">No address on file</div>}
+                        </div>
+                      ) : (
+                        // Contractor: Editable address fields
+                        <>
+                          <div className="space-y-2">
+                            <Input 
+                              placeholder="Address" 
+                              {...form.register('location_address')} 
+                            />
+                          </div>
+                          <div className="grid grid-cols-3 gap-4">
+                            <Input 
+                              placeholder="City" 
+                              {...form.register('location_city')} 
+                            />
+                            <Input 
+                              placeholder="State" 
+                              {...form.register('location_state')} 
+                            />
+                            <Input 
+                              placeholder="Zip" 
+                              {...form.register('location_zip')} 
+                            />
+                          </div>
+                        </>
+                      )}
+                    </div>
+                  </div>
+                )}
+              </>
             ) : (
               /* Remote location - combined card with client contact and video link */
-              <div className="rounded-lg border p-4 space-y-4">
-                {/* Header with View Facility link */}
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <span className="font-medium text-sm">Facility Information</span>
-                    {selectedFacility && (
-                      <Badge variant="secondary" className="text-xs">
-                        <Building2 className="h-3 w-3 mr-1" />
-                        From Facility
-                      </Badge>
-                    )}
-                  </div>
-                  {selectedFacility && (
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => window.open(`/facilities/${selectedFacility.id}`, '_blank')}
-                      className="text-muted-foreground hover:text-foreground -mr-2"
-                    >
-                      <ExternalLink className="h-4 w-4 mr-1" />
-                      View Facility
-                    </Button>
-                  )}
-                </div>
-
-                {/* Client Contact Section */}
-                <div className="space-y-3">
-                  <div className="flex items-center gap-2">
-                    <User className="h-4 w-4 text-muted-foreground" />
-                    <span className="font-medium text-sm">Client Contact</span>
-                  </div>
-                  
-                  {selectedFacility && !isContractor ? (
-                    // Non-contractor: Show read-only client info
-                    <div className="grid grid-cols-2 gap-4 text-sm pl-6">
-                      <div>
-                        <div className="text-muted-foreground text-xs">Business</div>
-                        <div>{selectedFacility.name || '—'}</div>
+              <>
+                {/* Contractor Card - Show when contractor is selected */}
+                {selectedFacility && isContractor && (
+                  <div className="rounded-lg border bg-muted/30 p-4">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-3">
+                        <div className="flex items-center gap-2">
+                          <Building2 className="h-4 w-4 text-muted-foreground" />
+                          <span className="font-medium">{selectedFacility.name}</span>
+                        </div>
+                        <Badge variant="secondary" className="text-xs">Contractor</Badge>
                       </div>
-                      <div>
-                        <div className="text-muted-foreground text-xs">Contact</div>
-                        <div>{selectedFacility.admin_contact_name || '—'}</div>
-                      </div>
-                      <div>
-                        <div className="text-muted-foreground text-xs">Phone</div>
-                        <div>{selectedFacility.admin_contact_phone || '—'}</div>
-                      </div>
-                      <div>
-                        <div className="text-muted-foreground text-xs">Email</div>
-                        <div>{selectedFacility.admin_contact_email || '—'}</div>
-                      </div>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => window.open(`/facilities/${selectedFacility.id}`, '_blank')}
+                        className="text-muted-foreground hover:text-foreground -mr-2"
+                      >
+                        <ExternalLink className="h-4 w-4 mr-1" />
+                        View Facility
+                      </Button>
                     </div>
-                  ) : (
-                    // Contractor or no facility: Editable client fields
-                    <>
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div className="space-y-2">
-                          <Label htmlFor="client_business_name">Business Name</Label>
-                          <Input id="client_business_name" {...form.register('client_business_name')} />
-                        </div>
-                        <div className="space-y-2">
-                          <Label htmlFor="client_contact_name">Contact Name</Label>
-                          <Input id="client_contact_name" {...form.register('client_contact_name')} />
-                        </div>
-                      </div>
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div className="space-y-2">
-                          <Label htmlFor="client_contact_phone">Phone</Label>
-                          <Input id="client_contact_phone" {...form.register('client_contact_phone')} />
-                        </div>
-                        <div className="space-y-2">
-                          <Label htmlFor="client_contact_email">Email</Label>
-                          <Input id="client_contact_email" type="email" {...form.register('client_contact_email')} />
-                        </div>
-                      </div>
-                    </>
-                  )}
-                </div>
+                  </div>
+                )}
 
-                <Separator />
+                {/* Facility Information Card - Only show when facility is selected */}
+                {selectedFacility && (
+                  <div className="rounded-lg border p-4 space-y-4">
+                    {/* Header with View Facility link - only for non-contractors */}
+                    {!isContractor && (
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <span className="font-medium text-sm">Facility Information</span>
+                          <Badge variant="secondary" className="text-xs">
+                            <Building2 className="h-3 w-3 mr-1" />
+                            From Facility
+                          </Badge>
+                        </div>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => window.open(`/facilities/${selectedFacility.id}`, '_blank')}
+                          className="text-muted-foreground hover:text-foreground -mr-2"
+                        >
+                          <ExternalLink className="h-4 w-4 mr-1" />
+                          View Facility
+                        </Button>
+                      </div>
+                    )}
 
-                {/* Video Call Link Section */}
-                <div className="space-y-2">
-                  <Label htmlFor="video_call_link">Video Call Link</Label>
-                  <Input id="video_call_link" placeholder="https://..." {...form.register('video_call_link')} />
-                </div>
-              </div>
+                    {/* Client Contact Section */}
+                    <div className="space-y-3">
+                      <div className="flex items-center gap-2">
+                        <User className="h-4 w-4 text-muted-foreground" />
+                        <span className="font-medium text-sm">
+                          {isContractor ? 'Client Contact (for this job)' : 'Client Contact'}
+                        </span>
+                      </div>
+                      
+                      {!isContractor ? (
+                        // Non-contractor: Show read-only client info
+                        <div className="grid grid-cols-2 gap-4 text-sm pl-6">
+                          <div>
+                            <div className="text-muted-foreground text-xs">Business</div>
+                            <div>{selectedFacility.name || '—'}</div>
+                          </div>
+                          <div>
+                            <div className="text-muted-foreground text-xs">Contact</div>
+                            <div>{selectedFacility.admin_contact_name || '—'}</div>
+                          </div>
+                          <div>
+                            <div className="text-muted-foreground text-xs">Phone</div>
+                            <div>{selectedFacility.admin_contact_phone || '—'}</div>
+                          </div>
+                          <div>
+                            <div className="text-muted-foreground text-xs">Email</div>
+                            <div>{selectedFacility.admin_contact_email || '—'}</div>
+                          </div>
+                        </div>
+                      ) : (
+                        // Contractor: Editable client fields
+                        <>
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div className="space-y-2">
+                              <Label htmlFor="client_business_name">Business Name</Label>
+                              <Input id="client_business_name" {...form.register('client_business_name')} />
+                            </div>
+                            <div className="space-y-2">
+                              <Label htmlFor="client_contact_name">Contact Name</Label>
+                              <Input id="client_contact_name" {...form.register('client_contact_name')} />
+                            </div>
+                          </div>
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div className="space-y-2">
+                              <Label htmlFor="client_contact_phone">Phone</Label>
+                              <Input id="client_contact_phone" {...form.register('client_contact_phone')} />
+                            </div>
+                            <div className="space-y-2">
+                              <Label htmlFor="client_contact_email">Email</Label>
+                              <Input id="client_contact_email" type="email" {...form.register('client_contact_email')} />
+                            </div>
+                          </div>
+                        </>
+                      )}
+                    </div>
+
+                    <Separator />
+
+                    {/* Video Call Link Section */}
+                    <div className="space-y-2">
+                      <Label htmlFor="video_call_link">Video Call Link</Label>
+                      <Input id="video_call_link" placeholder="https://..." {...form.register('video_call_link')} />
+                    </div>
+                  </div>
+                )}
+              </>
             )}
           </CardContent>
         </Card>

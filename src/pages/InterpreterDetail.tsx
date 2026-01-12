@@ -36,6 +36,14 @@ export default function InterpreterDetail() {
   const [searchOpen, setSearchOpen] = useState(false);
   const [selectedInterpreterId, setSelectedInterpreterId] = useState<string | null>(id || null);
 
+  // Sync URL id to selectedInterpreterId state (for browser back/forward navigation)
+  useEffect(() => {
+    if (id && id !== selectedInterpreterId) {
+      setSelectedInterpreterId(id);
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [id]);
+
   // Fetch all interpreters for the search
   const { data: interpreters } = useQuery({
     queryKey: ['interpreters'],
@@ -154,7 +162,6 @@ export default function InterpreterDetail() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['interpreters'] });
       queryClient.invalidateQueries({ queryKey: ['interpreter', selectedInterpreterId] });
-      form.reset(form.getValues());
       toast({ title: 'Interpreter updated successfully' });
     },
     onError: (error) => {

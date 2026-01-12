@@ -37,6 +37,14 @@ export default function FacilityDetail() {
   const [selectedFacilityId, setSelectedFacilityId] = useState<string | null>(id || null);
   const [billingContacts, setBillingContacts] = useState<BillingContact[]>([]);
 
+  // Sync URL id to selectedFacilityId state (for browser back/forward navigation)
+  useEffect(() => {
+    if (id && id !== selectedFacilityId) {
+      setSelectedFacilityId(id);
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [id]);
+
   // Fetch all facilities for the search
   const { data: facilities } = useQuery({
     queryKey: ['facilities'],
@@ -180,7 +188,6 @@ export default function FacilityDetail() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['facilities'] });
       queryClient.invalidateQueries({ queryKey: ['facility', selectedFacilityId] });
-      form.reset(form.getValues());
       toast({ title: 'Facility updated successfully' });
     },
     onError: (error) => {

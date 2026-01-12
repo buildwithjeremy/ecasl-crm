@@ -100,6 +100,8 @@ export default function NewJob() {
         client_contact_email: data.client_contact_email || null,
         emergency_fee_applied: data.emergency_fee_applied || false,
         holiday_fee_applied: data.holiday_fee_applied || false,
+        facility_rate_business: selectedFacility?.rate_business_hours ?? null,
+        facility_rate_after_hours: selectedFacility?.rate_after_hours ?? null,
       };
 
       // eslint-disable-next-line @typescript-eslint/no-explicit-any

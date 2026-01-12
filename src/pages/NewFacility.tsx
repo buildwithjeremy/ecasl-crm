@@ -159,10 +159,11 @@ export default function NewFacility() {
 
   // Auto-update timezone when physical state changes
   useEffect(() => {
-    if (detectedTimezone) {
-      form.setValue('timezone', detectedTimezone);
+    if (detectedTimezone && form.formState.dirtyFields.physical_state) {
+      form.setValue('timezone', detectedTimezone, { shouldDirty: true });
     }
-  }, [detectedTimezone, form]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [detectedTimezone]);
 
   const copyBillingToPhysical = () => {
     const billingAddress = form.getValues('billing_address');

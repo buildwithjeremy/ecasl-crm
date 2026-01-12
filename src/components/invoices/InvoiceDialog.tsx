@@ -145,7 +145,8 @@ export function InvoiceDialog({ open, onOpenChange, invoice }: InvoiceDialogProp
         notes: '',
       });
     }
-  }, [invoice, form]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [invoice]);
 
   const mutation = useMutation({
     mutationFn: async (data: FormData) => {

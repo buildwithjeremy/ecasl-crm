@@ -130,7 +130,8 @@ export function PayableDialog({ open, onOpenChange, payable }: PayableDialogProp
         notes: '',
       });
     }
-  }, [payable, form]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [payable]);
 
   const mutation = useMutation({
     mutationFn: async (data: FormData) => {

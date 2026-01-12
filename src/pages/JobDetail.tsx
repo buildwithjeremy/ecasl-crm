@@ -425,7 +425,8 @@ export default function JobDetail() {
         client_contact_email: job.client_contact_email ?? '',
       }, { keepDefaultValues: false });
     }
-  }, [job, form]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [job]);
 
   // Auto-calculate billable hours from start/end time
   const watchedStartTime = form.watch('start_time');

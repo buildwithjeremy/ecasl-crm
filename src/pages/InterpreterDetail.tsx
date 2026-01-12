@@ -190,7 +190,8 @@ export default function InterpreterDetail() {
         notes: interpreter.notes ?? '',
       }, { keepDefaultValues: false });
     }
-  }, [interpreter, form]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [interpreter]);
 
   const mutation = useMutation({
     mutationFn: async (data: FormData) => {

@@ -68,6 +68,7 @@ export default function InterpreterDetail() {
   const form = useForm<InterpreterFullFormData>({
     resolver: zodResolver(interpreterFullSchema),
     defaultValues: getInterpreterFullDefaults(),
+    mode: 'onChange',
   });
 
   // Unsaved changes warning

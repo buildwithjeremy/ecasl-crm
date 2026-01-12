@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -19,7 +19,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
-import { ArrowLeft, Copy } from 'lucide-react';
+import { ArrowLeft, Copy, Plus, X } from 'lucide-react';
 import { getTimezoneFromState, timezoneOptions } from '@/lib/timezone-utils';
 
 const facilityTypeOptions = [
@@ -30,6 +30,17 @@ const facilityTypeOptions = [
   { value: 'business', label: 'Business' },
   { value: 'other', label: 'Other' },
 ] as const;
+
+// Phone validation regex - allows formats like (123) 456-7890, 123-456-7890, 1234567890
+const phoneRegex = /^(\+?1[-.\s]?)?(\(?\d{3}\)?[-.\s]?)?\d{3}[-.\s]?\d{4}$/;
+
+// Billing contact type
+interface BillingContact {
+  id: string;
+  name: string;
+  phone: string;
+  email: string;
+}
 
 const facilitySchema = z.object({
   name: z.string().min(1, 'Facility name is required'),
@@ -43,9 +54,6 @@ const facilitySchema = z.object({
   physical_state: z.string().min(1, 'State is required'),
   physical_zip: z.string().min(1, 'Zip is required'),
   timezone: z.string().optional().nullable(),
-  admin_contact_name: z.string().optional(),
-  admin_contact_phone: z.string().optional(),
-  admin_contact_email: z.string().email('Valid email is required').optional().or(z.literal('')),
   rate_business_hours: z.coerce.number().min(0.01, 'Business rate is required'),
   rate_after_hours: z.coerce.number().min(0.01, 'After hours rate is required'),
   rate_mileage: z.coerce.number().optional(),
@@ -60,6 +68,8 @@ export default function NewFacility() {
   const navigate = useNavigate();
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const [billingContacts, setBillingContacts] = useState<BillingContact[]>([]);
+  const [contactErrors, setContactErrors] = useState<Record<string, { phone?: string; email?: string }>>({});
 
   const form = useForm<FormData>({
     resolver: zodResolver(facilitySchema),
@@ -71,6 +81,76 @@ export default function NewFacility() {
       contractor: false,
     },
   });
+
+  const addBillingContact = () => {
+    setBillingContacts([
+      ...billingContacts,
+      { id: crypto.randomUUID(), name: '', phone: '', email: '' }
+    ]);
+  };
+
+  const removeBillingContact = (id: string) => {
+    setBillingContacts(billingContacts.filter(c => c.id !== id));
+    setContactErrors(prev => {
+      const newErrors = { ...prev };
+      delete newErrors[id];
+      return newErrors;
+    });
+  };
+
+  const updateBillingContact = (id: string, field: keyof Omit<BillingContact, 'id'>, value: string) => {
+    setBillingContacts(billingContacts.map(c => 
+      c.id === id ? { ...c, [field]: value } : c
+    ));
+
+    // Validate on change
+    if (field === 'phone' && value) {
+      if (!phoneRegex.test(value)) {
+        setContactErrors(prev => ({
+          ...prev,
+          [id]: { ...prev[id], phone: 'Please enter a valid phone number' }
+        }));
+      } else {
+        setContactErrors(prev => ({
+          ...prev,
+          [id]: { ...prev[id], phone: undefined }
+        }));
+      }
+    }
+
+    if (field === 'email' && value) {
+      if (!z.string().email().safeParse(value).success) {
+        setContactErrors(prev => ({
+          ...prev,
+          [id]: { ...prev[id], email: 'Please enter a valid email address' }
+        }));
+      } else {
+        setContactErrors(prev => ({
+          ...prev,
+          [id]: { ...prev[id], email: undefined }
+        }));
+      }
+    }
+  };
+
+  const validateContacts = (): boolean => {
+    let valid = true;
+    const newErrors: Record<string, { phone?: string; email?: string }> = {};
+
+    billingContacts.forEach(contact => {
+      if (contact.phone && !phoneRegex.test(contact.phone)) {
+        newErrors[contact.id] = { ...newErrors[contact.id], phone: 'Please enter a valid phone number' };
+        valid = false;
+      }
+      if (contact.email && !z.string().email().safeParse(contact.email).success) {
+        newErrors[contact.id] = { ...newErrors[contact.id], email: 'Please enter a valid email address' };
+        valid = false;
+      }
+    });
+
+    setContactErrors(newErrors);
+    return valid;
+  };
 
   const watchedPhysicalState = form.watch('physical_state');
   const detectedTimezone = getTimezoneFromState(watchedPhysicalState);
@@ -96,6 +176,9 @@ export default function NewFacility() {
 
   const mutation = useMutation({
     mutationFn: async (data: FormData) => {
+      // Get primary billing contact (first one) for the main admin fields
+      const primaryContact = billingContacts[0];
+
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const payload: any = {
         name: data.name,
@@ -109,9 +192,9 @@ export default function NewFacility() {
         physical_state: data.physical_state || null,
         physical_zip: data.physical_zip || null,
         timezone: data.timezone || null,
-        admin_contact_name: data.admin_contact_name || null,
-        admin_contact_phone: data.admin_contact_phone || null,
-        admin_contact_email: data.admin_contact_email || null,
+        admin_contact_name: primaryContact?.name || null,
+        admin_contact_phone: primaryContact?.phone || null,
+        admin_contact_email: primaryContact?.email || null,
         status: 'pending',
         rate_business_hours: data.rate_business_hours || null,
         rate_after_hours: data.rate_after_hours || null,
@@ -142,6 +225,10 @@ export default function NewFacility() {
   });
 
   const onSubmit = (data: FormData) => {
+    if (!validateContacts()) {
+      toast({ title: 'Please fix validation errors', variant: 'destructive' });
+      return;
+    }
     mutation.mutate(data);
   };
 
@@ -223,29 +310,82 @@ export default function NewFacility() {
           </CardContent>
         </Card>
 
-        {/* Admin Contact */}
+        {/* Billing Contacts */}
         <Card>
           <CardHeader className="pb-4">
-            <CardTitle className="text-lg">Admin Contact</CardTitle>
+            <div className="flex items-center justify-between">
+              <CardTitle className="text-lg">Billing Contacts</CardTitle>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={addBillingContact}
+                className="h-8"
+              >
+                <Plus className="h-3 w-3 mr-1" />
+                Add Billing Contact
+              </Button>
+            </div>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div className="grid grid-cols-3 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="admin_contact_name">Name</Label>
-                <Input id="admin_contact_name" {...form.register('admin_contact_name')} />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="admin_contact_phone">Phone</Label>
-                <Input id="admin_contact_phone" {...form.register('admin_contact_phone')} />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="admin_contact_email">Email</Label>
-                <Input id="admin_contact_email" type="email" {...form.register('admin_contact_email')} />
-                {form.formState.errors.admin_contact_email && (
-                  <p className="text-sm text-destructive">{form.formState.errors.admin_contact_email.message}</p>
-                )}
-              </div>
-            </div>
+            {billingContacts.length === 0 ? (
+              <p className="text-sm text-muted-foreground">No billing contacts added yet. Click "Add Billing Contact" to add one.</p>
+            ) : (
+              billingContacts.map((contact, index) => (
+                <div key={contact.id} className="space-y-3">
+                  {index > 0 && <div className="border-t pt-4" />}
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm font-medium text-muted-foreground">
+                      {index === 0 ? 'Primary Contact' : `Contact ${index + 1}`}
+                    </span>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => removeBillingContact(contact.id)}
+                      className="h-7 w-7 p-0 text-muted-foreground hover:text-destructive"
+                    >
+                      <X className="h-4 w-4" />
+                    </Button>
+                  </div>
+                  <div className="grid grid-cols-3 gap-4">
+                    <div className="space-y-2">
+                      <Label>Name</Label>
+                      <Input
+                        value={contact.name}
+                        onChange={(e) => updateBillingContact(contact.id, 'name', e.target.value)}
+                        placeholder="Contact name"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Phone</Label>
+                      <Input
+                        value={contact.phone}
+                        onChange={(e) => updateBillingContact(contact.id, 'phone', e.target.value)}
+                        placeholder="(555) 123-4567"
+                        className={contactErrors[contact.id]?.phone ? 'border-destructive' : ''}
+                      />
+                      {contactErrors[contact.id]?.phone && (
+                        <p className="text-sm text-destructive">{contactErrors[contact.id].phone}</p>
+                      )}
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Email</Label>
+                      <Input
+                        type="email"
+                        value={contact.email}
+                        onChange={(e) => updateBillingContact(contact.id, 'email', e.target.value)}
+                        placeholder="email@example.com"
+                        className={contactErrors[contact.id]?.email ? 'border-destructive' : ''}
+                      />
+                      {contactErrors[contact.id]?.email && (
+                        <p className="text-sm text-destructive">{contactErrors[contact.id].email}</p>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              ))
+            )}
           </CardContent>
         </Card>
 

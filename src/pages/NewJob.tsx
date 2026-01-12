@@ -18,7 +18,7 @@ import {
   type FacilityOption,
 } from '@/components/jobs/fields';
 import { jobBaseSchema, type JobBaseFormData } from '@/lib/schemas/job.schema';
-import { HoursSplit } from '@/lib/utils/job-calculations';
+import { HoursSplit, toSafeNumber } from '@/lib/utils/job-calculations';
 
 export default function NewJob() {
   const navigate = useNavigate();
@@ -61,8 +61,8 @@ export default function NewJob() {
     const afterHoursTotal = hoursSplit.afterHours * afterHoursRate;
     const hoursSubtotal = businessTotal + afterHoursTotal;
     
-    const emergencyFee = watchedEmergencyFee || 0;
-    const holidayFee = watchedHolidayFee || 0;
+    const emergencyFee = toSafeNumber(watchedEmergencyFee);
+    const holidayFee = toSafeNumber(watchedHolidayFee);
     const feesTotal = emergencyFee + holidayFee;
 
     return {

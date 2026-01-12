@@ -129,7 +129,9 @@ export default function JobDetail() {
       job_date: format(new Date(), 'yyyy-MM-dd'),
       start_time: '09:00',
       end_time: '10:00',
+      opportunity_source: null,
     },
+    mode: 'onChange',
   });
 
   const blocker = useUnsavedChangesWarning({ isDirty: form.formState.isDirty });

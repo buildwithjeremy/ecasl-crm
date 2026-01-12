@@ -56,7 +56,7 @@ export function FacilityCoreFields({
           <div className="space-y-2">
             <Label htmlFor="facility_type">Facility Type</Label>
             <Select
-              value={form.watch('facility_type') || ''}
+              value={form.watch('facility_type') ?? undefined}
               onValueChange={(value) => form.setValue('facility_type', value || null, { shouldDirty: true })}
               disabled={disabled}
             >

@@ -77,6 +77,7 @@ export default function FacilityDetail() {
       is_gsa: false,
       contractor: false,
     },
+    mode: 'onChange',
   });
 
   // Unsaved changes warning
@@ -94,7 +95,7 @@ export default function FacilityDetail() {
     if (facility) {
       form.reset({
         name: facility.name,
-        facility_type: facility.facility_type || null,
+        facility_type: facility.facility_type ?? null,
         billing_address: facility.billing_address ?? '',
         billing_city: facility.billing_city ?? '',
         billing_state: facility.billing_state ?? '',
@@ -103,7 +104,7 @@ export default function FacilityDetail() {
         physical_city: facility.physical_city ?? '',
         physical_state: facility.physical_state ?? '',
         physical_zip: facility.physical_zip ?? '',
-        timezone: facility.timezone ?? null,
+        timezone: facility.timezone ?? '',
         admin_contact_name: facility.admin_contact_name ?? '',
         admin_contact_phone: facility.admin_contact_phone ?? '',
         admin_contact_email: facility.admin_contact_email ?? '',

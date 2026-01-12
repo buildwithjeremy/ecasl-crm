@@ -180,7 +180,7 @@ export function JobCoreFields({
           <div className="space-y-2">
             <Label htmlFor="opportunity_source">Job Source</Label>
             <Select
-              value={form.watch('opportunity_source') || ''}
+              value={form.watch('opportunity_source') ?? undefined}
               onValueChange={(value) => form.setValue('opportunity_source', value || null, { shouldDirty: true })}
               disabled={disabled}
             >

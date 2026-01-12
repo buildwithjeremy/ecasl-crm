@@ -23,7 +23,7 @@ export const facilityBaseSchema = z.object({
   name: z.string().min(1, 'Facility name is required'),
   
   // Type & flags
-  facility_type: z.enum(['hospital', 'clinic', 'school', 'government', 'business', 'other']).optional(),
+  facility_type: z.enum(['hospital', 'clinic', 'school', 'government', 'business', 'other']).nullable().optional(),
   is_gsa: z.boolean().optional(),
   contractor: z.boolean().optional(),
   
@@ -97,7 +97,7 @@ export type FacilityFullFormData = z.infer<typeof facilityFullSchema>;
 
 export const getFacilityBaseDefaults = (): Partial<FacilityBaseFormData> => ({
   name: '',
-  facility_type: undefined,
+  facility_type: null,
   is_gsa: false,
   contractor: false,
 });

@@ -58,7 +58,7 @@ export function InterpreterPaymentFields({
           <div className="space-y-2">
             <Label htmlFor="payment_method">Payment Method{requiredLabel}</Label>
             <Select
-              value={form.watch('payment_method') || ''}
+              value={form.watch('payment_method') ?? undefined}
               onValueChange={(value) => form.setValue('payment_method', value || null, { shouldDirty: true })}
               disabled={disabled}
             >

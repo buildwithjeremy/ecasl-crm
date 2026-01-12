@@ -152,6 +152,9 @@ function generateDurationOptions(): { value: number; label: string }[] {
 
 const DURATION_OPTIONS = generateDurationOptions();
 
+// Phone validation regex - allows formats like (123) 456-7890, 123-456-7890, 1234567890
+const phoneRegex = /^(\+?1[-.\s]?)?(\(?\d{3}\)?[-.\s]?)?\d{3}[-.\s]?\d{4}$/;
+
 const jobSchema = z.object({
   facility_id: z.string().min(1, 'Facility is required'),
   deaf_client_name: z.string().optional(),
@@ -168,8 +171,23 @@ const jobSchema = z.object({
   internal_notes: z.string().optional(),
   client_business_name: z.string().optional(),
   client_contact_name: z.string().optional(),
-  client_contact_phone: z.string().optional(),
-  client_contact_email: z.string().optional(),
+  client_contact_phone: z.string().optional().refine(
+    (val) => !val || phoneRegex.test(val),
+    { message: 'Please enter a valid phone number' }
+  ),
+  client_contact_email: z.string().optional().refine(
+    (val) => !val || z.string().email().safeParse(val).success,
+    { message: 'Please enter a valid email address' }
+  ),
+  admin_contact_name: z.string().optional(),
+  admin_contact_phone: z.string().optional().refine(
+    (val) => !val || phoneRegex.test(val),
+    { message: 'Please enter a valid phone number' }
+  ),
+  admin_contact_email: z.string().optional().refine(
+    (val) => !val || z.string().email().safeParse(val).success,
+    { message: 'Please enter a valid email address' }
+  ),
   emergency_fee: z.coerce.number().optional(),
   holiday_fee: z.coerce.number().optional(),
 }).refine((data) => {
@@ -590,15 +608,32 @@ export default function NewJob() {
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                   <div className="space-y-2">
                     <Label htmlFor="admin_contact_name">Contact Name</Label>
-                    <Input id="admin_contact_name" placeholder="Name" />
+                    <Input id="admin_contact_name" placeholder="Name" {...form.register('admin_contact_name')} />
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="admin_contact_email">Email</Label>
-                    <Input id="admin_contact_email" type="email" placeholder="Email" />
+                    <Input 
+                      id="admin_contact_email" 
+                      type="email" 
+                      placeholder="Email" 
+                      className={cn(form.formState.errors.admin_contact_email && "border-destructive")}
+                      {...form.register('admin_contact_email')} 
+                    />
+                    {form.formState.errors.admin_contact_email && (
+                      <p className="text-sm text-destructive">{form.formState.errors.admin_contact_email.message}</p>
+                    )}
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="admin_contact_phone">Phone</Label>
-                    <Input id="admin_contact_phone" placeholder="Phone" />
+                    <Input 
+                      id="admin_contact_phone" 
+                      placeholder="Phone" 
+                      className={cn(form.formState.errors.admin_contact_phone && "border-destructive")}
+                      {...form.register('admin_contact_phone')} 
+                    />
+                    {form.formState.errors.admin_contact_phone && (
+                      <p className="text-sm text-destructive">{form.formState.errors.admin_contact_phone.message}</p>
+                    )}
                   </div>
                 </div>
               </div>
@@ -875,11 +910,26 @@ export default function NewJob() {
                           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                             <div className="space-y-2">
                               <Label htmlFor="client_contact_phone">Phone</Label>
-                              <Input id="client_contact_phone" {...form.register('client_contact_phone')} />
+                              <Input 
+                                id="client_contact_phone" 
+                                className={cn(form.formState.errors.client_contact_phone && "border-destructive")}
+                                {...form.register('client_contact_phone')} 
+                              />
+                              {form.formState.errors.client_contact_phone && (
+                                <p className="text-sm text-destructive">{form.formState.errors.client_contact_phone.message}</p>
+                              )}
                             </div>
                             <div className="space-y-2">
                               <Label htmlFor="client_contact_email">Email</Label>
-                              <Input id="client_contact_email" type="email" {...form.register('client_contact_email')} />
+                              <Input 
+                                id="client_contact_email" 
+                                type="email" 
+                                className={cn(form.formState.errors.client_contact_email && "border-destructive")}
+                                {...form.register('client_contact_email')} 
+                              />
+                              {form.formState.errors.client_contact_email && (
+                                <p className="text-sm text-destructive">{form.formState.errors.client_contact_email.message}</p>
+                              )}
                             </div>
                           </div>
                         </>
@@ -1037,11 +1087,26 @@ export default function NewJob() {
                           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                             <div className="space-y-2">
                               <Label htmlFor="client_contact_phone">Phone</Label>
-                              <Input id="client_contact_phone" {...form.register('client_contact_phone')} />
+                              <Input 
+                                id="client_contact_phone" 
+                                className={cn(form.formState.errors.client_contact_phone && "border-destructive")}
+                                {...form.register('client_contact_phone')} 
+                              />
+                              {form.formState.errors.client_contact_phone && (
+                                <p className="text-sm text-destructive">{form.formState.errors.client_contact_phone.message}</p>
+                              )}
                             </div>
                             <div className="space-y-2">
                               <Label htmlFor="client_contact_email">Email</Label>
-                              <Input id="client_contact_email" type="email" {...form.register('client_contact_email')} />
+                              <Input 
+                                id="client_contact_email" 
+                                type="email" 
+                                className={cn(form.formState.errors.client_contact_email && "border-destructive")}
+                                {...form.register('client_contact_email')} 
+                              />
+                              {form.formState.errors.client_contact_email && (
+                                <p className="text-sm text-destructive">{form.formState.errors.client_contact_email.message}</p>
+                              )}
                             </div>
                           </div>
                         </>

@@ -24,6 +24,7 @@ import {
   type FacilityOption,
 } from '@/components/jobs/fields';
 import { HoursSplit, calculateBillableTotal } from '@/lib/utils/job-calculations';
+import { normalizeTimeToHHMM } from '@/lib/utils/time-helpers';
 import type { Tables } from '@/integrations/supabase/types';
 
 type Job = Tables<'jobs'>;
@@ -85,11 +86,45 @@ type FormData = z.infer<typeof formSchema>;
 // Constants
 // ==========================================
 
-// Helper to normalize time from "HH:MM:SS" to "HH:MM" for Select compatibility
-const normalizeTime = (time: string | null): string => {
-  if (!time) return '';
-  return time.slice(0, 5); // "16:15:00" → "16:15"
-};
+// Helper to convert a job record to form values with proper normalization
+const jobToFormValues = (job: Job): FormData => ({
+  facility_id: job.facility_id,
+  interpreter_id: job.interpreter_id ?? '',
+  potential_interpreter_ids: job.potential_interpreter_ids ?? [],
+  deaf_client_name: job.deaf_client_name ?? '',
+  job_date: job.job_date,
+  start_time: normalizeTimeToHHMM(job.start_time),
+  end_time: normalizeTimeToHHMM(job.end_time),
+  location_type: job.location_type ?? 'in_person',
+  location_address: job.location_address ?? '',
+  location_city: job.location_city ?? '',
+  location_state: job.location_state ?? '',
+  location_zip: job.location_zip ?? '',
+  video_call_link: job.video_call_link ?? '',
+  status: job.status ?? 'new',
+  opportunity_source: job.opportunity_source ?? null,
+  billable_hours: job.billable_hours ?? 0,
+  mileage: job.mileage ?? 0,
+  parking: job.parking ?? 0,
+  tolls: job.tolls ?? 0,
+  misc_fee: job.misc_fee ?? 0,
+  travel_time_hours: job.travel_time_hours ?? 0,
+  facility_rate_business: job.facility_rate_business ?? 0,
+  facility_rate_after_hours: job.facility_rate_after_hours ?? 0,
+  facility_rate_mileage: job.facility_rate_mileage ?? 0,
+  facility_rate_adjustment: job.facility_rate_adjustment ?? 0,
+  interpreter_rate_business: job.interpreter_rate_business ?? 0,
+  interpreter_rate_after_hours: job.interpreter_rate_after_hours ?? 0,
+  interpreter_rate_mileage: job.interpreter_rate_mileage ?? 0,
+  interpreter_rate_adjustment: job.interpreter_rate_adjustment ?? 0,
+  emergency_fee_applied: job.emergency_fee_applied ?? false,
+  holiday_fee_applied: job.holiday_fee_applied ?? false,
+  internal_notes: job.internal_notes ?? '',
+  client_business_name: job.client_business_name ?? '',
+  client_contact_name: job.client_contact_name ?? '',
+  client_contact_phone: job.client_contact_phone ?? '',
+  client_contact_email: job.client_contact_email ?? '',
+});
 
 const statusLabels: Record<string, string> = {
   new: 'New',
@@ -286,44 +321,7 @@ export default function JobDetail() {
   // Populate form when job loads
   useEffect(() => {
     if (job) {
-      form.reset({
-        facility_id: job.facility_id,
-        interpreter_id: job.interpreter_id ?? '',
-        potential_interpreter_ids: job.potential_interpreter_ids ?? [],
-        deaf_client_name: job.deaf_client_name ?? '',
-        job_date: job.job_date,
-        start_time: normalizeTime(job.start_time),
-        end_time: normalizeTime(job.end_time),
-        location_type: job.location_type ?? 'in_person',
-        location_address: job.location_address ?? '',
-        location_city: job.location_city ?? '',
-        location_state: job.location_state ?? '',
-        location_zip: job.location_zip ?? '',
-        video_call_link: job.video_call_link ?? '',
-        status: job.status ?? 'new',
-        opportunity_source: job.opportunity_source ?? null,
-        billable_hours: job.billable_hours ?? 0,
-        mileage: job.mileage ?? 0,
-        parking: job.parking ?? 0,
-        tolls: job.tolls ?? 0,
-        misc_fee: job.misc_fee ?? 0,
-        travel_time_hours: job.travel_time_hours ?? 0,
-        facility_rate_business: job.facility_rate_business ?? 0,
-        facility_rate_after_hours: job.facility_rate_after_hours ?? 0,
-        facility_rate_mileage: job.facility_rate_mileage ?? 0,
-        facility_rate_adjustment: job.facility_rate_adjustment ?? 0,
-        interpreter_rate_business: job.interpreter_rate_business ?? 0,
-        interpreter_rate_after_hours: job.interpreter_rate_after_hours ?? 0,
-        interpreter_rate_mileage: job.interpreter_rate_mileage ?? 0,
-        interpreter_rate_adjustment: job.interpreter_rate_adjustment ?? 0,
-        emergency_fee_applied: job.emergency_fee_applied ?? false,
-        holiday_fee_applied: job.holiday_fee_applied ?? false,
-        internal_notes: job.internal_notes ?? '',
-        client_business_name: job.client_business_name ?? '',
-        client_contact_name: job.client_contact_name ?? '',
-        client_contact_phone: job.client_contact_phone ?? '',
-        client_contact_email: job.client_contact_email ?? '',
-      }, { keepDefaultValues: false });
+      form.reset(jobToFormValues(job), { keepDefaultValues: false });
     }
   }, [job, form]);
 
@@ -400,7 +398,7 @@ export default function JobDetail() {
 
   const mutation = useMutation({
     mutationFn: async (data: FormData) => {
-      if (!selectedJobId) return;
+      if (!selectedJobId) return null;
       
       const totals = buildTotalsPayload(data, hoursSplit, job);
       
@@ -419,19 +417,19 @@ export default function JobDetail() {
         video_call_link: data.video_call_link || null,
         status: data.status,
         opportunity_source: data.opportunity_source || null,
-        billable_hours: data.billable_hours || null,
-        mileage: data.mileage || null,
-        parking: data.parking || null,
-        tolls: data.tolls || null,
-        misc_fee: data.misc_fee || null,
-        travel_time_hours: data.travel_time_hours || null,
-        facility_rate_business: data.facility_rate_business || null,
-        facility_rate_after_hours: data.facility_rate_after_hours || null,
-        facility_rate_mileage: data.facility_rate_mileage || null,
+        billable_hours: data.billable_hours ?? null,
+        mileage: data.mileage ?? null,
+        parking: data.parking ?? null,
+        tolls: data.tolls ?? null,
+        misc_fee: data.misc_fee ?? null,
+        travel_time_hours: data.travel_time_hours ?? null,
+        facility_rate_business: data.facility_rate_business ?? null,
+        facility_rate_after_hours: data.facility_rate_after_hours ?? null,
+        facility_rate_mileage: data.facility_rate_mileage ?? null,
         facility_rate_adjustment: data.facility_rate_adjustment ?? 0,
-        interpreter_rate_business: data.interpreter_rate_business || null,
-        interpreter_rate_after_hours: data.interpreter_rate_after_hours || null,
-        interpreter_rate_mileage: data.interpreter_rate_mileage || null,
+        interpreter_rate_business: data.interpreter_rate_business ?? null,
+        interpreter_rate_after_hours: data.interpreter_rate_after_hours ?? null,
+        interpreter_rate_mileage: data.interpreter_rate_mileage ?? null,
         interpreter_rate_adjustment: data.interpreter_rate_adjustment ?? 0,
         emergency_fee_applied: data.emergency_fee_applied || false,
         holiday_fee_applied: data.holiday_fee_applied || false,
@@ -444,15 +442,23 @@ export default function JobDetail() {
         ...totals,
       };
 
-      const { error } = await supabase
+      // Use select().single() to get the authoritative DB row back after save
+      const { data: savedJob, error } = await supabase
         .from('jobs')
         .update(payload as never)
-        .eq('id', selectedJobId);
+        .eq('id', selectedJobId)
+        .select('*')
+        .single();
       if (error) throw error;
+      return savedJob as Job;
     },
-    onSuccess: () => {
+    onSuccess: (savedJob) => {
       queryClient.invalidateQueries({ queryKey: ['job', selectedJobId] });
       queryClient.invalidateQueries({ queryKey: ['jobs'] });
+      // Reset form from the authoritative DB response to ensure UI matches DB
+      if (savedJob) {
+        form.reset(jobToFormValues(savedJob), { keepDefaultValues: false });
+      }
       toast({ title: 'Job updated successfully' });
     },
     onError: (error) => {
@@ -482,19 +488,19 @@ export default function JobDetail() {
         video_call_link: data.video_call_link || null,
         status: 'outreach_in_progress',
         opportunity_source: data.opportunity_source || null,
-        billable_hours: data.billable_hours || null,
-        mileage: data.mileage || null,
-        parking: data.parking || null,
-        tolls: data.tolls || null,
-        misc_fee: data.misc_fee || null,
-        travel_time_hours: data.travel_time_hours || null,
-        facility_rate_business: data.facility_rate_business || null,
-        facility_rate_after_hours: data.facility_rate_after_hours || null,
-        facility_rate_mileage: data.facility_rate_mileage || null,
+        billable_hours: data.billable_hours ?? null,
+        mileage: data.mileage ?? null,
+        parking: data.parking ?? null,
+        tolls: data.tolls ?? null,
+        misc_fee: data.misc_fee ?? null,
+        travel_time_hours: data.travel_time_hours ?? null,
+        facility_rate_business: data.facility_rate_business ?? null,
+        facility_rate_after_hours: data.facility_rate_after_hours ?? null,
+        facility_rate_mileage: data.facility_rate_mileage ?? null,
         facility_rate_adjustment: data.facility_rate_adjustment ?? 0,
-        interpreter_rate_business: data.interpreter_rate_business || null,
-        interpreter_rate_after_hours: data.interpreter_rate_after_hours || null,
-        interpreter_rate_mileage: data.interpreter_rate_mileage || null,
+        interpreter_rate_business: data.interpreter_rate_business ?? null,
+        interpreter_rate_after_hours: data.interpreter_rate_after_hours ?? null,
+        interpreter_rate_mileage: data.interpreter_rate_mileage ?? null,
         interpreter_rate_adjustment: data.interpreter_rate_adjustment ?? 0,
         emergency_fee_applied: data.emergency_fee_applied || false,
         holiday_fee_applied: data.holiday_fee_applied || false,
@@ -507,15 +513,21 @@ export default function JobDetail() {
         ...totals,
       };
 
-      const { error } = await supabase
+      const { data: savedJob, error } = await supabase
         .from('jobs')
         .update(payload as never)
-        .eq('id', selectedJobId);
+        .eq('id', selectedJobId)
+        .select('*')
+        .single();
       if (error) throw error;
+      return savedJob as Job;
     },
-    onSuccess: () => {
+    onSuccess: (savedJob) => {
       queryClient.invalidateQueries({ queryKey: ['job', selectedJobId] });
       queryClient.invalidateQueries({ queryKey: ['jobs'] });
+      if (savedJob) {
+        form.reset(jobToFormValues(savedJob), { keepDefaultValues: false });
+      }
       toast({
         title: 'Outreach Sent',
         description: 'Job saved and status updated to Outreach In Progress.',
@@ -563,18 +575,18 @@ export default function JobDetail() {
         status: 'confirmed',
         opportunity_source: data.opportunity_source || null,
         billable_hours: newBillableHours,
-        mileage: data.mileage || null,
-        parking: data.parking || null,
-        tolls: data.tolls || null,
-        misc_fee: data.misc_fee || null,
-        travel_time_hours: data.travel_time_hours || null,
-        facility_rate_business: data.facility_rate_business || null,
-        facility_rate_after_hours: data.facility_rate_after_hours || null,
-        facility_rate_mileage: data.facility_rate_mileage || null,
+        mileage: data.mileage ?? null,
+        parking: data.parking ?? null,
+        tolls: data.tolls ?? null,
+        misc_fee: data.misc_fee ?? null,
+        travel_time_hours: data.travel_time_hours ?? null,
+        facility_rate_business: data.facility_rate_business ?? null,
+        facility_rate_after_hours: data.facility_rate_after_hours ?? null,
+        facility_rate_mileage: data.facility_rate_mileage ?? null,
         facility_rate_adjustment: data.facility_rate_adjustment ?? 0,
-        interpreter_rate_business: data.interpreter_rate_business || null,
-        interpreter_rate_after_hours: data.interpreter_rate_after_hours || null,
-        interpreter_rate_mileage: data.interpreter_rate_mileage || null,
+        interpreter_rate_business: data.interpreter_rate_business ?? null,
+        interpreter_rate_after_hours: data.interpreter_rate_after_hours ?? null,
+        interpreter_rate_mileage: data.interpreter_rate_mileage ?? null,
         interpreter_rate_adjustment: data.interpreter_rate_adjustment ?? 0,
         emergency_fee_applied: data.emergency_fee_applied || false,
         holiday_fee_applied: data.holiday_fee_applied || false,
@@ -587,19 +599,22 @@ export default function JobDetail() {
         ...totals,
       };
       
-      const { error } = await supabase
+      const { data: savedJob, error } = await supabase
         .from('jobs')
         .update(payload as never)
-        .eq('id', selectedJobId);
+        .eq('id', selectedJobId)
+        .select('*')
+        .single();
       if (error) throw error;
       
-      return newBillableHours;
+      return savedJob as Job;
     },
-    onSuccess: (newBillableHours) => {
+    onSuccess: (savedJob) => {
       queryClient.invalidateQueries({ queryKey: ['job', selectedJobId] });
       queryClient.invalidateQueries({ queryKey: ['jobs'] });
-      const currentValues = form.getValues();
-      form.reset({ ...currentValues, status: 'confirmed' as const, billable_hours: newBillableHours });
+      if (savedJob) {
+        form.reset(jobToFormValues(savedJob), { keepDefaultValues: false });
+      }
       toast({
         title: 'Interpreter Confirmed',
         description: 'Job saved and status updated to Confirmed.',

@@ -75,7 +75,6 @@ const interpreterSchema = z.object({
   other_certifications: z.string().optional(),
   rate_business_hours: z.coerce.number().optional(),
   rate_after_hours: z.coerce.number().optional(),
-  rate_mileage: z.coerce.number().optional(),
   minimum_hours: z.coerce.number().optional().default(2),
   eligible_emergency_fee: z.boolean().optional().default(false),
   eligible_holiday_fee: z.boolean().optional().default(false),
@@ -176,7 +175,6 @@ export default function InterpreterDetail() {
         other_certifications: interpreter.other_certifications ?? '',
         rate_business_hours: interpreter.rate_business_hours ?? undefined,
         rate_after_hours: interpreter.rate_after_hours ?? undefined,
-        rate_mileage: interpreter.rate_mileage ?? undefined,
         minimum_hours: interpreter.minimum_hours ?? 2,
         eligible_emergency_fee: interpreter.eligible_emergency_fee ?? false,
         eligible_holiday_fee: interpreter.eligible_holiday_fee ?? false,
@@ -210,7 +208,6 @@ export default function InterpreterDetail() {
         other_certifications: data.other_certifications || null,
         rate_business_hours: data.rate_business_hours || null,
         rate_after_hours: data.rate_after_hours || null,
-        rate_mileage: data.rate_mileage || null,
         minimum_hours: data.minimum_hours ?? 2,
         eligible_emergency_fee: data.eligible_emergency_fee ?? false,
         eligible_holiday_fee: data.eligible_holiday_fee ?? false,
@@ -511,11 +508,8 @@ export default function InterpreterDetail() {
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label htmlFor="rate_mileage">Mileage Rate</Label>
-                  <div className="relative">
-                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">$</span>
-                    <Input id="rate_mileage" type="number" step="0.01" className="pl-7" {...form.register('rate_mileage')} />
-                  </div>
+                  <Label htmlFor="minimum_hours">Minimum Hours</Label>
+                  <Input id="minimum_hours" type="number" step="0.5" {...form.register('minimum_hours')} />
                 </div>
                 <div className="space-y-2">
                   <Label>Insurance End Date</Label>

@@ -129,7 +129,6 @@ export type Database = {
           physical_zip: string | null
           rate_after_hours: number | null
           rate_business_hours: number | null
-          rate_mileage: number | null
           signed_contract_pdf_url: string | null
           status: Database["public"]["Enums"]["facility_status"] | null
           timezone: string | null
@@ -166,7 +165,6 @@ export type Database = {
           physical_zip?: string | null
           rate_after_hours?: number | null
           rate_business_hours?: number | null
-          rate_mileage?: number | null
           signed_contract_pdf_url?: string | null
           status?: Database["public"]["Enums"]["facility_status"] | null
           timezone?: string | null
@@ -203,7 +201,6 @@ export type Database = {
           physical_zip?: string | null
           rate_after_hours?: number | null
           rate_business_hours?: number | null
-          rate_mileage?: number | null
           signed_contract_pdf_url?: string | null
           status?: Database["public"]["Enums"]["facility_status"] | null
           timezone?: string | null
@@ -310,7 +307,6 @@ export type Database = {
           phone: string | null
           rate_after_hours: number | null
           rate_business_hours: number | null
-          rate_mileage: number | null
           rid_certified: boolean | null
           signed_contract_pdf_url: string | null
           state: string | null
@@ -346,7 +342,6 @@ export type Database = {
           phone?: string | null
           rate_after_hours?: number | null
           rate_business_hours?: number | null
-          rate_mileage?: number | null
           rid_certified?: boolean | null
           signed_contract_pdf_url?: string | null
           state?: string | null
@@ -382,7 +377,6 @@ export type Database = {
           phone?: string | null
           rate_after_hours?: number | null
           rate_business_hours?: number | null
-          rate_mileage?: number | null
           rid_certified?: boolean | null
           signed_contract_pdf_url?: string | null
           state?: string | null
@@ -738,6 +732,33 @@ export type Database = {
           id?: string
           last_name?: string | null
           updated_at?: string | null
+        }
+        Relationships: []
+      }
+      settings: {
+        Row: {
+          created_at: string | null
+          description: string | null
+          id: string
+          key: string
+          updated_at: string | null
+          value: Json
+        }
+        Insert: {
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          key: string
+          updated_at?: string | null
+          value: Json
+        }
+        Update: {
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          key?: string
+          updated_at?: string | null
+          value?: Json
         }
         Relationships: []
       }

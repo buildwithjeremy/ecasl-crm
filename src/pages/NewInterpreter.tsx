@@ -49,7 +49,6 @@ const interpreterSchema = z.object({
   other_certifications: z.string().optional(),
   rate_business_hours: z.coerce.number().min(0.01, 'Business hours rate is required'),
   rate_after_hours: z.coerce.number().min(0.01, 'After hours rate is required'),
-  rate_mileage: z.coerce.number().optional(),
   payment_method: z.enum(['zelle', 'check'], { required_error: 'Payment method is required' }),
   payment_details: z.string().optional(),
   w9_received: z.boolean(),
@@ -73,7 +72,6 @@ export default function NewInterpreter() {
       phone: '',
       rid_certified: false,
       nic_certified: false,
-      rate_mileage: 0.7,
       w9_received: false,
       insurance_end_date: null,
     },
@@ -96,7 +94,6 @@ export default function NewInterpreter() {
         other_certifications: data.other_certifications || null,
         rate_business_hours: data.rate_business_hours || null,
         rate_after_hours: data.rate_after_hours || null,
-        rate_mileage: data.rate_mileage || null,
         minimum_hours: 2,
         eligible_emergency_fee: false,
         eligible_holiday_fee: false,
@@ -262,7 +259,7 @@ export default function NewInterpreter() {
             <CardTitle className="text-lg">Rates (What We Pay)</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div className="grid grid-cols-3 gap-4">
+            <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="rate_business_hours">Business Hours Rate *</Label>
                 <div className="relative">
@@ -282,13 +279,6 @@ export default function NewInterpreter() {
                 {form.formState.errors.rate_after_hours && (
                   <p className="text-sm text-destructive">{form.formState.errors.rate_after_hours.message}</p>
                 )}
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="rate_mileage">Mileage Rate</Label>
-                <div className="relative">
-                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">$</span>
-                  <Input id="rate_mileage" type="number" step="0.01" className="pl-7" {...form.register('rate_mileage')} />
-                </div>
               </div>
             </div>
           </CardContent>

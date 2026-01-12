@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
+import { useUnsavedChangesWarning, UnsavedChangesDialog } from '@/hooks/use-unsaved-changes-warning';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -148,6 +149,9 @@ export default function InterpreterDetail() {
       insurance_end_date: null,
     },
   });
+
+  // Unsaved changes warning
+  const blocker = useUnsavedChangesWarning({ isDirty: form.formState.isDirty });
 
   // Update URL when interpreter changes
   useEffect(() => {
@@ -603,6 +607,8 @@ export default function InterpreterDetail() {
           </CardContent>
         </Card>
       )}
+
+      <UnsavedChangesDialog blocker={blocker} />
     </div>
   );
 }

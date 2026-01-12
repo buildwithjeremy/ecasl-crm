@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useUnsavedChangesWarning, UnsavedChangesDialog } from '@/hooks/use-unsaved-changes-warning';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -79,6 +80,9 @@ export default function NewFacility() {
       contractor: false,
     },
   });
+
+  // Unsaved changes warning
+  const blocker = useUnsavedChangesWarning({ isDirty: form.formState.isDirty });
 
   const addBillingContact = () => {
     setBillingContacts([
@@ -543,6 +547,8 @@ export default function NewFacility() {
           </CardContent>
         </Card>
       </form>
+
+      <UnsavedChangesDialog blocker={blocker} />
     </div>
   );
 }

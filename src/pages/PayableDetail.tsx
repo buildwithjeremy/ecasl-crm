@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
+import { useUnsavedChangesWarning, UnsavedChangesDialog } from '@/hooks/use-unsaved-changes-warning';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -109,6 +110,9 @@ export default function PayableDetail() {
       notes: '',
     },
   });
+
+  // Unsaved changes warning
+  const blocker = useUnsavedChangesWarning({ isDirty: form.formState.isDirty });
 
   // Fetch all payables for search
   const { data: payables } = useQuery({
@@ -528,6 +532,8 @@ export default function PayableDetail() {
           </CardContent>
         </Card>
       )}
+
+      <UnsavedChangesDialog blocker={blocker} />
     </div>
   );
 }

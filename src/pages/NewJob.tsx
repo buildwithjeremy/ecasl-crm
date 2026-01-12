@@ -445,7 +445,16 @@ export default function NewJob() {
           <h1 className="text-xl font-bold text-foreground">New Job</h1>
 
           <div className="ml-auto">
-            <Button onClick={form.handleSubmit(onSubmit)} disabled={mutation.isPending}>
+            <Button 
+              onClick={form.handleSubmit(onSubmit, () => {
+                toast({
+                  title: "Validation Error",
+                  description: "Please fill in all required fields.",
+                  variant: "destructive",
+                });
+              })} 
+              disabled={mutation.isPending}
+            >
               {mutation.isPending ? 'Creating...' : 'Create Job'}
             </Button>
           </div>
@@ -474,7 +483,10 @@ export default function NewJob() {
                       variant="outline"
                       role="combobox"
                       aria-expanded={facilityOpen}
-                      className="w-full justify-between"
+                      className={cn(
+                        "w-full justify-between",
+                        form.formState.errors.facility_id && "border-destructive"
+                      )}
                     >
                       {selectedFacility ? (
                         <span className="flex items-center gap-2 truncate">
@@ -566,7 +578,8 @@ export default function NewJob() {
                       variant="outline"
                       className={cn(
                         'w-full justify-start text-left font-normal overflow-hidden',
-                        !watchedJobDate && 'text-muted-foreground'
+                        !watchedJobDate && 'text-muted-foreground',
+                        form.formState.errors.job_date && 'border-destructive'
                       )}
                     >
                       <CalendarIcon className="mr-2 h-4 w-4 shrink-0" />
@@ -602,7 +615,7 @@ export default function NewJob() {
                   value={watchedStartTime}
                   onValueChange={(value) => form.setValue('start_time', value)}
                 >
-                  <SelectTrigger>
+                  <SelectTrigger className={cn(form.formState.errors.start_time && "border-destructive")}>
                     <SelectValue placeholder="Select time" />
                   </SelectTrigger>
                   <SelectContent className="max-h-[300px]">
@@ -625,7 +638,7 @@ export default function NewJob() {
                   value={watchedEndTime}
                   onValueChange={(value) => form.setValue('end_time', value)}
                 >
-                  <SelectTrigger>
+                  <SelectTrigger className={cn(form.formState.errors.end_time && "border-destructive")}>
                     <SelectValue placeholder="Select time" />
                   </SelectTrigger>
                   <SelectContent className="max-h-[300px]">

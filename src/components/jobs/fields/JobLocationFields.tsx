@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import { UseFormReturn, Controller } from 'react-hook-form';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
@@ -45,39 +45,59 @@ export function JobLocationFields({
   const watchedFacilityId = form.watch('facility_id');
   const isContractor = selectedFacility?.contractor ?? false;
 
+  // Prevent auto-fill from marking form dirty on initial load / resets
+  const prevFacilityIdRef = useRef<string | null>(null);
+  const prevLocationTypeRef = useRef<string | null>(null);
+
   // Auto-fill location and client info when facility changes
   useEffect(() => {
-    if (watchedFacilityId && selectedFacility) {
-      if (!selectedFacility.contractor) {
-        // Non-contractor: auto-fill client info and location from facility
-        form.setValue('client_business_name', selectedFacility.name || '', { shouldDirty: true });
-        form.setValue('client_contact_name', selectedFacility.admin_contact_name || '', { shouldDirty: true });
-        form.setValue('client_contact_phone', selectedFacility.admin_contact_phone || '', { shouldDirty: true });
-        form.setValue('client_contact_email', selectedFacility.admin_contact_email || '', { shouldDirty: true });
+    if (!watchedFacilityId || !selectedFacility) return;
 
-        if (watchedLocationType === 'in_person') {
-          const address = selectedFacility.physical_address || selectedFacility.billing_address;
-          const city = selectedFacility.physical_city || selectedFacility.billing_city;
-          const state = selectedFacility.physical_state || selectedFacility.billing_state;
-          const zip = selectedFacility.physical_zip || selectedFacility.billing_zip;
+    const isInitial = prevFacilityIdRef.current === null;
+    const facilityChanged = !isInitial && watchedFacilityId !== prevFacilityIdRef.current;
+    const locationTypeChanged = !isInitial && watchedLocationType !== prevLocationTypeRef.current;
 
-          form.setValue('location_address', address || '', { shouldDirty: true });
-          form.setValue('location_city', city || '', { shouldDirty: true });
-          form.setValue('location_state', state || '', { shouldDirty: true });
-          form.setValue('location_zip', zip || '', { shouldDirty: true });
-        }
-      } else {
-        // Contractor: clear all client and location fields for manual entry
-        form.setValue('client_business_name', '', { shouldDirty: true });
-        form.setValue('client_contact_name', '', { shouldDirty: true });
-        form.setValue('client_contact_phone', '', { shouldDirty: true });
-        form.setValue('client_contact_email', '', { shouldDirty: true });
-        form.setValue('location_address', '', { shouldDirty: true });
-        form.setValue('location_city', '', { shouldDirty: true });
-        form.setValue('location_state', '', { shouldDirty: true });
-        form.setValue('location_zip', '', { shouldDirty: true });
+    const shouldDirty = facilityChanged || locationTypeChanged;
+
+    const setIfDifferent = (name: string, next: any) => {
+      const current = form.getValues(name);
+      if (current !== next) {
+        form.setValue(name as any, next, { shouldDirty });
       }
+    };
+
+    if (!selectedFacility.contractor) {
+      // Non-contractor: auto-fill client info and location from facility
+      setIfDifferent('client_business_name', selectedFacility.name || '');
+      setIfDifferent('client_contact_name', selectedFacility.admin_contact_name || '');
+      setIfDifferent('client_contact_phone', selectedFacility.admin_contact_phone || '');
+      setIfDifferent('client_contact_email', selectedFacility.admin_contact_email || '');
+
+      if (watchedLocationType === 'in_person') {
+        const address = selectedFacility.physical_address || selectedFacility.billing_address;
+        const city = selectedFacility.physical_city || selectedFacility.billing_city;
+        const state = selectedFacility.physical_state || selectedFacility.billing_state;
+        const zip = selectedFacility.physical_zip || selectedFacility.billing_zip;
+
+        setIfDifferent('location_address', address || '');
+        setIfDifferent('location_city', city || '');
+        setIfDifferent('location_state', state || '');
+        setIfDifferent('location_zip', zip || '');
+      }
+    } else {
+      // Contractor: clear all client and location fields for manual entry
+      setIfDifferent('client_business_name', '');
+      setIfDifferent('client_contact_name', '');
+      setIfDifferent('client_contact_phone', '');
+      setIfDifferent('client_contact_email', '');
+      setIfDifferent('location_address', '');
+      setIfDifferent('location_city', '');
+      setIfDifferent('location_state', '');
+      setIfDifferent('location_zip', '');
     }
+
+    prevFacilityIdRef.current = watchedFacilityId;
+    prevLocationTypeRef.current = watchedLocationType;
   }, [watchedFacilityId, watchedLocationType, selectedFacility, form]);
 
   return (

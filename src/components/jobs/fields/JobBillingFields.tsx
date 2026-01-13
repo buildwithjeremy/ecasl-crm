@@ -110,8 +110,8 @@ interface JobBillingFieldsProps {
   defaultMileageRate?: number;
   linkedInvoice?: LinkedRecord | null;
   linkedBill?: LinkedRecord | null;
-  onEditFacilityRates?: () => void;
-  onEditInterpreterRates?: () => void;
+  facilityId?: string;
+  interpreterId?: string | null;
   onGenerateBilling?: () => void;
   isGeneratingBilling?: boolean;
   canGenerateBilling?: boolean;
@@ -131,8 +131,8 @@ export function JobBillingFields({
   defaultMileageRate = 0.7,
   linkedInvoice,
   linkedBill,
-  onEditFacilityRates,
-  onEditInterpreterRates,
+  facilityId,
+  interpreterId,
   onGenerateBilling,
   isGeneratingBilling = false,
   canGenerateBilling = false,
@@ -285,7 +285,8 @@ export function JobBillingFields({
               { label: 'After Hours', value: watchedFacilityRateAfterHours, suffix: '/hr' },
               { label: 'Holiday', value: watchedFacilityRateHoliday, suffix: '/hr' },
             ]}
-            onEditClick={onEditFacilityRates}
+            linkTo={facilityId ? `/facilities/${facilityId}` : undefined}
+            linkLabel="View Facility"
             disabled={disabled}
           />
         </div>
@@ -300,7 +301,8 @@ export function JobBillingFields({
                 { label: 'After Hours', value: watchedInterpreterRateAfterHours, suffix: '/hr' },
                 { label: 'Holiday', value: watchedInterpreterRateHoliday, suffix: '/hr' },
               ]}
-              onEditClick={onEditInterpreterRates}
+              linkTo={interpreterId ? `/interpreters/${interpreterId}` : undefined}
+              linkLabel="View Interpreter"
               disabled={disabled}
             />
           </div>

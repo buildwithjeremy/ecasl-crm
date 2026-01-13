@@ -1,6 +1,7 @@
+import { Link } from 'react-router-dom';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Pencil } from 'lucide-react';
+import { ExternalLink } from 'lucide-react';
 
 export interface RateItem {
   label: string;
@@ -11,12 +12,12 @@ export interface RateItem {
 
 interface RateChipsProps {
   rates: RateItem[];
-  onEditClick: () => void;
+  linkTo?: string;
+  linkLabel?: string;
   disabled?: boolean;
-  showEdit?: boolean;
 }
 
-export function RateChips({ rates, onEditClick, disabled = false, showEdit = true }: RateChipsProps) {
+export function RateChips({ rates, linkTo, linkLabel = 'View', disabled = false }: RateChipsProps) {
   const formatValue = (rate: RateItem): string => {
     if (rate.format === 'number') {
       return `${rate.value}${rate.suffix || ''}`;
@@ -31,16 +32,18 @@ export function RateChips({ rates, onEditClick, disabled = false, showEdit = tru
     return (
       <div className="flex flex-wrap gap-2 items-center">
         <span className="text-sm text-muted-foreground">No rates set</span>
-        {showEdit && (
+        {linkTo && (
           <Button
             variant="ghost"
             size="sm"
-            onClick={onEditClick}
+            asChild
             disabled={disabled}
             className="h-7 px-2"
           >
-            <Pencil className="h-3 w-3 mr-1" />
-            Edit
+            <Link to={linkTo}>
+              <ExternalLink className="h-3 w-3 mr-1" />
+              {linkLabel}
+            </Link>
           </Button>
         )}
       </div>
@@ -54,16 +57,18 @@ export function RateChips({ rates, onEditClick, disabled = false, showEdit = tru
           {rate.label}: {formatValue(rate)}
         </Badge>
       ))}
-      {showEdit && (
+      {linkTo && (
         <Button
           variant="ghost"
           size="sm"
-          onClick={onEditClick}
+          asChild
           disabled={disabled}
           className="h-7 px-2"
         >
-          <Pencil className="h-3 w-3 mr-1" />
-          Edit
+          <Link to={linkTo}>
+            <ExternalLink className="h-3 w-3 mr-1" />
+            {linkLabel}
+          </Link>
         </Button>
       )}
     </div>

@@ -96,40 +96,30 @@ export function InterpreterCoreFields({
           </div>
         </div>
 
-        {/* Status & Timezone - only in edit mode */}
+        {/* Status - only in edit mode */}
         {mode === 'edit' && (
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="status">Status</Label>
-              <Controller
-                control={form.control}
-                name="status"
-                render={({ field }) => (
-                  <Select
-                    value={field.value || 'pending'}
-                    onValueChange={field.onChange}
-                    disabled={disabled}
-                  >
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="active">Active</SelectItem>
-                      <SelectItem value="inactive">Inactive</SelectItem>
-                      <SelectItem value="pending">Pending</SelectItem>
-                    </SelectContent>
-                  </Select>
-                )}
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="timezone">Timezone</Label>
-              <Input
-                id="timezone"
-                disabled={disabled}
-                {...form.register('timezone')}
-              />
-            </div>
+          <div className="space-y-2">
+            <Label htmlFor="status">Status</Label>
+            <Controller
+              control={form.control}
+              name="status"
+              render={({ field }) => (
+                <Select
+                  value={field.value || 'pending'}
+                  onValueChange={field.onChange}
+                  disabled={disabled}
+                >
+                  <SelectTrigger className="w-[200px]">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="active">Active</SelectItem>
+                    <SelectItem value="inactive">Inactive</SelectItem>
+                    <SelectItem value="pending">Pending</SelectItem>
+                  </SelectContent>
+                </Select>
+              )}
+            />
           </div>
         )}
       </CardContent>

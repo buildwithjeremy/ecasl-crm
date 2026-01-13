@@ -23,6 +23,11 @@ interface FacilityContractSectionProps {
   onContractGenerated: () => void;
 }
 
+// Helper to check if a string looks like a storage path vs full URL
+function isStoragePath(url: string): boolean {
+  return !url.startsWith('http://') && !url.startsWith('https://');
+}
+
 export function FacilityContractSection({ 
   form, 
   facility,
@@ -32,17 +37,42 @@ export function FacilityContractSection({
   const [isGenerating, setIsGenerating] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
   const [showUploadDialog, setShowUploadDialog] = useState(false);
-  const [contractPdfUrl, setContractPdfUrl] = useState<string | null>(
-    facility.contract_pdf_url || null
-  );
-  const [signedContractPdfUrl, setSignedContractPdfUrl] = useState<string | null>(
-    facility.signed_contract_pdf_url || null
-  );
+  const [contractPdfUrl, setContractPdfUrl] = useState<string | null>(null);
+  const [signedContractPdfUrl, setSignedContractPdfUrl] = useState<string | null>(null);
 
-  // Keep local state in sync with facility prop
+  // Generate signed URLs for storage paths
   useEffect(() => {
-    setContractPdfUrl(facility.contract_pdf_url || null);
-    setSignedContractPdfUrl(facility.signed_contract_pdf_url || null);
+    async function getSignedUrls() {
+      // Handle contract PDF URL
+      if (facility.contract_pdf_url) {
+        if (isStoragePath(facility.contract_pdf_url)) {
+          const { data } = await supabase.storage
+            .from('facility-contracts')
+            .createSignedUrl(facility.contract_pdf_url, 3600);
+          setContractPdfUrl(data?.signedUrl || null);
+        } else {
+          setContractPdfUrl(facility.contract_pdf_url);
+        }
+      } else {
+        setContractPdfUrl(null);
+      }
+
+      // Handle signed contract PDF URL
+      if (facility.signed_contract_pdf_url) {
+        if (isStoragePath(facility.signed_contract_pdf_url)) {
+          const { data } = await supabase.storage
+            .from('facility-contracts')
+            .createSignedUrl(facility.signed_contract_pdf_url, 3600);
+          setSignedContractPdfUrl(data?.signedUrl || null);
+        } else {
+          setSignedContractPdfUrl(facility.signed_contract_pdf_url);
+        }
+      } else {
+        setSignedContractPdfUrl(null);
+      }
+    }
+
+    getSignedUrls();
   }, [facility.contract_pdf_url, facility.signed_contract_pdf_url]);
 
   const generateContractMutation = useMutation({
@@ -121,24 +151,23 @@ export function FacilityContractSection({
 
       if (uploadError) throw uploadError;
 
-      const { data: urlData } = supabase.storage
+      // Generate a signed URL for immediate display
+      const { data: signedUrlData } = await supabase.storage
         .from('facility-contracts')
-        .getPublicUrl(filePath);
+        .createSignedUrl(filePath, 3600);
 
-      const signedUrl = urlData.publicUrl;
-
-      // Update the facility record with the signed contract URL and status
+      // Update the facility record with the file path (not public URL)
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const { error: updateError } = await (supabase.from('facilities') as any)
         .update({ 
-          signed_contract_pdf_url: signedUrl,
+          signed_contract_pdf_url: filePath,
           contract_status: 'signed'
         })
         .eq('id', facility.id);
 
       if (updateError) throw updateError;
 
-      setSignedContractPdfUrl(signedUrl);
+      setSignedContractPdfUrl(signedUrlData?.signedUrl || null);
       form.setValue('contract_status', 'signed', { shouldDirty: false });
       setShowUploadDialog(false);
       toast({ title: 'Signed contract uploaded successfully' });

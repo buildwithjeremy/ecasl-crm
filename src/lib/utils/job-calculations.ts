@@ -181,10 +181,12 @@ export interface BillableCalculationInputs {
   hoursSplit: HoursSplit;
   facilityBusinessRate: number;
   facilityAfterHoursRate: number;
+  facilityHolidayRate?: number;
   facilityMileageRate: number;
   facilityRateAdjustment: number;
   interpreterBusinessRate: number;
   interpreterAfterHoursRate: number;
+  interpreterHolidayRate?: number;
   interpreterMileageRate: number;
   interpreterRateAdjustment: number;
   mileage: number;
@@ -192,6 +194,7 @@ export interface BillableCalculationInputs {
   parking: number;
   tolls: number;
   miscFee: number;
+  useHolidayRate?: boolean;
 }
 
 /**
@@ -202,10 +205,12 @@ export function calculateBillableTotal(inputs: BillableCalculationInputs): Billa
     hoursSplit,
     facilityBusinessRate,
     facilityAfterHoursRate,
+    facilityHolidayRate = 0,
     facilityMileageRate,
     facilityRateAdjustment,
     interpreterBusinessRate,
     interpreterAfterHoursRate,
+    interpreterHolidayRate = 0,
     interpreterMileageRate,
     interpreterRateAdjustment,
     mileage,
@@ -213,28 +218,47 @@ export function calculateBillableTotal(inputs: BillableCalculationInputs): Billa
     parking,
     tolls,
     miscFee,
+    useHolidayRate = false,
   } = inputs;
 
   // Apply rate adjustments to hourly rates
   const adjustedFacilityBusinessRate = facilityBusinessRate + facilityRateAdjustment;
   const adjustedFacilityAfterHoursRate = facilityAfterHoursRate + facilityRateAdjustment;
+  const adjustedFacilityHolidayRate = facilityHolidayRate + facilityRateAdjustment;
   const adjustedInterpreterBusinessRate = interpreterBusinessRate + interpreterRateAdjustment;
   const adjustedInterpreterAfterHoursRate = interpreterAfterHoursRate + interpreterRateAdjustment;
+  const adjustedInterpreterHolidayRate = interpreterHolidayRate + interpreterRateAdjustment;
 
-  // Determine travel time rate based on which hour type has more hours
-  const interpreterTravelTimeRate = hoursSplit.businessHours >= hoursSplit.afterHours 
-    ? adjustedInterpreterBusinessRate 
-    : adjustedInterpreterAfterHoursRate;
+  // Determine travel time rate based on which hour type has more hours (or holiday rate if applied)
+  const interpreterTravelTimeRate = useHolidayRate
+    ? adjustedInterpreterHolidayRate
+    : hoursSplit.businessHours >= hoursSplit.afterHours 
+      ? adjustedInterpreterBusinessRate 
+      : adjustedInterpreterAfterHoursRate;
 
-  // Facility calculations
-  const facilityBusinessTotal = hoursSplit.businessHours * adjustedFacilityBusinessRate;
-  const facilityAfterHoursTotal = hoursSplit.afterHours * adjustedFacilityAfterHoursRate;
+  // When holiday rate is applied, all billable hours use the holiday rate
+  let facilityBusinessTotal: number;
+  let facilityAfterHoursTotal: number;
+  let interpreterBusinessTotal: number;
+  let interpreterAfterHoursTotal: number;
+
+  if (useHolidayRate) {
+    // Use holiday rate for all hours
+    facilityBusinessTotal = hoursSplit.businessHours * adjustedFacilityHolidayRate;
+    facilityAfterHoursTotal = hoursSplit.afterHours * adjustedFacilityHolidayRate;
+    interpreterBusinessTotal = hoursSplit.businessHours * adjustedInterpreterHolidayRate;
+    interpreterAfterHoursTotal = hoursSplit.afterHours * adjustedInterpreterHolidayRate;
+  } else {
+    // Use normal business/after-hours rates
+    facilityBusinessTotal = hoursSplit.businessHours * adjustedFacilityBusinessRate;
+    facilityAfterHoursTotal = hoursSplit.afterHours * adjustedFacilityAfterHoursRate;
+    interpreterBusinessTotal = hoursSplit.businessHours * adjustedInterpreterBusinessRate;
+    interpreterAfterHoursTotal = hoursSplit.afterHours * adjustedInterpreterAfterHoursRate;
+  }
+
   const facilityMileageTotal = mileage * facilityMileageRate;
   const facilityFeesTotal = parking + tolls + miscFee;
 
-  // Interpreter calculations
-  const interpreterBusinessTotal = hoursSplit.businessHours * adjustedInterpreterBusinessRate;
-  const interpreterAfterHoursTotal = hoursSplit.afterHours * adjustedInterpreterAfterHoursRate;
   const interpreterMileageTotal = mileage * interpreterMileageRate;
   const interpreterTravelTimeTotal = travelTimeHours * interpreterTravelTimeRate;
   const interpreterFeesTotal = parking + tolls + miscFee;
@@ -246,8 +270,8 @@ export function calculateBillableTotal(inputs: BillableCalculationInputs): Billa
     facilityMileageRate,
     facilityFeesTotal,
     facilityTotal: facilityBusinessTotal + facilityAfterHoursTotal + facilityMileageTotal + facilityFeesTotal,
-    facilityBusinessRate: adjustedFacilityBusinessRate,
-    facilityAfterHoursRate: adjustedFacilityAfterHoursRate,
+    facilityBusinessRate: useHolidayRate ? adjustedFacilityHolidayRate : adjustedFacilityBusinessRate,
+    facilityAfterHoursRate: useHolidayRate ? adjustedFacilityHolidayRate : adjustedFacilityAfterHoursRate,
     facilityRateAdjustment,
     interpreterBusinessTotal,
     interpreterAfterHoursTotal,
@@ -257,8 +281,8 @@ export function calculateBillableTotal(inputs: BillableCalculationInputs): Billa
     interpreterTravelTimeRate,
     interpreterFeesTotal,
     interpreterTotal: interpreterBusinessTotal + interpreterAfterHoursTotal + interpreterMileageTotal + interpreterTravelTimeTotal + interpreterFeesTotal,
-    interpreterBusinessRate: adjustedInterpreterBusinessRate,
-    interpreterAfterHoursRate: adjustedInterpreterAfterHoursRate,
+    interpreterBusinessRate: useHolidayRate ? adjustedInterpreterHolidayRate : adjustedInterpreterBusinessRate,
+    interpreterAfterHoursRate: useHolidayRate ? adjustedInterpreterHolidayRate : adjustedInterpreterAfterHoursRate,
     interpreterRateAdjustment,
     mileage,
     travelTimeHours,

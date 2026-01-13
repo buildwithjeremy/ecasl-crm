@@ -157,6 +157,7 @@ export function JobBillingFields({
   const watchedParking = form.watch('parking') ?? 0;
   const watchedTolls = form.watch('tolls') ?? 0;
   const watchedMiscFee = form.watch('misc_fee') ?? 0;
+  const watchedHolidayFeeApplied = form.watch('holiday_fee_applied') ?? false;
 
   // Resolve mileage rates with default fallback
   const facilityMileageRate = watchedFacilityRateMileageRaw === null || watchedFacilityRateMileageRaw === undefined || watchedFacilityRateMileageRaw === 0
@@ -174,10 +175,12 @@ export function JobBillingFields({
       hoursSplit,
       facilityBusinessRate: watchedFacilityRateBusiness,
       facilityAfterHoursRate: watchedFacilityRateAfterHours,
+      facilityHolidayRate: watchedFacilityRateHoliday,
       facilityMileageRate,
       facilityRateAdjustment: watchedFacilityRateAdjustment,
       interpreterBusinessRate: watchedInterpreterRateBusiness,
       interpreterAfterHoursRate: watchedInterpreterRateAfterHours,
+      interpreterHolidayRate: watchedInterpreterRateHoliday,
       interpreterMileageRate,
       interpreterRateAdjustment: watchedInterpreterRateAdjustment,
       mileage: watchedMileage,
@@ -185,15 +188,18 @@ export function JobBillingFields({
       parking: watchedParking,
       tolls: watchedTolls,
       miscFee: watchedMiscFee,
+      useHolidayRate: watchedHolidayFeeApplied,
     });
   }, [
     hoursSplit,
     watchedFacilityRateBusiness,
     watchedFacilityRateAfterHours,
+    watchedFacilityRateHoliday,
     facilityMileageRate,
     watchedFacilityRateAdjustment,
     watchedInterpreterRateBusiness,
     watchedInterpreterRateAfterHours,
+    watchedInterpreterRateHoliday,
     interpreterMileageRate,
     watchedInterpreterRateAdjustment,
     watchedMileage,
@@ -201,6 +207,7 @@ export function JobBillingFields({
     watchedParking,
     watchedTolls,
     watchedMiscFee,
+    watchedHolidayFeeApplied,
   ]);
 
   // Number input setValueAs helper - rounds to 2 decimal places for currency

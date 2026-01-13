@@ -60,27 +60,34 @@ export default function NewJob() {
   // Calculate billable total
   const billableTotal = useMemo(() => {
     if (!hoursSplit || !selectedFacility) return null;
+    
+    const useHolidayRate = watchedHolidayFeeApplied ?? false;
     const businessRate = selectedFacility.rate_business_hours ?? 0;
     const afterHoursRate = selectedFacility.rate_after_hours ?? 0;
+    const holidayRate = selectedFacility.rate_holiday_hours ?? 0;
 
-    const businessTotal = hoursSplit.businessHours * businessRate;
-    const afterHoursTotal = hoursSplit.afterHours * afterHoursRate;
+    // When holiday rate is applied, use it for all hours
+    const effectiveBusinessRate = useHolidayRate ? holidayRate : businessRate;
+    const effectiveAfterHoursRate = useHolidayRate ? holidayRate : afterHoursRate;
+
+    const businessTotal = hoursSplit.businessHours * effectiveBusinessRate;
+    const afterHoursTotal = hoursSplit.afterHours * effectiveAfterHoursRate;
     const hoursSubtotal = businessTotal + afterHoursTotal;
     
     const emergencyFee = watchedEmergencyFeeApplied ? (selectedFacility?.emergency_fee ?? 0) : 0;
-    const holidayFee = watchedHolidayFeeApplied ? (selectedFacility?.holiday_fee ?? 0) : 0;
-    const feesTotal = emergencyFee + holidayFee;
+    const feesTotal = emergencyFee;
 
     return {
       businessTotal,
       afterHoursTotal,
       hoursSubtotal,
-      businessRate,
-      afterHoursRate,
+      businessRate: effectiveBusinessRate,
+      afterHoursRate: effectiveAfterHoursRate,
       emergencyFee,
-      holidayFee,
+      holidayFee: 0, // No longer a flat fee, now a rate override
       feesTotal,
       total: hoursSubtotal + feesTotal,
+      useHolidayRate,
     };
   }, [hoursSplit, selectedFacility, watchedEmergencyFeeApplied, watchedHolidayFeeApplied]);
 

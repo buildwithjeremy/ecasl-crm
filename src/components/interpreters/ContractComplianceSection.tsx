@@ -24,6 +24,11 @@ interface ContractComplianceSectionProps {
   onContractGenerated: () => void;
 }
 
+// Helper to check if a string looks like a storage path vs full URL
+function isStoragePath(url: string): boolean {
+  return !url.startsWith('http://') && !url.startsWith('https://');
+}
+
 export function ContractComplianceSection({ 
   form, 
   interpreter,
@@ -33,17 +38,42 @@ export function ContractComplianceSection({
   const [isGenerating, setIsGenerating] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
   const [showUploadDialog, setShowUploadDialog] = useState(false);
-  const [contractPdfUrl, setContractPdfUrl] = useState<string | null>(
-    interpreter.contract_pdf_url || null
-  );
-  const [signedContractPdfUrl, setSignedContractPdfUrl] = useState<string | null>(
-    interpreter.signed_contract_pdf_url || null
-  );
+  const [contractPdfUrl, setContractPdfUrl] = useState<string | null>(null);
+  const [signedContractPdfUrl, setSignedContractPdfUrl] = useState<string | null>(null);
 
-  // Keep local state in sync with interpreter prop
+  // Generate signed URLs for storage paths
   useEffect(() => {
-    setContractPdfUrl(interpreter.contract_pdf_url || null);
-    setSignedContractPdfUrl(interpreter.signed_contract_pdf_url || null);
+    async function getSignedUrls() {
+      // Handle contract PDF URL
+      if (interpreter.contract_pdf_url) {
+        if (isStoragePath(interpreter.contract_pdf_url)) {
+          const { data } = await supabase.storage
+            .from('interpreter-contracts')
+            .createSignedUrl(interpreter.contract_pdf_url, 3600);
+          setContractPdfUrl(data?.signedUrl || null);
+        } else {
+          setContractPdfUrl(interpreter.contract_pdf_url);
+        }
+      } else {
+        setContractPdfUrl(null);
+      }
+
+      // Handle signed contract PDF URL
+      if (interpreter.signed_contract_pdf_url) {
+        if (isStoragePath(interpreter.signed_contract_pdf_url)) {
+          const { data } = await supabase.storage
+            .from('interpreter-contracts')
+            .createSignedUrl(interpreter.signed_contract_pdf_url, 3600);
+          setSignedContractPdfUrl(data?.signedUrl || null);
+        } else {
+          setSignedContractPdfUrl(interpreter.signed_contract_pdf_url);
+        }
+      } else {
+        setSignedContractPdfUrl(null);
+      }
+    }
+
+    getSignedUrls();
   }, [interpreter.contract_pdf_url, interpreter.signed_contract_pdf_url]);
 
   const generateContractMutation = useMutation({
@@ -122,24 +152,23 @@ export function ContractComplianceSection({
 
       if (uploadError) throw uploadError;
 
-      const { data: urlData } = supabase.storage
+      // Generate a signed URL for immediate display
+      const { data: signedUrlData } = await supabase.storage
         .from('interpreter-contracts')
-        .getPublicUrl(filePath);
+        .createSignedUrl(filePath, 3600);
 
-      const signedUrl = urlData.publicUrl;
-
-      // Update the interpreter record with the signed contract URL and status
+      // Update the interpreter record with the file path (not public URL)
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const { error: updateError } = await (supabase.from('interpreters') as any)
         .update({ 
-          signed_contract_pdf_url: signedUrl,
+          signed_contract_pdf_url: filePath,
           contract_status: 'signed'
         })
         .eq('id', interpreter.id);
 
       if (updateError) throw updateError;
 
-      setSignedContractPdfUrl(signedUrl);
+      setSignedContractPdfUrl(signedUrlData?.signedUrl || null);
       form.setValue('contract_status', 'signed', { shouldDirty: false });
       setShowUploadDialog(false);
       toast({ title: 'Signed contract uploaded successfully' });

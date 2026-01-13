@@ -98,6 +98,7 @@ type Job = {
   holiday_fee_applied: boolean | null;
   total_facility_charge: number | null;
   facility_hourly_total: number | null;
+  facility_billable_total: number | null;
   facility: { name: string; emergency_fee: number | null; holiday_fee: number | null } | null;
 };
 
@@ -173,7 +174,7 @@ export default function InvoiceDetail() {
           parking, tolls, misc_fee, trilingual_rate_uplift,
           facility_rate_business, facility_rate_after_hours,
           billable_hours, emergency_fee_applied, holiday_fee_applied,
-          total_facility_charge, facility_hourly_total,
+          total_facility_charge, facility_hourly_total, facility_billable_total,
           facility:facilities(name, emergency_fee, holiday_fee)
         `)
         .eq('id', invoice.job_id)
@@ -297,17 +298,10 @@ export default function InvoiceDetail() {
 
   const selectedInvoice = invoices?.find((i) => i.id === selectedInvoiceId);
 
-  // Calculate derived values
-  const mileageTotal = (job?.mileage || 0) * (job?.facility_rate_mileage || 0);
-  const travelTimeTotal = (job?.travel_time_hours || 0) * (job?.travel_time_rate || 0);
-  const trilingualUplift = job?.trilingual_rate_uplift || 0;
-  const facilityHourlyTotal = (job?.billable_hours || 0) * ((job?.facility_rate_business || 0) + trilingualUplift);
-  const emergencyFee = job?.emergency_fee_applied ? (job.facility?.emergency_fee || 0) : 0;
-  const holidayFee = job?.holiday_fee_applied ? (job.facility?.holiday_fee || 0) : 0;
-  
+  // Use pre-calculated values from job for consistency with job detail page
   const hourlyTotal = job?.facility_hourly_total ?? 0;
-  const travelFeeTotal = mileageTotal + travelTimeTotal + (job?.parking || 0) + (job?.tolls || 0) + (job?.misc_fee || 0) + emergencyFee;
-  const overallTotal = hourlyTotal + travelFeeTotal;
+  const travelFeeTotal = (job?.total_facility_charge ?? 0) - hourlyTotal;
+  const overallTotal = job?.total_facility_charge ?? 0;
 
   const formatCurrency = (value: number | null | undefined) => {
     if (value === null || value === undefined) return '-';
@@ -603,50 +597,14 @@ export default function InvoiceDetail() {
                 <div className="space-y-2">
                   {hourlyTotal > 0 && (
                     <div className="flex justify-between py-2 border-b">
-                      <span>Interpreter Services {trilingualUplift > 0 ? '(incl. Trilingual)' : ''}</span>
+                      <span>Interpreter Services {(job.trilingual_rate_uplift ?? 0) > 0 ? '(incl. Trilingual)' : ''}</span>
                       <span className="font-medium">{formatCurrency(hourlyTotal)}</span>
                     </div>
                   )}
-                  {mileageTotal > 0 && (
+                  {travelFeeTotal > 0 && (
                     <div className="flex justify-between py-2 border-b">
-                      <span>Mileage ({job.mileage} mi × ${job.facility_rate_mileage}/mi)</span>
-                      <span className="font-medium">{formatCurrency(mileageTotal)}</span>
-                    </div>
-                  )}
-                  {travelTimeTotal > 0 && (
-                    <div className="flex justify-between py-2 border-b">
-                      <span>Travel Time ({job.travel_time_hours} hrs × ${job.travel_time_rate}/hr)</span>
-                      <span className="font-medium">{formatCurrency(travelTimeTotal)}</span>
-                    </div>
-                  )}
-                  {(job.parking || 0) > 0 && (
-                    <div className="flex justify-between py-2 border-b">
-                      <span>Parking</span>
-                      <span className="font-medium">{formatCurrency(job.parking)}</span>
-                    </div>
-                  )}
-                  {(job.tolls || 0) > 0 && (
-                    <div className="flex justify-between py-2 border-b">
-                      <span>Tolls</span>
-                      <span className="font-medium">{formatCurrency(job.tolls)}</span>
-                    </div>
-                  )}
-                  {(job.misc_fee || 0) > 0 && (
-                    <div className="flex justify-between py-2 border-b">
-                      <span>Miscellaneous Fee</span>
-                      <span className="font-medium">{formatCurrency(job.misc_fee)}</span>
-                    </div>
-                  )}
-                  {emergencyFee > 0 && (
-                    <div className="flex justify-between py-2 border-b">
-                      <span>Emergency Fee</span>
-                      <span className="font-medium">{formatCurrency(emergencyFee)}</span>
-                    </div>
-                  )}
-                  {holidayFee > 0 && (
-                    <div className="flex justify-between py-2 border-b">
-                      <span>Holiday Fee</span>
-                      <span className="font-medium">{formatCurrency(holidayFee)}</span>
+                      <span>Travel, Mileage & Fees</span>
+                      <span className="font-medium">{formatCurrency(travelFeeTotal)}</span>
                     </div>
                   )}
                   <div className="flex justify-between py-3 font-semibold text-lg">

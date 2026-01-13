@@ -228,17 +228,11 @@ export default function PayableDetail() {
     return `$${value.toFixed(2)}`;
   };
 
-  // Calculate derived values for line items
+  // Use pre-calculated values from job for consistency with job detail page
   const job = payable?.job;
-  const mileageTotal = (job?.mileage || 0) * (job?.interpreter_rate_mileage || 0);
-  const travelTimeTotal = (job?.travel_time_hours || 0) * (job?.travel_time_rate || 0);
   const hourlyTotal = job?.interpreter_hourly_total ?? 0;
-  
-  // Emergency/holiday fees for interpreters
-  const emergencyFee = (job?.emergency_fee_applied && payable?.interpreter?.eligible_emergency_fee) 
-    ? (job.facility?.emergency_fee || 0) : 0;
-  const holidayFee = (job?.holiday_fee_applied && payable?.interpreter?.eligible_holiday_fee) 
-    ? (job.facility?.holiday_fee || 0) : 0;
+  const travelFeeTotal = (job?.interpreter_billable_total ?? 0) - hourlyTotal;
+  const overallTotal = job?.interpreter_billable_total ?? 0;
 
   return (
     <div className="space-y-4">
@@ -473,51 +467,15 @@ export default function PayableDetail() {
                       <span className="font-medium">{formatCurrency(hourlyTotal)}</span>
                     </div>
                   )}
-                  {mileageTotal > 0 && (
+                  {travelFeeTotal > 0 && (
                     <div className="flex justify-between py-2 border-b">
-                      <span>Mileage ({job.mileage} mi × ${job.interpreter_rate_mileage}/mi)</span>
-                      <span className="font-medium">{formatCurrency(mileageTotal)}</span>
-                    </div>
-                  )}
-                  {travelTimeTotal > 0 && (
-                    <div className="flex justify-between py-2 border-b">
-                      <span>Travel Time ({job.travel_time_hours} hrs × ${job.travel_time_rate}/hr)</span>
-                      <span className="font-medium">{formatCurrency(travelTimeTotal)}</span>
-                    </div>
-                  )}
-                  {(job.parking || 0) > 0 && (
-                    <div className="flex justify-between py-2 border-b">
-                      <span>Parking</span>
-                      <span className="font-medium">{formatCurrency(job.parking)}</span>
-                    </div>
-                  )}
-                  {(job.tolls || 0) > 0 && (
-                    <div className="flex justify-between py-2 border-b">
-                      <span>Tolls</span>
-                      <span className="font-medium">{formatCurrency(job.tolls)}</span>
-                    </div>
-                  )}
-                  {(job.misc_fee || 0) > 0 && (
-                    <div className="flex justify-between py-2 border-b">
-                      <span>Miscellaneous Fee</span>
-                      <span className="font-medium">{formatCurrency(job.misc_fee)}</span>
-                    </div>
-                  )}
-                  {emergencyFee > 0 && (
-                    <div className="flex justify-between py-2 border-b">
-                      <span>Emergency Fee</span>
-                      <span className="font-medium">{formatCurrency(emergencyFee)}</span>
-                    </div>
-                  )}
-                  {holidayFee > 0 && (
-                    <div className="flex justify-between py-2 border-b">
-                      <span>Holiday Fee</span>
-                      <span className="font-medium">{formatCurrency(holidayFee)}</span>
+                      <span>Travel, Mileage & Fees</span>
+                      <span className="font-medium">{formatCurrency(travelFeeTotal)}</span>
                     </div>
                   )}
                   <div className="flex justify-between py-3 font-semibold text-lg">
                     <span>Total</span>
-                    <span className="text-primary">{formatCurrency(payable?.job?.interpreter_billable_total)}</span>
+                    <span className="text-primary">{formatCurrency(overallTotal)}</span>
                   </div>
                 </div>
               </CardContent>

@@ -48,14 +48,13 @@ export function JobLocationFields({
   // Auto-fill location and client info when facility changes
   useEffect(() => {
     if (watchedFacilityId && selectedFacility) {
-      // Auto-fill client info for ALL facilities
-      form.setValue('client_business_name', selectedFacility.name || '', { shouldDirty: true });
-      form.setValue('client_contact_name', selectedFacility.admin_contact_name || '', { shouldDirty: true });
-      form.setValue('client_contact_phone', selectedFacility.admin_contact_phone || '', { shouldDirty: true });
-      form.setValue('client_contact_email', selectedFacility.admin_contact_email || '', { shouldDirty: true });
-
       if (!selectedFacility.contractor) {
-        // Non-contractor: also auto-fill location from facility
+        // Non-contractor: auto-fill client info and location from facility
+        form.setValue('client_business_name', selectedFacility.name || '', { shouldDirty: true });
+        form.setValue('client_contact_name', selectedFacility.admin_contact_name || '', { shouldDirty: true });
+        form.setValue('client_contact_phone', selectedFacility.admin_contact_phone || '', { shouldDirty: true });
+        form.setValue('client_contact_email', selectedFacility.admin_contact_email || '', { shouldDirty: true });
+
         if (watchedLocationType === 'in_person') {
           const address = selectedFacility.physical_address || selectedFacility.billing_address;
           const city = selectedFacility.physical_city || selectedFacility.billing_city;
@@ -68,7 +67,11 @@ export function JobLocationFields({
           form.setValue('location_zip', zip || '', { shouldDirty: true });
         }
       } else {
-        // Contractor: clear location fields for manual entry
+        // Contractor: clear all client and location fields for manual entry
+        form.setValue('client_business_name', '', { shouldDirty: true });
+        form.setValue('client_contact_name', '', { shouldDirty: true });
+        form.setValue('client_contact_phone', '', { shouldDirty: true });
+        form.setValue('client_contact_email', '', { shouldDirty: true });
         form.setValue('location_address', '', { shouldDirty: true });
         form.setValue('location_city', '', { shouldDirty: true });
         form.setValue('location_state', '', { shouldDirty: true });

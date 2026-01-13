@@ -4,6 +4,7 @@ import { format } from 'date-fns';
 import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
 import { Calendar } from '@/components/ui/calendar';
+import { Checkbox } from '@/components/ui/checkbox';
 import {
   Select,
   SelectContent,
@@ -48,6 +49,8 @@ interface JobScheduleFieldsProps {
   disabled?: boolean;
   minimumHours?: number;
   onHoursSplitChange?: (hoursSplit: HoursSplit | null) => void;
+  facilityEmergencyFee?: number | null;
+  facilityHolidayRate?: number | null;
 }
 
 // ==========================================
@@ -60,6 +63,8 @@ export function JobScheduleFields({
   disabled = false,
   minimumHours = 2,
   onHoursSplitChange,
+  facilityEmergencyFee,
+  facilityHolidayRate,
 }: JobScheduleFieldsProps) {
   const [datePickerOpen, setDatePickerOpen] = useState(false);
 
@@ -384,6 +389,52 @@ export function JobScheduleFields({
                 )}
               </div>
             )}
+          </div>
+        </div>
+
+        {/* Fee Toggles */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2 border-t">
+          <div className="flex items-center gap-3">
+            <Checkbox
+              id="emergency_fee_applied"
+              checked={form.watch('emergency_fee_applied') || false}
+              onCheckedChange={(checked) =>
+                form.setValue('emergency_fee_applied', !!checked, { shouldDirty: true })
+              }
+              disabled={disabled || !facilityEmergencyFee}
+            />
+            <Label
+              htmlFor="emergency_fee_applied"
+              className={!facilityEmergencyFee ? 'text-muted-foreground' : ''}
+            >
+              Apply Emergency Fee
+              {facilityEmergencyFee ? (
+                <span className="ml-1 text-muted-foreground">(${facilityEmergencyFee.toFixed(2)})</span>
+              ) : (
+                <span className="ml-1 text-muted-foreground text-xs">(not set on facility)</span>
+              )}
+            </Label>
+          </div>
+          <div className="flex items-center gap-3">
+            <Checkbox
+              id="holiday_fee_applied"
+              checked={form.watch('holiday_fee_applied') || false}
+              onCheckedChange={(checked) =>
+                form.setValue('holiday_fee_applied', !!checked, { shouldDirty: true })
+              }
+              disabled={disabled || !facilityHolidayRate}
+            />
+            <Label
+              htmlFor="holiday_fee_applied"
+              className={!facilityHolidayRate ? 'text-muted-foreground' : ''}
+            >
+              Apply Holiday Rate
+              {facilityHolidayRate ? (
+                <span className="ml-1 text-muted-foreground">(${facilityHolidayRate.toFixed(2)}/hr)</span>
+              ) : (
+                <span className="ml-1 text-muted-foreground text-xs">(not set on facility)</span>
+              )}
+            </Label>
           </div>
         </div>
       </CardContent>

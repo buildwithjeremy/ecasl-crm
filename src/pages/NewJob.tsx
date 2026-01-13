@@ -13,7 +13,6 @@ import {
   JobCoreFields,
   JobScheduleFields,
   JobLocationFields,
-  JobFeesFields,
   JobNotesFields,
   JobEstimatedBillable,
   type FacilityOption,
@@ -195,6 +194,8 @@ export default function NewJob() {
           mode="create"
           minimumHours={selectedFacility?.minimum_billable_hours ?? 2}
           onHoursSplitChange={handleHoursSplitChange}
+          facilityEmergencyFee={selectedFacility?.emergency_fee}
+          facilityHolidayRate={selectedFacility?.rate_holiday_hours}
         />
 
         {/* Client & Location */}
@@ -202,14 +203,6 @@ export default function NewJob() {
           form={form}
           mode="create"
           selectedFacility={selectedFacility}
-        />
-
-        {/* Fees */}
-        <JobFeesFields
-          form={form}
-          mode="create"
-          facilityEmergencyFee={selectedFacility?.emergency_fee}
-          facilityHolidayFee={selectedFacility?.holiday_fee}
         />
 
         {/* Estimated Billable */}

@@ -991,8 +991,8 @@ export default function JobDetail() {
               defaultMileageRate={defaultMileageRate}
               linkedInvoice={jobInvoice ? { id: jobInvoice.id, number: jobInvoice.invoice_number } : null}
               linkedBill={jobBill ? { id: jobBill.id, number: jobBill.bill_number } : null}
-              onEditFacilityRates={() => setFacilityRatesDialogOpen(true)}
-              onEditInterpreterRates={() => setInterpreterRatesDialogOpen(true)}
+              facilityId={job?.facility_id}
+              interpreterId={watchedInterpreterId}
               onGenerateBilling={() => generateBillingMutation.mutate()}
               isGeneratingBilling={generateBillingMutation.isPending}
               canGenerateBilling={canGenerateBilling}

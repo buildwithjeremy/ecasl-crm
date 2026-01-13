@@ -30,6 +30,7 @@ import {
   calculateDurationMinutes,
   calculateEndTime,
   clampDuration,
+  formatTimeForDisplay,
 } from '@/lib/utils/form-helpers';
 import { normalizeTimeToHHMM, needsTimeNormalization } from '@/lib/utils/time-helpers';
 
@@ -61,13 +62,17 @@ export function JobScheduleFields({
   onHoursSplitChange,
 }: JobScheduleFieldsProps) {
   const [datePickerOpen, setDatePickerOpen] = useState(false);
-  
+
   // Track if this is the initial mount to skip auto-adjustment on form reset
   const isInitialMountRef = useRef(true);
 
   const watchedJobDate = form.watch('job_date');
   const watchedStartTime = form.watch('start_time');
   const watchedEndTime = form.watch('end_time');
+
+  const timeOptionsSet = useMemo(() => {
+    return new Set(TIME_OPTIONS.map((o) => o.value));
+  }, []);
 
   // Track previous times for change detection (user-initiated changes only)
   const prevStartTimeRef = useRef<string | null>(null);
@@ -89,7 +94,21 @@ export function JobScheduleFields({
         form.setValue('end_time', normalized, { shouldDirty: false });
       }
     }
-    
+
+    // Debug: confirm form state vs options (DEV only)
+    if (import.meta.env.DEV) {
+      const startNorm = normalizeTimeToHHMM(watchedStartTime);
+      const endNorm = normalizeTimeToHHMM(watchedEndTime);
+      // eslint-disable-next-line no-console
+      console.debug('[JobScheduleFields] times', {
+        watchedStartTime,
+        watchedEndTime,
+        startNorm,
+        endNorm,
+        endInOptions: endNorm ? timeOptionsSet.has(endNorm) : null,
+      });
+    }
+
     // After first normalization pass, mark initial mount as complete
     // and initialize the refs with current values
     if (isInitialMountRef.current && watchedStartTime && watchedEndTime) {
@@ -101,7 +120,7 @@ export function JobScheduleFields({
       }, 100);
       return () => clearTimeout(timer);
     }
-  }, [watchedStartTime, watchedEndTime, form]);
+  }, [watchedStartTime, watchedEndTime, form, timeOptionsSet]);
 
   // Calculate job duration in hours
   const jobDuration = useMemo(() => {
@@ -218,7 +237,7 @@ export function JobScheduleFields({
                     }
                   }}
                   initialFocus
-                  className={cn("p-3 pointer-events-auto")}
+                  className={cn('p-3 pointer-events-auto')}
                 />
               </PopoverContent>
             </Popover>
@@ -235,26 +254,36 @@ export function JobScheduleFields({
             <Controller
               control={form.control}
               name="start_time"
-              render={({ field }) => (
-                <Select
-                  value={field.value || TIME_NONE}
-                  onValueChange={(value) => {
-                    field.onChange(value || null);
-                  }}
-                  disabled={disabled}
-                >
-                  <SelectTrigger className={cn(form.formState.errors.start_time && "border-destructive")}>
-                    <SelectValue placeholder="Select time" />
-                  </SelectTrigger>
-                  <SelectContent className="max-h-[300px]">
-                    {TIME_OPTIONS.map((option) => (
-                      <SelectItem key={option.value} value={option.value}>
-                        {option.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              )}
+              render={({ field }) => {
+                const safeValue = normalizeTimeToHHMM(field.value) || TIME_NONE;
+                const hasCustom = !!safeValue && !timeOptionsSet.has(safeValue);
+
+                return (
+                  <Select
+                    value={safeValue}
+                    onValueChange={(value) => {
+                      field.onChange(value || null);
+                    }}
+                    disabled={disabled}
+                  >
+                    <SelectTrigger className={cn(form.formState.errors.start_time && 'border-destructive')}>
+                      <SelectValue placeholder="Select time" />
+                    </SelectTrigger>
+                    <SelectContent className="max-h-[300px]">
+                      {hasCustom && (
+                        <SelectItem value={safeValue}>
+                          {formatTimeForDisplay(safeValue)}
+                        </SelectItem>
+                      )}
+                      {TIME_OPTIONS.map((option) => (
+                        <SelectItem key={option.value} value={option.value}>
+                          {option.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                );
+              }}
             />
             {form.formState.errors.start_time && (
               <p className="text-sm text-destructive">
@@ -269,26 +298,36 @@ export function JobScheduleFields({
             <Controller
               control={form.control}
               name="end_time"
-              render={({ field }) => (
-                <Select
-                  value={field.value || TIME_NONE}
-                  onValueChange={(value) => {
-                    field.onChange(value || null);
-                  }}
-                  disabled={disabled}
-                >
-                  <SelectTrigger className={cn(form.formState.errors.end_time && "border-destructive")}>
-                    <SelectValue placeholder="Select time" />
-                  </SelectTrigger>
-                  <SelectContent className="max-h-[300px]">
-                    {TIME_OPTIONS.map((option) => (
-                      <SelectItem key={option.value} value={option.value}>
-                        {option.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              )}
+              render={({ field }) => {
+                const safeValue = normalizeTimeToHHMM(field.value) || TIME_NONE;
+                const hasCustom = !!safeValue && !timeOptionsSet.has(safeValue);
+
+                return (
+                  <Select
+                    value={safeValue}
+                    onValueChange={(value) => {
+                      field.onChange(value || null);
+                    }}
+                    disabled={disabled}
+                  >
+                    <SelectTrigger className={cn(form.formState.errors.end_time && 'border-destructive')}>
+                      <SelectValue placeholder="Select time" />
+                    </SelectTrigger>
+                    <SelectContent className="max-h-[300px]">
+                      {hasCustom && (
+                        <SelectItem value={safeValue}>
+                          {formatTimeForDisplay(safeValue)}
+                        </SelectItem>
+                      )}
+                      {TIME_OPTIONS.map((option) => (
+                        <SelectItem key={option.value} value={option.value}>
+                          {option.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                );
+              }}
             />
             {form.formState.errors.end_time && (
               <p className="text-sm text-destructive">
@@ -349,3 +388,4 @@ export function JobScheduleFields({
 }
 
 export default JobScheduleFields;
+

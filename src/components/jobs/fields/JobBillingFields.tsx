@@ -1,6 +1,7 @@
-import { useMemo } from 'react';
+import { useMemo, useCallback } from 'react';
 import { UseFormReturn } from 'react-hook-form';
 import { useNavigate } from 'react-router-dom';
+import { ChevronUp, ChevronDown } from 'lucide-react';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
@@ -234,7 +235,7 @@ export function JobBillingFields({
                   inputMode="decimal"
                   {...form.register('facility_rate_mileage', { setValueAs: numericSetValueAs })}
                   disabled={disabled}
-                  placeholder={String(defaultMileageRate)}
+                  placeholder={defaultMileageRate.toFixed(2)}
                   className="h-8 w-20 pl-5"
                 />
               </div>
@@ -328,32 +329,92 @@ export function JobBillingFields({
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-1">
               <Label htmlFor="facility_rate_adjustment" className="text-xs">Facility</Label>
-              <div className="relative">
-                <span className="absolute left-2 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">$</span>
-                <Input
-                  id="facility_rate_adjustment"
-                  type="text"
-                  inputMode="decimal"
-                  {...form.register('facility_rate_adjustment', { setValueAs: numericSetValueAs })}
-                  disabled={disabled}
-                  placeholder="0.00"
-                  className="h-8 pl-5"
-                />
+              <div className="flex items-center gap-1">
+                <div className="relative flex-1">
+                  <span className="absolute left-2 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">$</span>
+                  <Input
+                    id="facility_rate_adjustment"
+                    type="text"
+                    inputMode="decimal"
+                    {...form.register('facility_rate_adjustment', { setValueAs: numericSetValueAs })}
+                    disabled={disabled}
+                    placeholder="0.00"
+                    className="h-8 pl-5"
+                  />
+                </div>
+                <div className="flex flex-col">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="icon"
+                    className="h-4 w-6 rounded-b-none border-b-0"
+                    disabled={disabled}
+                    onClick={() => {
+                      const current = form.getValues('facility_rate_adjustment') ?? 0;
+                      form.setValue('facility_rate_adjustment', Math.round((current + 1) * 100) / 100, { shouldDirty: true });
+                    }}
+                  >
+                    <ChevronUp className="h-3 w-3" />
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="icon"
+                    className="h-4 w-6 rounded-t-none"
+                    disabled={disabled}
+                    onClick={() => {
+                      const current = form.getValues('facility_rate_adjustment') ?? 0;
+                      form.setValue('facility_rate_adjustment', Math.round((current - 1) * 100) / 100, { shouldDirty: true });
+                    }}
+                  >
+                    <ChevronDown className="h-3 w-3" />
+                  </Button>
+                </div>
               </div>
             </div>
             <div className="space-y-1">
               <Label htmlFor="interpreter_rate_adjustment" className="text-xs">Interpreter</Label>
-              <div className="relative">
-                <span className="absolute left-2 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">$</span>
-                <Input
-                  id="interpreter_rate_adjustment"
-                  type="text"
-                  inputMode="decimal"
-                  {...form.register('interpreter_rate_adjustment', { setValueAs: numericSetValueAs })}
-                  disabled={disabled}
-                  placeholder="0.00"
-                  className="h-8 pl-5"
-                />
+              <div className="flex items-center gap-1">
+                <div className="relative flex-1">
+                  <span className="absolute left-2 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">$</span>
+                  <Input
+                    id="interpreter_rate_adjustment"
+                    type="text"
+                    inputMode="decimal"
+                    {...form.register('interpreter_rate_adjustment', { setValueAs: numericSetValueAs })}
+                    disabled={disabled}
+                    placeholder="0.00"
+                    className="h-8 pl-5"
+                  />
+                </div>
+                <div className="flex flex-col">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="icon"
+                    className="h-4 w-6 rounded-b-none border-b-0"
+                    disabled={disabled}
+                    onClick={() => {
+                      const current = form.getValues('interpreter_rate_adjustment') ?? 0;
+                      form.setValue('interpreter_rate_adjustment', Math.round((current + 1) * 100) / 100, { shouldDirty: true });
+                    }}
+                  >
+                    <ChevronUp className="h-3 w-3" />
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="icon"
+                    className="h-4 w-6 rounded-t-none"
+                    disabled={disabled}
+                    onClick={() => {
+                      const current = form.getValues('interpreter_rate_adjustment') ?? 0;
+                      form.setValue('interpreter_rate_adjustment', Math.round((current - 1) * 100) / 100, { shouldDirty: true });
+                    }}
+                  >
+                    <ChevronDown className="h-3 w-3" />
+                  </Button>
+                </div>
               </div>
             </div>
           </div>

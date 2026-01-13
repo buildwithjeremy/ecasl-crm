@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { UseFormReturn } from 'react-hook-form';
+import { UseFormReturn, Controller } from 'react-hook-form';
 import { format } from 'date-fns';
 import { CalendarIcon } from 'lucide-react';
 import { Label } from '@/components/ui/label';
@@ -22,6 +22,9 @@ import {
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
 import { FormMode, PAYMENT_METHODS } from '@/lib/schemas/shared';
+
+// Sentinel value for "no selection" to keep Select controlled
+const PAYMENT_METHOD_NONE = '__none__';
 
 // ==========================================
 // Types
@@ -57,22 +60,33 @@ export function InterpreterPaymentFields({
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div className="space-y-2">
             <Label htmlFor="payment_method">Payment Method{requiredLabel}</Label>
-            <Select
-              value={form.watch('payment_method') ?? undefined}
-              onValueChange={(value) => form.setValue('payment_method', value || null, { shouldDirty: true })}
-              disabled={disabled}
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Select method" />
-              </SelectTrigger>
-              <SelectContent>
-                {PAYMENT_METHODS.map((method) => (
-                  <SelectItem key={method.value} value={method.value}>
-                    {method.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <Controller
+              control={form.control}
+              name="payment_method"
+              render={({ field }) => (
+                <Select
+                  value={field.value || PAYMENT_METHOD_NONE}
+                  onValueChange={(value) => {
+                    field.onChange(value === PAYMENT_METHOD_NONE ? null : value);
+                  }}
+                  disabled={disabled}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select method" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value={PAYMENT_METHOD_NONE}>
+                      <span className="text-muted-foreground">Unspecified</span>
+                    </SelectItem>
+                    {PAYMENT_METHODS.map((method) => (
+                      <SelectItem key={method.value} value={method.value}>
+                        {method.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              )}
+            />
             {form.formState.errors.payment_method && (
               <p className="text-sm text-destructive">
                 {form.formState.errors.payment_method.message as string}

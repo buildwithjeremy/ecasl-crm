@@ -1,5 +1,5 @@
 import { useEffect } from 'react';
-import { UseFormReturn } from 'react-hook-form';
+import { UseFormReturn, Controller } from 'react-hook-form';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
@@ -16,6 +16,9 @@ import { Building2, MapPin, User, ExternalLink } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { FormMode, LOCATION_TYPES, US_STATES } from '@/lib/schemas/shared';
 import type { FacilityOption } from './JobCoreFields';
+
+// Sentinel for state selector (empty state = unselected)
+const STATE_NONE = '';
 
 // ==========================================
 // Types
@@ -80,25 +83,33 @@ export function JobLocationFields({
         <CardTitle className="text-lg">Client & Location</CardTitle>
       </CardHeader>
       <CardContent className="space-y-6">
-        {/* Location Type */}
+        {/* Location Type - Using Controller for consistent controlled state */}
         <div className="space-y-2">
           <Label>Location Type</Label>
-          <Select
-            value={watchedLocationType}
-            onValueChange={(value) => form.setValue('location_type', value as 'in_person' | 'remote', { shouldDirty: true })}
-            disabled={disabled}
-          >
-            <SelectTrigger className="w-[200px]">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              {LOCATION_TYPES.map((type) => (
-                <SelectItem key={type.value} value={type.value}>
-                  {type.label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          <Controller
+            control={form.control}
+            name="location_type"
+            render={({ field }) => (
+              <Select
+                value={field.value || 'in_person'}
+                onValueChange={(value) => {
+                  field.onChange(value as 'in_person' | 'remote');
+                }}
+                disabled={disabled}
+              >
+                <SelectTrigger className="w-[200px]">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {LOCATION_TYPES.map((type) => (
+                    <SelectItem key={type.value} value={type.value}>
+                      {type.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            )}
+          />
         </div>
 
         {/* Deaf Client Name */}
@@ -286,22 +297,30 @@ export function JobLocationFields({
                         </div>
                         <div className="space-y-2">
                           <Label htmlFor="location_state">State</Label>
-                          <Select
-                            value={form.watch('location_state') || ''}
-                            onValueChange={(value) => form.setValue('location_state', value, { shouldDirty: true })}
-                            disabled={disabled}
-                          >
-                            <SelectTrigger>
-                              <SelectValue placeholder="Select state" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              {US_STATES.map((state) => (
-                                <SelectItem key={state.value} value={state.value}>
-                                  {state.label}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
+                          <Controller
+                            control={form.control}
+                            name="location_state"
+                            render={({ field }) => (
+                              <Select
+                                value={field.value || STATE_NONE}
+                                onValueChange={(value) => {
+                                  field.onChange(value || null);
+                                }}
+                                disabled={disabled}
+                              >
+                                <SelectTrigger>
+                                  <SelectValue placeholder="Select state" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  {US_STATES.map((state) => (
+                                    <SelectItem key={state.value} value={state.value}>
+                                      {state.label}
+                                    </SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                            )}
+                          />
                         </div>
                         <div className="space-y-2">
                           <Label htmlFor="location_zip">ZIP Code</Label>

@@ -6,13 +6,6 @@ import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
-import {
   Popover,
   PopoverContent,
   PopoverTrigger,
@@ -29,9 +22,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Check, ChevronsUpDown } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { FormMode, OPPORTUNITY_SOURCES } from '@/lib/schemas/shared';
-
-// Sentinel value for "no selection" to keep Select controlled
-const OPPORTUNITY_SOURCE_NONE = '__none__';
+import { FormSelect } from '@/components/form';
 
 // ==========================================
 // Types
@@ -181,32 +172,16 @@ export function JobCoreFields({
             )}
           </div>
 
-          {/* Job Source */}
-          <div className="space-y-2">
-            <Label htmlFor="opportunity_source">Job Source</Label>
-            <Select
-              value={form.watch('opportunity_source') || OPPORTUNITY_SOURCE_NONE}
-              onValueChange={(value) => {
-                const newValue = value === OPPORTUNITY_SOURCE_NONE ? null : value;
-                form.setValue('opportunity_source', newValue, { shouldDirty: true });
-              }}
-              disabled={disabled}
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Select source" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value={OPPORTUNITY_SOURCE_NONE}>
-                  <span className="text-muted-foreground">Unspecified</span>
-                </SelectItem>
-                {OPPORTUNITY_SOURCES.map((source) => (
-                  <SelectItem key={source.value} value={source.value}>
-                    {source.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
+          {/* Job Source - Using FormSelect with Controller */}
+          <FormSelect
+            form={form}
+            name="opportunity_source"
+            label="Job Source"
+            options={OPPORTUNITY_SOURCES}
+            placeholder="Select source"
+            disabled={disabled}
+            nullable={true}
+          />
         </div>
       </CardContent>
     </Card>

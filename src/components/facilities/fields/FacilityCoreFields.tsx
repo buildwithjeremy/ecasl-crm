@@ -1,4 +1,4 @@
-import { UseFormReturn } from 'react-hook-form';
+import { UseFormReturn, Controller } from 'react-hook-form';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -11,6 +11,9 @@ import {
 } from '@/components/ui/select';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { FormMode, FACILITY_TYPES } from '@/lib/schemas/shared';
+
+// Sentinel value for "no selection" to keep Select controlled
+const FACILITY_TYPE_NONE = '__none__';
 
 // ==========================================
 // Types
@@ -55,22 +58,33 @@ export function FacilityCoreFields({
           </div>
           <div className="space-y-2">
             <Label htmlFor="facility_type">Facility Type</Label>
-            <Select
-              value={form.watch('facility_type') ?? undefined}
-              onValueChange={(value) => form.setValue('facility_type', value || null, { shouldDirty: true })}
-              disabled={disabled}
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Select type" />
-              </SelectTrigger>
-              <SelectContent>
-                {FACILITY_TYPES.map((option) => (
-                  <SelectItem key={option.value} value={option.value}>
-                    {option.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <Controller
+              control={form.control}
+              name="facility_type"
+              render={({ field }) => (
+                <Select
+                  value={field.value || FACILITY_TYPE_NONE}
+                  onValueChange={(value) => {
+                    field.onChange(value === FACILITY_TYPE_NONE ? null : value);
+                  }}
+                  disabled={disabled}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select type" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value={FACILITY_TYPE_NONE}>
+                      <span className="text-muted-foreground">Unspecified</span>
+                    </SelectItem>
+                    {FACILITY_TYPES.map((option) => (
+                      <SelectItem key={option.value} value={option.value}>
+                        {option.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              )}
+            />
           </div>
         </div>
 
@@ -78,20 +92,28 @@ export function FacilityCoreFields({
         {showStatus && mode === 'edit' && (
           <div className="space-y-2">
             <Label htmlFor="status">Status</Label>
-            <Select
-              value={form.watch('status') || 'pending'}
-              onValueChange={(value) => form.setValue('status', value, { shouldDirty: true })}
-              disabled={disabled}
-            >
-              <SelectTrigger className="w-[200px]">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="pending">Pending</SelectItem>
-                <SelectItem value="active">Active</SelectItem>
-                <SelectItem value="inactive">Inactive</SelectItem>
-              </SelectContent>
-            </Select>
+            <Controller
+              control={form.control}
+              name="status"
+              render={({ field }) => (
+                <Select
+                  value={field.value || 'pending'}
+                  onValueChange={(value) => {
+                    field.onChange(value);
+                  }}
+                  disabled={disabled}
+                >
+                  <SelectTrigger className="w-[200px]">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="pending">Pending</SelectItem>
+                    <SelectItem value="active">Active</SelectItem>
+                    <SelectItem value="inactive">Inactive</SelectItem>
+                  </SelectContent>
+                </Select>
+              )}
+            />
           </div>
         )}
 

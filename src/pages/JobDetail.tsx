@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useCallback } from 'react';
+import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useUnsavedChangesWarning } from '@/hooks/use-unsaved-changes-warning';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
@@ -335,15 +335,23 @@ export default function JobDetail() {
     return () => window.clearTimeout(t);
   }, [job, form]);
 
-  // Auto-populate interpreter rates when interpreter changes
+  // Auto-populate interpreter rates when interpreter changes (user-initiated only)
+  const prevInterpreterIdRef = useRef<string | null>(null);
   useEffect(() => {
-    if (watchedInterpreterId && interpreters) {
+    // Skip on initial load (when form first populates from job data)
+    if (prevInterpreterIdRef.current === null) {
+      prevInterpreterIdRef.current = watchedInterpreterId || '';
+      return;
+    }
+    // Only run when interpreter actually changed by user action
+    if (watchedInterpreterId && watchedInterpreterId !== prevInterpreterIdRef.current && interpreters) {
       const interpreter = interpreters.find((i) => i.id === watchedInterpreterId);
       if (interpreter) {
-        form.setValue('interpreter_rate_business', interpreter.rate_business_hours || 0);
-        form.setValue('interpreter_rate_after_hours', interpreter.rate_after_hours || 0);
+        form.setValue('interpreter_rate_business', interpreter.rate_business_hours || 0, { shouldDirty: true });
+        form.setValue('interpreter_rate_after_hours', interpreter.rate_after_hours || 0, { shouldDirty: true });
       }
     }
+    prevInterpreterIdRef.current = watchedInterpreterId || '';
   }, [watchedInterpreterId, interpreters, form]);
 
   // ==========================================

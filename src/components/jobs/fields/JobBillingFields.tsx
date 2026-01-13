@@ -1,4 +1,4 @@
-import { useMemo, useCallback, useState, useEffect } from 'react';
+import { useMemo, useCallback, useState, useEffect, useRef } from 'react';
 import { UseFormReturn, Controller } from 'react-hook-form';
 import { useNavigate } from 'react-router-dom';
 import { ChevronUp, ChevronDown } from 'lucide-react';
@@ -37,12 +37,16 @@ interface CurrencyInputProps {
 function CurrencyInput({ value, onChange, disabled, id, className }: CurrencyInputProps) {
   const [localValue, setLocalValue] = useState<string>('');
   const [isFocused, setIsFocused] = useState(false);
+  
+  // Track the original value to avoid unnecessary onChange calls
+  const originalValueRef = useRef<number>(value ?? 0);
 
   // Sync local value with form value when not focused
   useEffect(() => {
     if (!isFocused) {
       const numValue = value ?? 0;
       setLocalValue(numValue.toFixed(2));
+      originalValueRef.current = numValue;
     }
   }, [value, isFocused]);
 
@@ -58,7 +62,12 @@ function CurrencyInput({ value, onChange, disabled, id, className }: CurrencyInp
     setIsFocused(false);
     const num = parseFloat(localValue);
     const finalValue = isNaN(num) ? 0 : Math.round(num * 100) / 100;
-    onChange(finalValue);
+    
+    // Only call onChange if the value actually changed to avoid marking form as dirty
+    if (finalValue !== originalValueRef.current) {
+      onChange(finalValue);
+      originalValueRef.current = finalValue;
+    }
     setLocalValue(finalValue.toFixed(2));
   };
 

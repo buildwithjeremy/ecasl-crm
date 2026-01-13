@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useMemo } from 'react';
-import { UseFormReturn } from 'react-hook-form';
+import { UseFormReturn, Controller } from 'react-hook-form';
 import { format } from 'date-fns';
 import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
@@ -34,6 +34,7 @@ import {
 import { normalizeTimeToHHMM, needsTimeNormalization } from '@/lib/utils/time-helpers';
 
 // Sentinel value for "no selection" to keep Select controlled
+const TIME_NONE = '';
 const DURATION_NONE = '__none__';
 
 // ==========================================
@@ -150,6 +151,12 @@ export function JobScheduleFields({
     form.setValue('end_time', newEndTime, { shouldDirty: true });
   };
 
+  // Compute duration value for the selector
+  const durationSelectValue = useMemo(() => {
+    if (jobDuration === null) return DURATION_NONE;
+    return String(Math.round((jobDuration * 60) / 15) * 15);
+  }, [jobDuration]);
+
   return (
     <Card>
       <CardHeader className="pb-4">
@@ -201,25 +208,33 @@ export function JobScheduleFields({
             )}
           </div>
 
-          {/* Start Time */}
+          {/* Start Time - Using Controller for consistent controlled state */}
           <div className="space-y-2">
             <Label>Start Time *</Label>
-            <Select
-              value={watchedStartTime || ''}
-              onValueChange={(value) => form.setValue('start_time', value, { shouldDirty: true })}
-              disabled={disabled}
-            >
-              <SelectTrigger className={cn(form.formState.errors.start_time && "border-destructive")}>
-                <SelectValue placeholder="Select time" />
-              </SelectTrigger>
-              <SelectContent className="max-h-[300px]">
-                {TIME_OPTIONS.map((option) => (
-                  <SelectItem key={option.value} value={option.value}>
-                    {option.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <Controller
+              control={form.control}
+              name="start_time"
+              render={({ field }) => (
+                <Select
+                  value={field.value || TIME_NONE}
+                  onValueChange={(value) => {
+                    field.onChange(value || null);
+                  }}
+                  disabled={disabled}
+                >
+                  <SelectTrigger className={cn(form.formState.errors.start_time && "border-destructive")}>
+                    <SelectValue placeholder="Select time" />
+                  </SelectTrigger>
+                  <SelectContent className="max-h-[300px]">
+                    {TIME_OPTIONS.map((option) => (
+                      <SelectItem key={option.value} value={option.value}>
+                        {option.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              )}
+            />
             {form.formState.errors.start_time && (
               <p className="text-sm text-destructive">
                 {form.formState.errors.start_time.message as string}
@@ -227,25 +242,33 @@ export function JobScheduleFields({
             )}
           </div>
 
-          {/* End Time */}
+          {/* End Time - Using Controller for consistent controlled state */}
           <div className="space-y-2">
             <Label>End Time *</Label>
-            <Select
-              value={watchedEndTime || ''}
-              onValueChange={(value) => form.setValue('end_time', value, { shouldDirty: true })}
-              disabled={disabled}
-            >
-              <SelectTrigger className={cn(form.formState.errors.end_time && "border-destructive")}>
-                <SelectValue placeholder="Select time" />
-              </SelectTrigger>
-              <SelectContent className="max-h-[300px]">
-                {TIME_OPTIONS.map((option) => (
-                  <SelectItem key={option.value} value={option.value}>
-                    {option.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <Controller
+              control={form.control}
+              name="end_time"
+              render={({ field }) => (
+                <Select
+                  value={field.value || TIME_NONE}
+                  onValueChange={(value) => {
+                    field.onChange(value || null);
+                  }}
+                  disabled={disabled}
+                >
+                  <SelectTrigger className={cn(form.formState.errors.end_time && "border-destructive")}>
+                    <SelectValue placeholder="Select time" />
+                  </SelectTrigger>
+                  <SelectContent className="max-h-[300px]">
+                    {TIME_OPTIONS.map((option) => (
+                      <SelectItem key={option.value} value={option.value}>
+                        {option.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              )}
+            />
             {form.formState.errors.end_time && (
               <p className="text-sm text-destructive">
                 {form.formState.errors.end_time.message as string}
@@ -257,7 +280,7 @@ export function JobScheduleFields({
           <div className="space-y-2">
             <Label>Duration</Label>
             <Select
-              value={jobDuration !== null ? String(Math.round((jobDuration * 60) / 15) * 15) : DURATION_NONE}
+              value={durationSelectValue}
               onValueChange={(value) => {
                 if (value !== DURATION_NONE) {
                   handleDurationChange(value);

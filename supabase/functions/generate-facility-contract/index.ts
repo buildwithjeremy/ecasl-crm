@@ -15,9 +15,8 @@ interface FacilityData {
   physical_state: string | null;
   rate_business_hours: number | null;
   rate_after_hours: number | null;
-  holiday_fee: number | null;
+  rate_holiday_hours: number | null;
   minimum_billable_hours: number | null;
-  rate_mileage: number | null;
 }
 
 function formatDate(date: Date): string {
@@ -111,7 +110,7 @@ function generateContractPdf(facility: FacilityData): Uint8Array {
   y += 6;
   doc.setFont("helvetica", "normal");
 
-  const holidayRate = formatCurrency(facility.holiday_fee || facility.rate_after_hours);
+  const holidayRate = formatCurrency(facility.rate_holiday_hours || facility.rate_after_hours);
   doc.text(`${holidayRate} per hour with a ${minHours}-hour minimum.`, margin, y);
   y += lineHeight + 4;
 
@@ -129,8 +128,7 @@ function generateContractPdf(facility: FacilityData): Uint8Array {
   y += lineHeight + 4;
 
   // Cancellation and mileage policy
-  const mileageRate = facility.rate_mileage ? `$${facility.rate_mileage.toFixed(2)}` : "the current IRS rate";
-  const policyText = `Two-full business day cancelation policy; otherwise scheduled time will be billed. Total mileage will be billed at ${mileageRate} per mile, plus tolls, if applicable.`;
+  const policyText = `Two-full business day cancelation policy; otherwise scheduled time will be billed. Total mileage will be billed at the current IRS rate per mile, plus tolls, if applicable.`;
   const policyLines = doc.splitTextToSize(policyText, contentWidth);
   doc.text(policyLines, margin, y);
   y += policyLines.length * lineHeight + lineHeight;
@@ -254,7 +252,7 @@ Deno.serve(async (req) => {
     // Fetch facility data
     const { data: facility, error: fetchError } = await supabase
       .from("facilities")
-      .select("id, name, admin_contact_name, admin_contact_email, physical_city, physical_state, rate_business_hours, rate_after_hours, holiday_fee, minimum_billable_hours, rate_mileage")
+      .select("id, name, admin_contact_name, admin_contact_email, physical_city, physical_state, rate_business_hours, rate_after_hours, rate_holiday_hours, minimum_billable_hours")
       .eq("id", facilityId)
       .single();
 

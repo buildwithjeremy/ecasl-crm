@@ -104,10 +104,15 @@ export function JobInterpreterSection({
 
   const selectedInterpreter = interpreters?.find((i) => i.id === watchedInterpreterId);
 
-  // Filter interpreters for "Selected" dropdown to only show potential interpreters
-  const filteredInterpretersForSelection = interpreters?.filter((interpreter) =>
-    watchedPotentialInterpreterIds.includes(interpreter.id)
-  ) || [];
+  // Filter interpreters for "Selected" dropdown:
+  // - If potential interpreters exist, limit to those
+  // - If potential interpreters is empty, allow picking from the full list
+  const hasPotentialInterpreters = watchedPotentialInterpreterIds.length > 0;
+  const filteredInterpretersForSelection = hasPotentialInterpreters
+    ? (interpreters?.filter((interpreter) =>
+        watchedPotentialInterpreterIds.includes(interpreter.id)
+      ) || [])
+    : (interpreters || []);
 
   const handleTogglePotentialInterpreter = (interpreterId: string) => {
     const currentIds = watchedPotentialInterpreterIds;

@@ -58,6 +58,7 @@ export default function NewFacility() {
         status: 'pending',
         rate_business_hours: data.rate_business_hours || null,
         rate_after_hours: data.rate_after_hours || null,
+        rate_holiday_hours: data.rate_holiday_hours || null,
         minimum_billable_hours: 2,
         contract_status: 'not_sent',
         is_gsa: data.is_gsa,

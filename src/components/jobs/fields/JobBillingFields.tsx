@@ -141,38 +141,65 @@ export function JobBillingFields({
 }: JobBillingFieldsProps) {
   const navigate = useNavigate();
 
+  // Watch all billing-related fields for dynamic calculation updates
   const watchedFacilityRateBusiness = form.watch('facility_rate_business') ?? 0;
   const watchedFacilityRateAfterHours = form.watch('facility_rate_after_hours') ?? 0;
+  const watchedFacilityRateMileageRaw = form.watch('facility_rate_mileage');
+  const watchedFacilityRateAdjustment = form.watch('facility_rate_adjustment') ?? 0;
   const watchedInterpreterRateBusiness = form.watch('interpreter_rate_business') ?? 0;
   const watchedInterpreterRateAfterHours = form.watch('interpreter_rate_after_hours') ?? 0;
+  const watchedInterpreterRateMileageRaw = form.watch('interpreter_rate_mileage');
+  const watchedInterpreterRateAdjustment = form.watch('interpreter_rate_adjustment') ?? 0;
+  const watchedMileage = form.watch('mileage') ?? 0;
+  const watchedTravelTime = form.watch('travel_time_hours') ?? 0;
+  const watchedParking = form.watch('parking') ?? 0;
+  const watchedTolls = form.watch('tolls') ?? 0;
+  const watchedMiscFee = form.watch('misc_fee') ?? 0;
 
-  // Calculate billable totals
+  // Resolve mileage rates with default fallback
+  const facilityMileageRate = watchedFacilityRateMileageRaw === null || watchedFacilityRateMileageRaw === undefined || watchedFacilityRateMileageRaw === 0
+    ? defaultMileageRate
+    : watchedFacilityRateMileageRaw;
+  const interpreterMileageRate = watchedInterpreterRateMileageRaw === null || watchedInterpreterRateMileageRaw === undefined || watchedInterpreterRateMileageRaw === 0
+    ? defaultMileageRate
+    : watchedInterpreterRateMileageRaw;
+
+  // Calculate billable totals - dynamically updates when any watched value changes
   const billableTotal = useMemo<BillableTotal | null>(() => {
     if (!hoursSplit) return null;
 
     return calculateBillableTotal({
       hoursSplit,
-      facilityBusinessRate: form.watch('facility_rate_business') ?? 0,
-      facilityAfterHoursRate: form.watch('facility_rate_after_hours') ?? 0,
-      facilityMileageRate: (() => {
-        const v = form.watch('facility_rate_mileage');
-        return v === null || v === undefined || v === 0 ? defaultMileageRate : v;
-      })(),
-      facilityRateAdjustment: form.watch('facility_rate_adjustment') ?? 0,
-      interpreterBusinessRate: form.watch('interpreter_rate_business') ?? 0,
-      interpreterAfterHoursRate: form.watch('interpreter_rate_after_hours') ?? 0,
-      interpreterMileageRate: (() => {
-        const v = form.watch('interpreter_rate_mileage');
-        return v === null || v === undefined || v === 0 ? defaultMileageRate : v;
-      })(),
-      interpreterRateAdjustment: form.watch('interpreter_rate_adjustment') ?? 0,
-      mileage: form.watch('mileage') ?? 0,
-      travelTimeHours: form.watch('travel_time_hours') ?? 0,
-      parking: form.watch('parking') ?? 0,
-      tolls: form.watch('tolls') ?? 0,
-      miscFee: form.watch('misc_fee') ?? 0,
+      facilityBusinessRate: watchedFacilityRateBusiness,
+      facilityAfterHoursRate: watchedFacilityRateAfterHours,
+      facilityMileageRate,
+      facilityRateAdjustment: watchedFacilityRateAdjustment,
+      interpreterBusinessRate: watchedInterpreterRateBusiness,
+      interpreterAfterHoursRate: watchedInterpreterRateAfterHours,
+      interpreterMileageRate,
+      interpreterRateAdjustment: watchedInterpreterRateAdjustment,
+      mileage: watchedMileage,
+      travelTimeHours: watchedTravelTime,
+      parking: watchedParking,
+      tolls: watchedTolls,
+      miscFee: watchedMiscFee,
     });
-  }, [hoursSplit, form, defaultMileageRate]);
+  }, [
+    hoursSplit,
+    watchedFacilityRateBusiness,
+    watchedFacilityRateAfterHours,
+    facilityMileageRate,
+    watchedFacilityRateAdjustment,
+    watchedInterpreterRateBusiness,
+    watchedInterpreterRateAfterHours,
+    interpreterMileageRate,
+    watchedInterpreterRateAdjustment,
+    watchedMileage,
+    watchedTravelTime,
+    watchedParking,
+    watchedTolls,
+    watchedMiscFee,
+  ]);
 
   // Number input setValueAs helper - rounds to 2 decimal places for currency
   const numericSetValueAs = (v: string) => {
@@ -182,16 +209,8 @@ export function JobBillingFields({
     return Math.round(num * 100) / 100;
   };
 
-  // Watch values for inline calculations
-  const watchedMileage = form.watch('mileage') ?? 0;
-  const watchedMileageRateRaw = form.watch('facility_rate_mileage');
-  const watchedMileageRate = watchedMileageRateRaw === null || watchedMileageRateRaw === undefined || watchedMileageRateRaw === 0
-    ? defaultMileageRate
-    : watchedMileageRateRaw;
-  const watchedTravelTime = form.watch('travel_time_hours') ?? 0;
-
-  // Calculate mileage total
-  const mileageTotal = watchedMileage * watchedMileageRate;
+  // Calculate mileage total using already-watched values
+  const mileageTotal = watchedMileage * facilityMileageRate;
 
   // Travel time rate uses the interpreter's adjusted rate (higher of business or after-hours)
   const travelTimeRate = billableTotal?.interpreterTravelTimeRate ?? 0;

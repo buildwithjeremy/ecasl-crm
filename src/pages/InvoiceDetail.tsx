@@ -108,6 +108,12 @@ const statusDisplayMap: Record<string, string> = {
   paid: 'Paid',
 };
 
+// Helper to check if a URL is a storage path (not a full URL)
+function isStoragePath(url: string | null): boolean {
+  if (!url) return false;
+  return !url.startsWith('http://') && !url.startsWith('https://');
+}
+
 export default function InvoiceDetail() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
@@ -201,10 +207,40 @@ export default function InvoiceDetail() {
         paid_date: invoice.paid_date ?? '',
         notes: invoice.notes ?? '',
       }, { keepDefaultValues: false });
-      setPdfUrl(invoice.pdf_url ?? null);
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [invoice]);
+
+  // Generate signed URL for PDF when invoice loads
+  useEffect(() => {
+    async function generateSignedUrl() {
+      if (!invoice?.pdf_url) {
+        setPdfUrl(null);
+        return;
+      }
+
+      // If it's already a full URL (legacy), use it directly
+      if (!isStoragePath(invoice.pdf_url)) {
+        setPdfUrl(invoice.pdf_url);
+        return;
+      }
+
+      // Generate signed URL for storage path
+      const { data, error } = await supabase.storage
+        .from('invoices')
+        .createSignedUrl(invoice.pdf_url, 3600); // 1 hour expiry
+
+      if (error) {
+        console.error('Error generating signed URL for invoice PDF:', error);
+        setPdfUrl(null);
+        return;
+      }
+
+      setPdfUrl(data.signedUrl);
+    }
+
+    generateSignedUrl();
+  }, [invoice?.pdf_url]);
 
   const mutation = useMutation({
     mutationFn: async (data: FormData) => {

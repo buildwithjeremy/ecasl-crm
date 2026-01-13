@@ -61,14 +61,17 @@ export function JobScheduleFields({
   onHoursSplitChange,
 }: JobScheduleFieldsProps) {
   const [datePickerOpen, setDatePickerOpen] = useState(false);
+  
+  // Track if this is the initial mount to skip auto-adjustment on form reset
+  const isInitialMountRef = useRef(true);
 
   const watchedJobDate = form.watch('job_date');
   const watchedStartTime = form.watch('start_time');
   const watchedEndTime = form.watch('end_time');
 
-  // Track previous times for change detection
-  const prevStartTimeRef = useRef(watchedStartTime);
-  const prevEndTimeRef = useRef(watchedEndTime);
+  // Track previous times for change detection (user-initiated changes only)
+  const prevStartTimeRef = useRef<string | null>(null);
+  const prevEndTimeRef = useRef<string | null>(null);
 
   // Normalize times from various formats to HH:MM on mount and when values change
   useEffect(() => {
@@ -85,6 +88,18 @@ export function JobScheduleFields({
       if (normalized && normalized !== watchedEndTime) {
         form.setValue('end_time', normalized, { shouldDirty: false });
       }
+    }
+    
+    // After first normalization pass, mark initial mount as complete
+    // and initialize the refs with current values
+    if (isInitialMountRef.current && watchedStartTime && watchedEndTime) {
+      // Small delay to allow form reset to fully complete
+      const timer = setTimeout(() => {
+        prevStartTimeRef.current = watchedStartTime;
+        prevEndTimeRef.current = watchedEndTime;
+        isInitialMountRef.current = false;
+      }, 100);
+      return () => clearTimeout(timer);
     }
   }, [watchedStartTime, watchedEndTime, form]);
 
@@ -116,7 +131,10 @@ export function JobScheduleFields({
   }, [hoursSplit, onHoursSplitChange]);
 
   // When start time changes, auto-adjust end time to maintain valid duration
+  // Skip during initial mount to preserve DB values
   useEffect(() => {
+    // Skip if still in initial mount phase
+    if (isInitialMountRef.current) return;
     if (!watchedStartTime || !watchedEndTime) return;
     if (prevStartTimeRef.current === watchedStartTime) return;
     prevStartTimeRef.current = watchedStartTime;
@@ -131,7 +149,10 @@ export function JobScheduleFields({
   }, [watchedStartTime, watchedEndTime, form]);
 
   // When end time changes directly, ensure it maintains valid duration
+  // Skip during initial mount to preserve DB values
   useEffect(() => {
+    // Skip if still in initial mount phase
+    if (isInitialMountRef.current) return;
     if (!watchedStartTime || !watchedEndTime) return;
     if (prevEndTimeRef.current === watchedEndTime) return;
     prevEndTimeRef.current = watchedEndTime;

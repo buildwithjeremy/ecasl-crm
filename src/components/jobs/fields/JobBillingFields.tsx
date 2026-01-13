@@ -543,28 +543,38 @@ export function JobBillingFields({
                 <div className="space-y-1">
                   <h5 className="text-sm font-medium">Facility Charge</h5>
                   <div className="text-sm space-y-0.5">
-                    <div className="flex justify-between">
-                      <span>Business:</span>
-                      <span>${billableTotal.facilityBusinessTotal.toFixed(2)}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span>After Hours:</span>
-                      <span>${billableTotal.facilityAfterHoursTotal.toFixed(2)}</span>
-                    </div>
+                    {hoursSplit.businessHours > 0 && (
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">
+                          Business Hours ({hoursSplit.businessHours.toFixed(2)} × ${billableTotal.facilityBusinessRate.toFixed(2)})
+                        </span>
+                        <span>${billableTotal.facilityBusinessTotal.toFixed(2)}</span>
+                      </div>
+                    )}
+                    {hoursSplit.afterHours > 0 && (
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">
+                          After Hours ({hoursSplit.afterHours.toFixed(2)} × ${billableTotal.facilityAfterHoursRate.toFixed(2)})
+                        </span>
+                        <span>${billableTotal.facilityAfterHoursTotal.toFixed(2)}</span>
+                      </div>
+                    )}
                     {billableTotal.mileage > 0 && (
                       <div className="flex justify-between">
-                        <span>Mileage:</span>
+                        <span className="text-muted-foreground">
+                          Mileage ({billableTotal.mileage} × ${billableTotal.facilityMileageRate.toFixed(2)})
+                        </span>
                         <span>${billableTotal.facilityMileageTotal.toFixed(2)}</span>
                       </div>
                     )}
                     {billableTotal.facilityFeesTotal > 0 && (
                       <div className="flex justify-between">
-                        <span>Fees:</span>
+                        <span className="text-muted-foreground">Fees (Parking + Tolls + Misc)</span>
                         <span>${billableTotal.facilityFeesTotal.toFixed(2)}</span>
                       </div>
                     )}
                     <div className="flex justify-between border-t pt-1 font-semibold">
-                      <span>Total:</span>
+                      <span>Total</span>
                       <span>${billableTotal.facilityTotal.toFixed(2)}</span>
                     </div>
                   </div>
@@ -574,34 +584,46 @@ export function JobBillingFields({
                 <div className="space-y-1">
                   <h5 className="text-sm font-medium">Interpreter Pay</h5>
                   <div className="text-sm space-y-0.5">
-                    <div className="flex justify-between">
-                      <span>Business:</span>
-                      <span>${billableTotal.interpreterBusinessTotal.toFixed(2)}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span>After Hours:</span>
-                      <span>${billableTotal.interpreterAfterHoursTotal.toFixed(2)}</span>
-                    </div>
+                    {hoursSplit.businessHours > 0 && (
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">
+                          Business Hours ({hoursSplit.businessHours.toFixed(2)} × ${billableTotal.interpreterBusinessRate.toFixed(2)})
+                        </span>
+                        <span>${billableTotal.interpreterBusinessTotal.toFixed(2)}</span>
+                      </div>
+                    )}
+                    {hoursSplit.afterHours > 0 && (
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">
+                          After Hours ({hoursSplit.afterHours.toFixed(2)} × ${billableTotal.interpreterAfterHoursRate.toFixed(2)})
+                        </span>
+                        <span>${billableTotal.interpreterAfterHoursTotal.toFixed(2)}</span>
+                      </div>
+                    )}
                     {billableTotal.mileage > 0 && (
                       <div className="flex justify-between">
-                        <span>Mileage:</span>
+                        <span className="text-muted-foreground">
+                          Mileage ({billableTotal.mileage} × ${billableTotal.interpreterMileageRate.toFixed(2)})
+                        </span>
                         <span>${billableTotal.interpreterMileageTotal.toFixed(2)}</span>
                       </div>
                     )}
                     {billableTotal.travelTimeHours > 0 && (
                       <div className="flex justify-between">
-                        <span>Travel Time:</span>
+                        <span className="text-muted-foreground">
+                          Travel Time ({billableTotal.travelTimeHours.toFixed(2)} × ${billableTotal.interpreterTravelTimeRate.toFixed(2)})
+                        </span>
                         <span>${billableTotal.interpreterTravelTimeTotal.toFixed(2)}</span>
                       </div>
                     )}
                     {billableTotal.interpreterFeesTotal > 0 && (
                       <div className="flex justify-between">
-                        <span>Fees:</span>
+                        <span className="text-muted-foreground">Fees (Parking + Tolls + Misc)</span>
                         <span>${billableTotal.interpreterFeesTotal.toFixed(2)}</span>
                       </div>
                     )}
                     <div className="flex justify-between border-t pt-1 font-semibold">
-                      <span>Total:</span>
+                      <span>Total</span>
                       <span>${billableTotal.interpreterTotal.toFixed(2)}</span>
                     </div>
                   </div>

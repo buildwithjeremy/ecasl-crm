@@ -320,9 +320,19 @@ export default function JobDetail() {
 
   // Populate form when job loads
   useEffect(() => {
-    if (job) {
-      form.reset(jobToFormValues(job), { keepDefaultValues: false });
-    }
+    if (!job) return;
+
+    // Reset first so RHF updates all fields in one shot
+    form.reset(jobToFormValues(job), { keepDefaultValues: false });
+
+    // Defensive: some Radix Select fields can appear blank if the value arrives
+    // during the same commit as the reset; re-apply normalized times on next tick.
+    const t = window.setTimeout(() => {
+      form.setValue('start_time', normalizeTimeToHHMM(job.start_time), { shouldDirty: false });
+      form.setValue('end_time', normalizeTimeToHHMM(job.end_time), { shouldDirty: false });
+    }, 0);
+
+    return () => window.clearTimeout(t);
   }, [job, form]);
 
   // Auto-populate interpreter rates when interpreter changes

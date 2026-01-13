@@ -267,7 +267,9 @@ export function JobScheduleFields({
                     disabled={disabled}
                   >
                     <SelectTrigger className={cn(form.formState.errors.start_time && 'border-destructive')}>
-                      <SelectValue placeholder="Select time" />
+                      <span className={cn('truncate', !safeValue && 'text-muted-foreground')}>
+                        {safeValue ? formatTimeForDisplay(safeValue) : 'Select time'}
+                      </span>
                     </SelectTrigger>
                     <SelectContent className="max-h-[300px]">
                       {hasCustom && (
@@ -311,7 +313,9 @@ export function JobScheduleFields({
                     disabled={disabled}
                   >
                     <SelectTrigger className={cn(form.formState.errors.end_time && 'border-destructive')}>
-                      <SelectValue placeholder="Select time" />
+                      <span className={cn('truncate', !safeValue && 'text-muted-foreground')}>
+                        {safeValue ? formatTimeForDisplay(safeValue) : 'Select time'}
+                      </span>
                     </SelectTrigger>
                     <SelectContent className="max-h-[300px]">
                       {hasCustom && (

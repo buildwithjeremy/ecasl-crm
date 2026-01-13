@@ -416,6 +416,7 @@ export default function JobDetail() {
     let facilityBillableTotal: number | null = null;
     let interpreterHourlyTotal: number | null = null;
     let interpreterBillableTotal: number | null = null;
+    let travelTimeRate: number | null = null;
 
     if (currentHoursSplit) {
       const trilingualUplift = currentJob?.trilingual_rate_uplift ?? 0;
@@ -433,10 +434,12 @@ export default function JobDetail() {
         hoursSplit: currentHoursSplit,
         facilityBusinessRate: (data.facility_rate_business ?? 0) + trilingualUplift,
         facilityAfterHoursRate: (data.facility_rate_after_hours ?? 0) + trilingualUplift,
+        facilityHolidayRate: (data.facility_rate_holiday ?? 0) + trilingualUplift,
         facilityMileageRate,
         facilityRateAdjustment: data.facility_rate_adjustment ?? 0,
         interpreterBusinessRate: data.interpreter_rate_business ?? 0,
         interpreterAfterHoursRate: data.interpreter_rate_after_hours ?? 0,
+        interpreterHolidayRate: data.interpreter_rate_holiday ?? 0,
         interpreterMileageRate,
         interpreterRateAdjustment: data.interpreter_rate_adjustment ?? 0,
         mileage: data.mileage ?? 0,
@@ -444,19 +447,24 @@ export default function JobDetail() {
         parking: data.parking ?? 0,
         tolls: data.tolls ?? 0,
         miscFee: data.misc_fee ?? 0,
+        useHolidayRate: data.holiday_fee_applied ?? false,
       });
 
       facilityHourlyTotal = result.facilityBusinessTotal + result.facilityAfterHoursTotal;
       facilityBillableTotal = result.facilityTotal;
       interpreterHourlyTotal = result.interpreterBusinessTotal + result.interpreterAfterHoursTotal;
       interpreterBillableTotal = result.interpreterTotal;
+      travelTimeRate = result.interpreterTravelTimeRate;
     }
 
     return { 
       facility_hourly_total: facilityHourlyTotal, 
-      facility_billable_total: facilityBillableTotal, 
+      facility_billable_total: facilityBillableTotal,
+      total_facility_charge: facilityBillableTotal,
       interpreter_hourly_total: interpreterHourlyTotal, 
-      interpreter_billable_total: interpreterBillableTotal 
+      interpreter_billable_total: interpreterBillableTotal,
+      total_interpreter_pay: interpreterBillableTotal,
+      travel_time_rate: travelTimeRate,
     };
   }, [defaultMileageRate]);
 

@@ -22,6 +22,9 @@ interface SendEmailRequest {
 interface ResendEmailResponse {
   id?: string;
   error?: { message: string };
+  statusCode?: number;
+  message?: string;
+  name?: string;
 }
 
 const handler = async (req: Request): Promise<Response> => {
@@ -127,9 +130,10 @@ const handler = async (req: Request): Promise<Response> => {
     const emailResponse: ResendEmailResponse = await resendResponse.json();
     console.log("Resend response:", JSON.stringify(emailResponse, null, 2));
 
-    // Check for Resend errors
-    if (!resendResponse.ok || emailResponse.error) {
-      console.error("Resend error:", emailResponse.error);
+    // Check for Resend errors (can come in different formats)
+    if (!resendResponse.ok || emailResponse.error || emailResponse.statusCode) {
+      const errorMessage = emailResponse.error?.message || emailResponse.message || "Unknown error";
+      console.error("Resend error:", errorMessage);
       
       // Log failed email attempt
       for (const recipient of recipients) {

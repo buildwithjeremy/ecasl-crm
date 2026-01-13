@@ -564,6 +564,11 @@ export default function JobDetail() {
       if (!selectedJobId) throw new Error('No job selected');
       
       const data = form.getValues();
+      const potentialInterpreterIds = data.potential_interpreter_ids || [];
+      
+      if (potentialInterpreterIds.length === 0) {
+        throw new Error('No potential interpreters selected');
+      }
       
       // Normalize and validate times before saving
       const normalizedStartTime = normalizeTimeToHHMM(data.start_time);
@@ -572,6 +577,83 @@ export default function JobDetail() {
       if (!normalizedStartTime || !normalizedEndTime) {
         throw new Error('Invalid start or end time. Please select valid times.');
       }
+      
+      // Get facility name for email
+      const facility = facilities?.find(f => f.id === data.facility_id);
+      const facilityName = facility?.name || 'Unknown Facility';
+      
+      // Build location string
+      const locationParts = [data.location_address, data.location_city, data.location_state, data.location_zip].filter(Boolean);
+      const location = data.location_type === 'remote' 
+        ? (data.video_call_link || 'Remote - Link TBD')
+        : (locationParts.join(', ') || 'TBD');
+      
+      // Get rate info
+      const businessRate = data.facility_rate_business || facility?.rate_business_hours || 0;
+      const rateInfo = `$${businessRate.toFixed(2)}/hr`;
+      
+      // Get the email template
+      const { data: templateData, error: templateError } = await supabase
+        .from('email_templates')
+        .select('subject, body')
+        .eq('name', 'interpreter_outreach')
+        .single();
+      
+      if (templateError || !templateData) {
+        throw new Error('Could not find outreach email template');
+      }
+      
+      const template = templateData as { subject: string; body: string };
+      
+      // Get interpreter emails
+      const { data: potentialInterpreters, error: interpError } = await supabase
+        .from('interpreters')
+        .select('id, email, first_name, last_name')
+        .in('id', potentialInterpreterIds);
+      
+      if (interpError) throw interpError;
+      
+      // Send emails to all potential interpreters
+      const { data: session } = await supabase.auth.getSession();
+      if (!session?.session?.access_token) {
+        throw new Error('Not authenticated');
+      }
+      
+      const emailPromises = (potentialInterpreters || []).map(async (interpreter) => {
+        const templateVariables = {
+          interpreter_name: `${interpreter.first_name} ${interpreter.last_name}`,
+          facility_name: facilityName,
+          job_date: format(new Date(data.job_date), 'MMMM d, yyyy'),
+          start_time: normalizedStartTime,
+          end_time: normalizedEndTime,
+          location: location,
+          rate_info: rateInfo,
+        };
+        
+        const response = await fetch('https://umyjqvmpvjfikljhoofy.supabase.co/functions/v1/send-email', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${session.session.access_token}`,
+          },
+          body: JSON.stringify({
+            to: interpreter.email,
+            subject: template.subject,
+            body: template.body,
+            template_name: 'interpreter_outreach',
+            template_variables: templateVariables,
+            job_id: selectedJobId,
+            interpreter_id: interpreter.id,
+          }),
+        });
+        
+        if (!response.ok) {
+          console.error(`Failed to send email to ${interpreter.email}`);
+        }
+        return response;
+      });
+      
+      await Promise.allSettled(emailPromises);
       
       // Sanitize opportunity_source
       const opportunitySource = (data.opportunity_source as unknown) === '__none__' || !data.opportunity_source
@@ -617,6 +699,7 @@ export default function JobDetail() {
         client_contact_phone: data.client_contact_phone || null,
         client_contact_email: data.client_contact_email || null,
         potential_interpreter_ids: data.potential_interpreter_ids || [],
+        reminder_sent_at: new Date().toISOString(),
         ...totals,
       };
 
@@ -627,9 +710,9 @@ export default function JobDetail() {
         .select('*')
         .single();
       if (error) throw error;
-      return savedJob as Job;
+      return { savedJob: savedJob as Job, emailCount: potentialInterpreters?.length || 0 };
     },
-    onSuccess: (savedJob) => {
+    onSuccess: ({ savedJob, emailCount }) => {
       queryClient.invalidateQueries({ queryKey: ['job', selectedJobId] });
       queryClient.invalidateQueries({ queryKey: ['jobs'] });
       queryClient.invalidateQueries({ queryKey: ['jobs-list'] });
@@ -637,8 +720,8 @@ export default function JobDetail() {
         form.reset(jobToFormValues(savedJob, defaultMileageRate), { keepDefaultValues: false });
       }
       toast({
-        title: 'Outreach Sent',
-        description: 'Job saved and status updated to Outreach In Progress.',
+        title: 'Outreach Emails Sent',
+        description: `Sent outreach to ${emailCount} interpreter${emailCount !== 1 ? 's' : ''}. Status updated to Outreach In Progress.`,
       });
     },
     onError: (error: Error) => {
@@ -661,6 +744,85 @@ export default function JobDetail() {
       
       if (!normalizedStartTime || !normalizedEndTime) {
         throw new Error('Invalid start or end time. Please select valid times.');
+      }
+      
+      // Get facility name and details for email
+      const facility = facilities?.find(f => f.id === data.facility_id);
+      const facilityName = facility?.name || 'Unknown Facility';
+      
+      // Build location string
+      const locationParts = [data.location_address, data.location_city, data.location_state, data.location_zip].filter(Boolean);
+      const location = data.location_type === 'remote' 
+        ? (data.video_call_link || 'Remote - Link TBD')
+        : (locationParts.join(', ') || 'TBD');
+      
+      // Get contact info
+      const contactName = data.client_contact_name || facility?.admin_contact_name || 'N/A';
+      const contactPhone = data.client_contact_phone || facility?.admin_contact_phone || 'N/A';
+      
+      // Get the interpreter info
+      const { data: interpreterInfo, error: interpError } = await supabase
+        .from('interpreters')
+        .select('email, first_name, last_name')
+        .eq('id', interpreterId)
+        .single();
+      
+      if (interpError || !interpreterInfo) {
+        throw new Error('Could not find interpreter information');
+      }
+      
+      const confirmedInterpreter = interpreterInfo as { email: string; first_name: string; last_name: string };
+      
+      // Get the email template
+      const { data: templateData, error: templateError } = await supabase
+        .from('email_templates')
+        .select('subject, body')
+        .eq('name', 'interpreter_confirmation')
+        .single();
+      
+      if (templateError || !templateData) {
+        throw new Error('Could not find confirmation email template');
+      }
+      
+      const template = templateData as { subject: string; body: string };
+      
+      // Send confirmation email
+      const { data: session } = await supabase.auth.getSession();
+      if (!session?.session?.access_token) {
+        throw new Error('Not authenticated');
+      }
+      
+      const templateVariables = {
+        interpreter_name: `${confirmedInterpreter.first_name} ${confirmedInterpreter.last_name}`,
+        job_number: job?.job_number || 'N/A',
+        facility_name: facilityName,
+        job_date: format(new Date(data.job_date), 'MMMM d, yyyy'),
+        start_time: normalizedStartTime,
+        end_time: normalizedEndTime,
+        location: location,
+        contact_name: contactName,
+        contact_phone: contactPhone,
+      };
+      
+      const emailResponse = await fetch('https://umyjqvmpvjfikljhoofy.supabase.co/functions/v1/send-email', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session.session.access_token}`,
+        },
+        body: JSON.stringify({
+          to: confirmedInterpreter.email,
+          subject: template.subject,
+          body: template.body,
+          template_name: 'interpreter_confirmation',
+          template_variables: templateVariables,
+          job_id: selectedJobId,
+          interpreter_id: interpreterId,
+        }),
+      });
+      
+      if (!emailResponse.ok) {
+        console.error('Failed to send confirmation email');
       }
       
       // Sanitize opportunity_source
@@ -717,6 +879,7 @@ export default function JobDetail() {
         client_contact_phone: data.client_contact_phone || null,
         client_contact_email: data.client_contact_email || null,
         potential_interpreter_ids: data.potential_interpreter_ids || [],
+        confirmation_sent_at: new Date().toISOString(),
         ...totals,
       };
       
@@ -728,9 +891,9 @@ export default function JobDetail() {
         .single();
       if (error) throw error;
       
-      return savedJob as Job;
+      return { savedJob: savedJob as Job, interpreterName: `${confirmedInterpreter.first_name} ${confirmedInterpreter.last_name}` };
     },
-    onSuccess: (savedJob) => {
+    onSuccess: ({ savedJob, interpreterName }) => {
       queryClient.invalidateQueries({ queryKey: ['job', selectedJobId] });
       queryClient.invalidateQueries({ queryKey: ['jobs'] });
       queryClient.invalidateQueries({ queryKey: ['jobs-list'] });
@@ -739,7 +902,7 @@ export default function JobDetail() {
       }
       toast({
         title: 'Interpreter Confirmed',
-        description: 'Job saved and status updated to Confirmed.',
+        description: `Confirmation email sent to ${interpreterName}. Status updated to Confirmed.`,
       });
     },
     onError: (error: Error) => {

@@ -311,7 +311,6 @@ export type Database = {
           signed_contract_pdf_url: string | null
           state: string | null
           status: Database["public"]["Enums"]["interpreter_status"] | null
-          timezone: string | null
           updated_at: string | null
           w9_received: boolean | null
           w9_received_date: string | null
@@ -346,7 +345,6 @@ export type Database = {
           signed_contract_pdf_url?: string | null
           state?: string | null
           status?: Database["public"]["Enums"]["interpreter_status"] | null
-          timezone?: string | null
           updated_at?: string | null
           w9_received?: boolean | null
           w9_received_date?: string | null
@@ -381,7 +379,6 @@ export type Database = {
           signed_contract_pdf_url?: string | null
           state?: string | null
           status?: Database["public"]["Enums"]["interpreter_status"] | null
-          timezone?: string | null
           updated_at?: string | null
           w9_received?: boolean | null
           w9_received_date?: string | null

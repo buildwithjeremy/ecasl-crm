@@ -60,9 +60,6 @@ export const interpreterExtendedSchema = z.object({
   contract_pdf_url: z.string().optional(),
   signed_contract_pdf_url: z.string().optional(),
   
-  // Timezone
-  timezone: z.string().optional(),
-  
   // W9 date
   w9_received_date: z.date().optional().nullable(),
 });

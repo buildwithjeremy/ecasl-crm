@@ -149,11 +149,13 @@ export interface BillableTotal {
   facilityBusinessTotal: number;
   facilityAfterHoursTotal: number;
   facilityMileageTotal: number;
+  facilityTravelTimeTotal: number;
   facilityFeesTotal: number;
   facilityTotal: number;
   facilityBusinessRate: number;
   facilityAfterHoursRate: number;
   facilityMileageRate: number;
+  facilityTravelTimeRate: number;
   facilityRateAdjustment: number;
   
   // Interpreter totals
@@ -230,7 +232,8 @@ export function calculateBillableTotal(inputs: BillableCalculationInputs): Billa
   const adjustedInterpreterHolidayRate = interpreterHolidayRate + interpreterRateAdjustment;
 
   // Determine travel time rate based on which hour type has more hours (or holiday rate if applied)
-  const interpreterTravelTimeRate = useHolidayRate
+  // Travel time uses interpreter rates for both facility and interpreter billing
+  const travelTimeRate = useHolidayRate
     ? adjustedInterpreterHolidayRate
     : hoursSplit.businessHours >= hoursSplit.afterHours 
       ? adjustedInterpreterBusinessRate 
@@ -257,10 +260,11 @@ export function calculateBillableTotal(inputs: BillableCalculationInputs): Billa
   }
 
   const facilityMileageTotal = mileage * facilityMileageRate;
+  const facilityTravelTimeTotal = travelTimeHours * travelTimeRate;
   const facilityFeesTotal = parking + tolls + miscFee;
 
   const interpreterMileageTotal = mileage * interpreterMileageRate;
-  const interpreterTravelTimeTotal = travelTimeHours * interpreterTravelTimeRate;
+  const interpreterTravelTimeTotal = travelTimeHours * travelTimeRate;
   const interpreterFeesTotal = parking + tolls + miscFee;
 
   return {
@@ -268,8 +272,10 @@ export function calculateBillableTotal(inputs: BillableCalculationInputs): Billa
     facilityAfterHoursTotal,
     facilityMileageTotal,
     facilityMileageRate,
+    facilityTravelTimeTotal,
+    facilityTravelTimeRate: travelTimeRate,
     facilityFeesTotal,
-    facilityTotal: facilityBusinessTotal + facilityAfterHoursTotal + facilityMileageTotal + facilityFeesTotal,
+    facilityTotal: facilityBusinessTotal + facilityAfterHoursTotal + facilityMileageTotal + facilityTravelTimeTotal + facilityFeesTotal,
     facilityBusinessRate: useHolidayRate ? adjustedFacilityHolidayRate : adjustedFacilityBusinessRate,
     facilityAfterHoursRate: useHolidayRate ? adjustedFacilityHolidayRate : adjustedFacilityAfterHoursRate,
     facilityRateAdjustment,
@@ -278,7 +284,7 @@ export function calculateBillableTotal(inputs: BillableCalculationInputs): Billa
     interpreterMileageTotal,
     interpreterMileageRate,
     interpreterTravelTimeTotal,
-    interpreterTravelTimeRate,
+    interpreterTravelTimeRate: travelTimeRate,
     interpreterFeesTotal,
     interpreterTotal: interpreterBusinessTotal + interpreterAfterHoursTotal + interpreterMileageTotal + interpreterTravelTimeTotal + interpreterFeesTotal,
     interpreterBusinessRate: useHolidayRate ? adjustedInterpreterHolidayRate : adjustedInterpreterBusinessRate,

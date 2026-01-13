@@ -599,6 +599,14 @@ export function JobBillingFields({
                         <span>${billableTotal.facilityMileageTotal.toFixed(2)}</span>
                       </div>
                     )}
+                    {billableTotal.travelTimeHours > 0 && (
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">
+                          Travel Time ({billableTotal.travelTimeHours.toFixed(2)} × ${billableTotal.facilityTravelTimeRate.toFixed(2)})
+                        </span>
+                        <span>${billableTotal.facilityTravelTimeTotal.toFixed(2)}</span>
+                      </div>
+                    )}
                     {billableTotal.facilityFeesTotal > 0 && (
                       <div className="flex justify-between">
                         <span className="text-muted-foreground">Fees (Parking + Tolls + Misc)</span>

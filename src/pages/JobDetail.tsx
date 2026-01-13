@@ -343,6 +343,31 @@ export default function JobDetail() {
     return () => window.clearTimeout(t);
   }, [job, form, defaultMileageRate]);
 
+  // Some child fields auto-fill values (e.g., location/client fields from facility) after the job reset.
+  // If those fills happen during initial page load, RHF can end up considering the form "dirty" even
+  // though the user didn't change anything. Once the selected facility is known, we stabilize the
+  // current values as the new defaults for this job.
+  const stabilizedDefaultsForJobId = useRef<string | null>(null);
+  useEffect(() => {
+    if (!job?.id) return;
+    // Reset marker when switching jobs
+    stabilizedDefaultsForJobId.current = null;
+  }, [job?.id]);
+
+  useEffect(() => {
+    if (!job?.id) return;
+    if (!selectedFacility) return;
+    if (stabilizedDefaultsForJobId.current === job.id) return;
+
+    // Next tick so any facility-dependent effects have applied their values.
+    const t = window.setTimeout(() => {
+      form.reset(form.getValues(), { keepDefaultValues: false });
+      stabilizedDefaultsForJobId.current = job.id;
+    }, 0);
+
+    return () => window.clearTimeout(t);
+  }, [job?.id, selectedFacility, form]);
+
   // Auto-populate interpreter rates when interpreter changes (user-initiated only)
   const prevInterpreterIdRef = useRef<string | null>(null);
   useEffect(() => {

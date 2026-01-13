@@ -87,7 +87,7 @@ type FormData = z.infer<typeof formSchema>;
 // ==========================================
 
 // Helper to convert a job record to form values with proper normalization
-const jobToFormValues = (job: Job): FormData => ({
+const jobToFormValues = (job: Job, defaultMileageRate: number = 0.7): FormData => ({
   facility_id: job.facility_id,
   interpreter_id: job.interpreter_id ?? '',
   potential_interpreter_ids: job.potential_interpreter_ids ?? [],
@@ -111,11 +111,11 @@ const jobToFormValues = (job: Job): FormData => ({
   travel_time_hours: job.travel_time_hours ?? 0,
   facility_rate_business: job.facility_rate_business ?? 0,
   facility_rate_after_hours: job.facility_rate_after_hours ?? 0,
-  facility_rate_mileage: job.facility_rate_mileage ?? 0,
+  facility_rate_mileage: job.facility_rate_mileage ?? defaultMileageRate,
   facility_rate_adjustment: job.facility_rate_adjustment ?? 0,
   interpreter_rate_business: job.interpreter_rate_business ?? 0,
   interpreter_rate_after_hours: job.interpreter_rate_after_hours ?? 0,
-  interpreter_rate_mileage: job.interpreter_rate_mileage ?? 0,
+  interpreter_rate_mileage: job.interpreter_rate_mileage ?? defaultMileageRate,
   interpreter_rate_adjustment: job.interpreter_rate_adjustment ?? 0,
   emergency_fee_applied: job.emergency_fee_applied ?? false,
   holiday_fee_applied: job.holiday_fee_applied ?? false,
@@ -323,7 +323,8 @@ export default function JobDetail() {
     if (!job) return;
 
     // Reset first so RHF updates all fields in one shot
-    form.reset(jobToFormValues(job), { keepDefaultValues: false });
+    // Pass defaultMileageRate so mileage rate fields use it when null
+    form.reset(jobToFormValues(job, defaultMileageRate), { keepDefaultValues: false });
 
     // Defensive: some Radix Select fields can appear blank if the value arrives
     // during the same commit as the reset; re-apply normalized times on next tick.
@@ -333,7 +334,7 @@ export default function JobDetail() {
     }, 0);
 
     return () => window.clearTimeout(t);
-  }, [job, form]);
+  }, [job, form, defaultMileageRate]);
 
   // Auto-populate interpreter rates when interpreter changes (user-initiated only)
   const prevInterpreterIdRef = useRef<string | null>(null);

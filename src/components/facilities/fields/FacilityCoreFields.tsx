@@ -118,24 +118,36 @@ export function FacilityCoreFields({
         )}
 
         <div className="flex items-center gap-6">
-          <div className="flex items-center space-x-2">
-            <Checkbox
-              id="is_gsa"
-              checked={form.watch('is_gsa') || false}
-              onCheckedChange={(checked) => form.setValue('is_gsa', !!checked, { shouldDirty: true })}
-              disabled={disabled}
-            />
-            <Label htmlFor="is_gsa">GSA Contract</Label>
-          </div>
-          <div className="flex items-center space-x-2">
-            <Checkbox
-              id="contractor"
-              checked={form.watch('contractor') || false}
-              onCheckedChange={(checked) => form.setValue('contractor', !!checked, { shouldDirty: true })}
-              disabled={disabled}
-            />
-            <Label htmlFor="contractor">Contractor</Label>
-          </div>
+          <Controller
+            control={form.control}
+            name="is_gsa"
+            render={({ field }) => (
+              <div className="flex items-center space-x-2">
+                <Checkbox
+                  id="is_gsa"
+                  checked={field.value || false}
+                  onCheckedChange={field.onChange}
+                  disabled={disabled}
+                />
+                <Label htmlFor="is_gsa">GSA Contract</Label>
+              </div>
+            )}
+          />
+          <Controller
+            control={form.control}
+            name="contractor"
+            render={({ field }) => (
+              <div className="flex items-center space-x-2">
+                <Checkbox
+                  id="contractor"
+                  checked={field.value || false}
+                  onCheckedChange={field.onChange}
+                  disabled={disabled}
+                />
+                <Label htmlFor="contractor">Contractor</Label>
+              </div>
+            )}
+          />
         </div>
       </CardContent>
     </Card>

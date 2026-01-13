@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useMutation } from '@tanstack/react-query';
-import { UseFormReturn } from 'react-hook-form';
+import { UseFormReturn, Controller } from 'react-hook-form';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
@@ -176,14 +176,20 @@ export function ContractComplianceSection({
                 </Badge>
               </div>
             </div>
-            <div className="flex items-center space-x-2 pt-6">
-              <Checkbox
-                id="w9_received"
-                checked={form.watch('w9_received')}
-                onCheckedChange={(checked) => form.setValue('w9_received', !!checked, { shouldDirty: true })}
-              />
-              <Label htmlFor="w9_received">W-9 Received</Label>
-            </div>
+            <Controller
+              control={form.control}
+              name="w9_received"
+              render={({ field }) => (
+                <div className="flex items-center space-x-2 pt-6">
+                  <Checkbox
+                    id="w9_received"
+                    checked={field.value || false}
+                    onCheckedChange={field.onChange}
+                  />
+                  <Label htmlFor="w9_received">W-9 Received</Label>
+                </div>
+              )}
+            />
           </div>
 
           {/* Action Buttons Row */}

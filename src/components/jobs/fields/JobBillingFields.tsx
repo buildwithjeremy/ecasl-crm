@@ -154,11 +154,17 @@ export function JobBillingFields({
       hoursSplit,
       facilityBusinessRate: form.watch('facility_rate_business') ?? 0,
       facilityAfterHoursRate: form.watch('facility_rate_after_hours') ?? 0,
-      facilityMileageRate: form.watch('facility_rate_mileage') ?? defaultMileageRate,
+      facilityMileageRate: (() => {
+        const v = form.watch('facility_rate_mileage');
+        return v === null || v === undefined || v === 0 ? defaultMileageRate : v;
+      })(),
       facilityRateAdjustment: form.watch('facility_rate_adjustment') ?? 0,
       interpreterBusinessRate: form.watch('interpreter_rate_business') ?? 0,
       interpreterAfterHoursRate: form.watch('interpreter_rate_after_hours') ?? 0,
-      interpreterMileageRate: form.watch('interpreter_rate_mileage') ?? defaultMileageRate,
+      interpreterMileageRate: (() => {
+        const v = form.watch('interpreter_rate_mileage');
+        return v === null || v === undefined || v === 0 ? defaultMileageRate : v;
+      })(),
       interpreterRateAdjustment: form.watch('interpreter_rate_adjustment') ?? 0,
       mileage: form.watch('mileage') ?? 0,
       travelTimeHours: form.watch('travel_time_hours') ?? 0,
@@ -178,7 +184,10 @@ export function JobBillingFields({
 
   // Watch values for inline calculations
   const watchedMileage = form.watch('mileage') ?? 0;
-  const watchedMileageRate = form.watch('facility_rate_mileage') ?? defaultMileageRate;
+  const watchedMileageRateRaw = form.watch('facility_rate_mileage');
+  const watchedMileageRate = watchedMileageRateRaw === null || watchedMileageRateRaw === undefined || watchedMileageRateRaw === 0
+    ? defaultMileageRate
+    : watchedMileageRateRaw;
   const watchedTravelTime = form.watch('travel_time_hours') ?? 0;
 
   // Calculate mileage total
@@ -301,15 +310,20 @@ export function JobBillingFields({
               <Controller
                 control={form.control}
                 name="facility_rate_mileage"
-                render={({ field }) => (
-                  <CurrencyInput
-                    id="facility_rate_mileage"
-                    value={field.value ?? defaultMileageRate}
-                    onChange={field.onChange}
-                    disabled={disabled}
-                    className="h-8 w-20"
-                  />
-                )}
+                render={({ field }) => {
+                  const effective = field.value === null || field.value === undefined || field.value === 0
+                    ? defaultMileageRate
+                    : field.value;
+                  return (
+                    <CurrencyInput
+                      id="facility_rate_mileage"
+                      value={effective}
+                      onChange={field.onChange}
+                      disabled={disabled}
+                      className="h-8 w-20"
+                    />
+                  );
+                }}
               />
             </div>
             <span className="text-muted-foreground pb-1">=</span>

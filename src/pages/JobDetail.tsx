@@ -111,11 +111,18 @@ const jobToFormValues = (job: Job, defaultMileageRate: number = 0.7): FormData =
   travel_time_hours: job.travel_time_hours ?? 0,
   facility_rate_business: job.facility_rate_business ?? 0,
   facility_rate_after_hours: job.facility_rate_after_hours ?? 0,
-  facility_rate_mileage: job.facility_rate_mileage ?? defaultMileageRate,
+  // Treat 0.00 as "unset" so the UI uses the settings default until user overrides
+  facility_rate_mileage:
+    job.facility_rate_mileage === null || job.facility_rate_mileage === 0
+      ? defaultMileageRate
+      : job.facility_rate_mileage,
   facility_rate_adjustment: job.facility_rate_adjustment ?? 0,
   interpreter_rate_business: job.interpreter_rate_business ?? 0,
   interpreter_rate_after_hours: job.interpreter_rate_after_hours ?? 0,
-  interpreter_rate_mileage: job.interpreter_rate_mileage ?? defaultMileageRate,
+  interpreter_rate_mileage:
+    job.interpreter_rate_mileage === null || job.interpreter_rate_mileage === 0
+      ? defaultMileageRate
+      : job.interpreter_rate_mileage,
   interpreter_rate_adjustment: job.interpreter_rate_adjustment ?? 0,
   emergency_fee_applied: job.emergency_fee_applied ?? false,
   holiday_fee_applied: job.holiday_fee_applied ?? false,
@@ -381,15 +388,25 @@ export default function JobDetail() {
 
     if (currentHoursSplit) {
       const trilingualUplift = currentJob?.trilingual_rate_uplift ?? 0;
+
+      const facilityMileageRate =
+        data.facility_rate_mileage === null || data.facility_rate_mileage === undefined || data.facility_rate_mileage === 0
+          ? defaultMileageRate
+          : data.facility_rate_mileage;
+      const interpreterMileageRate =
+        data.interpreter_rate_mileage === null || data.interpreter_rate_mileage === undefined || data.interpreter_rate_mileage === 0
+          ? defaultMileageRate
+          : data.interpreter_rate_mileage;
+
       const result = calculateBillableTotal({
         hoursSplit: currentHoursSplit,
         facilityBusinessRate: (data.facility_rate_business ?? 0) + trilingualUplift,
         facilityAfterHoursRate: (data.facility_rate_after_hours ?? 0) + trilingualUplift,
-        facilityMileageRate: data.facility_rate_mileage ?? defaultMileageRate,
+        facilityMileageRate,
         facilityRateAdjustment: data.facility_rate_adjustment ?? 0,
         interpreterBusinessRate: data.interpreter_rate_business ?? 0,
         interpreterAfterHoursRate: data.interpreter_rate_after_hours ?? 0,
-        interpreterMileageRate: data.interpreter_rate_mileage ?? defaultMileageRate,
+        interpreterMileageRate,
         interpreterRateAdjustment: data.interpreter_rate_adjustment ?? 0,
         mileage: data.mileage ?? 0,
         travelTimeHours: data.travel_time_hours ?? 0,
@@ -458,11 +475,12 @@ export default function JobDetail() {
         travel_time_hours: data.travel_time_hours ?? null,
         facility_rate_business: data.facility_rate_business ?? null,
         facility_rate_after_hours: data.facility_rate_after_hours ?? null,
-        facility_rate_mileage: data.facility_rate_mileage ?? null,
+        // Treat 0 as "use default" and store null
+        facility_rate_mileage: !data.facility_rate_mileage || data.facility_rate_mileage === 0 ? null : data.facility_rate_mileage,
         facility_rate_adjustment: data.facility_rate_adjustment ?? 0,
         interpreter_rate_business: data.interpreter_rate_business ?? null,
         interpreter_rate_after_hours: data.interpreter_rate_after_hours ?? null,
-        interpreter_rate_mileage: data.interpreter_rate_mileage ?? null,
+        interpreter_rate_mileage: !data.interpreter_rate_mileage || data.interpreter_rate_mileage === 0 ? null : data.interpreter_rate_mileage,
         interpreter_rate_adjustment: data.interpreter_rate_adjustment ?? 0,
         emergency_fee_applied: data.emergency_fee_applied || false,
         holiday_fee_applied: data.holiday_fee_applied || false,
@@ -491,7 +509,7 @@ export default function JobDetail() {
       queryClient.invalidateQueries({ queryKey: ['jobs-list'] });
       // Reset form from the authoritative DB response to ensure UI matches DB
       if (savedJob) {
-        form.reset(jobToFormValues(savedJob), { keepDefaultValues: false });
+        form.reset(jobToFormValues(savedJob, defaultMileageRate), { keepDefaultValues: false });
       }
       toast({ title: 'Job updated successfully' });
     },
@@ -575,7 +593,7 @@ export default function JobDetail() {
       queryClient.invalidateQueries({ queryKey: ['jobs'] });
       queryClient.invalidateQueries({ queryKey: ['jobs-list'] });
       if (savedJob) {
-        form.reset(jobToFormValues(savedJob), { keepDefaultValues: false });
+        form.reset(jobToFormValues(savedJob, defaultMileageRate), { keepDefaultValues: false });
       }
       toast({
         title: 'Outreach Sent',

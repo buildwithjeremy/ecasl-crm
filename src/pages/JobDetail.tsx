@@ -361,8 +361,9 @@ export default function JobDetail() {
   const handleFacilityChange = useCallback((facility: FacilityOption | null) => {
     setSelectedFacility(facility);
     if (facility) {
-      form.setValue('facility_rate_business', facility.rate_business_hours || 0);
-      form.setValue('facility_rate_after_hours', facility.rate_after_hours || 0);
+      // Use shouldDirty: false to avoid marking form as dirty during initial load
+      form.setValue('facility_rate_business', facility.rate_business_hours || 0, { shouldDirty: false });
+      form.setValue('facility_rate_after_hours', facility.rate_after_hours || 0, { shouldDirty: false });
     }
   }, [form]);
 

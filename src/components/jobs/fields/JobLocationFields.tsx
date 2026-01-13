@@ -57,6 +57,16 @@ export function JobLocationFields({
     const facilityChanged = !isInitial && watchedFacilityId !== prevFacilityIdRef.current;
     const locationTypeChanged = !isInitial && watchedLocationType !== prevLocationTypeRef.current;
 
+    // Only run auto-fill logic when facility actually changes or on initial load
+    // Don't run when only location type changes for contractors (to preserve user input)
+    const shouldAutoFill = isInitial || facilityChanged;
+    
+    if (!shouldAutoFill && selectedFacility.contractor && locationTypeChanged) {
+      // For contractors, just update refs without clearing fields
+      prevLocationTypeRef.current = watchedLocationType;
+      return;
+    }
+
     const shouldDirty = facilityChanged || locationTypeChanged;
 
     const setIfDifferent = (name: string, next: any) => {
@@ -84,8 +94,9 @@ export function JobLocationFields({
         setIfDifferent('location_state', state || '');
         setIfDifferent('location_zip', zip || '');
       }
-    } else {
-      // Contractor: clear all client and location fields for manual entry
+    } else if (shouldAutoFill) {
+      // Contractor: only clear fields when facility changes or on initial load
+      // This preserves user-entered data during normal form interaction
       setIfDifferent('client_business_name', '');
       setIfDifferent('client_contact_name', '');
       setIfDifferent('client_contact_phone', '');

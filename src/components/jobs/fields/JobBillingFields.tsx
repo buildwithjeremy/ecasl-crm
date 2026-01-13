@@ -1,5 +1,5 @@
-import { useMemo, useCallback } from 'react';
-import { UseFormReturn } from 'react-hook-form';
+import { useMemo, useCallback, useState, useEffect } from 'react';
+import { UseFormReturn, Controller } from 'react-hook-form';
 import { useNavigate } from 'react-router-dom';
 import { ChevronUp, ChevronDown } from 'lucide-react';
 import { Label } from '@/components/ui/label';
@@ -21,6 +21,68 @@ import {
 import { FormMode } from '@/lib/schemas/shared';
 import { RateChips } from '@/components/jobs/RateChips';
 import { HoursSplit, calculateBillableTotal, BillableTotal } from '@/lib/utils/job-calculations';
+
+// ==========================================
+// Currency Input Component
+// ==========================================
+
+interface CurrencyInputProps {
+  value: number | null | undefined;
+  onChange: (value: number) => void;
+  disabled?: boolean;
+  id?: string;
+  className?: string;
+}
+
+function CurrencyInput({ value, onChange, disabled, id, className }: CurrencyInputProps) {
+  const [localValue, setLocalValue] = useState<string>('');
+  const [isFocused, setIsFocused] = useState(false);
+
+  // Sync local value with form value when not focused
+  useEffect(() => {
+    if (!isFocused) {
+      const numValue = value ?? 0;
+      setLocalValue(numValue.toFixed(2));
+    }
+  }, [value, isFocused]);
+
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const inputValue = e.target.value;
+    // Allow typing decimal numbers
+    if (inputValue === '' || inputValue === '-' || /^-?\d*\.?\d*$/.test(inputValue)) {
+      setLocalValue(inputValue);
+    }
+  };
+
+  const handleBlur = () => {
+    setIsFocused(false);
+    const num = parseFloat(localValue);
+    const finalValue = isNaN(num) ? 0 : Math.round(num * 100) / 100;
+    onChange(finalValue);
+    setLocalValue(finalValue.toFixed(2));
+  };
+
+  const handleFocus = () => {
+    setIsFocused(true);
+  };
+
+  return (
+    <div className="relative">
+      <span className="absolute left-2 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">$</span>
+      <Input
+        id={id}
+        type="text"
+        inputMode="decimal"
+        value={localValue}
+        onChange={handleChange}
+        onBlur={handleBlur}
+        onFocus={handleFocus}
+        disabled={disabled}
+        className={`pl-5 ${className ?? ''}`}
+      />
+    </div>
+  );
+}
 
 // ==========================================
 // Types
@@ -227,18 +289,19 @@ export function JobBillingFields({
             <span className="text-muted-foreground pb-1">×</span>
             <div className="space-y-1">
               <Label htmlFor="facility_rate_mileage" className="text-xs">Rate/mi</Label>
-              <div className="relative">
-                <span className="absolute left-2 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">$</span>
-                <Input
-                  id="facility_rate_mileage"
-                  type="text"
-                  inputMode="decimal"
-                  {...form.register('facility_rate_mileage', { setValueAs: numericSetValueAs })}
-                  disabled={disabled}
-                  placeholder={defaultMileageRate.toFixed(2)}
-                  className="h-8 w-20 pl-5"
-                />
-              </div>
+              <Controller
+                control={form.control}
+                name="facility_rate_mileage"
+                render={({ field }) => (
+                  <CurrencyInput
+                    id="facility_rate_mileage"
+                    value={field.value ?? defaultMileageRate}
+                    onChange={field.onChange}
+                    disabled={disabled}
+                    className="h-8 w-20"
+                  />
+                )}
+              />
             </div>
             <span className="text-muted-foreground pb-1">=</span>
             <div className="pb-1">
@@ -277,48 +340,51 @@ export function JobBillingFields({
           <div className="grid grid-cols-3 gap-4">
             <div className="space-y-1">
               <Label htmlFor="parking" className="text-xs">Parking</Label>
-              <div className="relative">
-                <span className="absolute left-2 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">$</span>
-                <Input
-                  id="parking"
-                  type="text"
-                  inputMode="decimal"
-                  {...form.register('parking', { setValueAs: numericSetValueAs })}
-                  disabled={disabled}
-                  placeholder="0.00"
-                  className="h-8 pl-5"
-                />
-              </div>
+              <Controller
+                control={form.control}
+                name="parking"
+                render={({ field }) => (
+                  <CurrencyInput
+                    id="parking"
+                    value={field.value}
+                    onChange={field.onChange}
+                    disabled={disabled}
+                    className="h-8"
+                  />
+                )}
+              />
             </div>
             <div className="space-y-1">
               <Label htmlFor="tolls" className="text-xs">Tolls</Label>
-              <div className="relative">
-                <span className="absolute left-2 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">$</span>
-                <Input
-                  id="tolls"
-                  type="text"
-                  inputMode="decimal"
-                  {...form.register('tolls', { setValueAs: numericSetValueAs })}
-                  disabled={disabled}
-                  placeholder="0.00"
-                  className="h-8 pl-5"
-                />
-              </div>
+              <Controller
+                control={form.control}
+                name="tolls"
+                render={({ field }) => (
+                  <CurrencyInput
+                    id="tolls"
+                    value={field.value}
+                    onChange={field.onChange}
+                    disabled={disabled}
+                    className="h-8"
+                  />
+                )}
+              />
             </div>
             <div className="space-y-1">
               <Label htmlFor="misc_fee" className="text-xs">Misc Fee</Label>
-              <div className="relative">
-                <span className="absolute left-2 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">$</span>
-                <Input
-                  id="misc_fee"
-                  type="text"
-                  inputMode="decimal"
-                  {...form.register('misc_fee', { setValueAs: numericSetValueAs })}
-                  disabled={disabled}
-                  placeholder="0.00"
-                  className="h-8 pl-5"
-                />
-              </div>
+              <Controller
+                control={form.control}
+                name="misc_fee"
+                render={({ field }) => (
+                  <CurrencyInput
+                    id="misc_fee"
+                    value={field.value}
+                    onChange={field.onChange}
+                    disabled={disabled}
+                    className="h-8"
+                  />
+                )}
+              />
             </div>
           </div>
         </div>
@@ -330,18 +396,19 @@ export function JobBillingFields({
             <div className="space-y-1">
               <Label htmlFor="facility_rate_adjustment" className="text-xs">Facility</Label>
               <div className="flex items-center gap-1">
-                <div className="relative flex-1">
-                  <span className="absolute left-2 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">$</span>
-                  <Input
-                    id="facility_rate_adjustment"
-                    type="text"
-                    inputMode="decimal"
-                    {...form.register('facility_rate_adjustment', { setValueAs: numericSetValueAs })}
-                    disabled={disabled}
-                    placeholder="0.00"
-                    className="h-8 pl-5"
-                  />
-                </div>
+                <Controller
+                  control={form.control}
+                  name="facility_rate_adjustment"
+                  render={({ field }) => (
+                    <CurrencyInput
+                      id="facility_rate_adjustment"
+                      value={field.value}
+                      onChange={field.onChange}
+                      disabled={disabled}
+                      className="h-8 flex-1"
+                    />
+                  )}
+                />
                 <div className="flex flex-col">
                   <Button
                     type="button"
@@ -375,18 +442,19 @@ export function JobBillingFields({
             <div className="space-y-1">
               <Label htmlFor="interpreter_rate_adjustment" className="text-xs">Interpreter</Label>
               <div className="flex items-center gap-1">
-                <div className="relative flex-1">
-                  <span className="absolute left-2 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">$</span>
-                  <Input
-                    id="interpreter_rate_adjustment"
-                    type="text"
-                    inputMode="decimal"
-                    {...form.register('interpreter_rate_adjustment', { setValueAs: numericSetValueAs })}
-                    disabled={disabled}
-                    placeholder="0.00"
-                    className="h-8 pl-5"
-                  />
-                </div>
+                <Controller
+                  control={form.control}
+                  name="interpreter_rate_adjustment"
+                  render={({ field }) => (
+                    <CurrencyInput
+                      id="interpreter_rate_adjustment"
+                      value={field.value}
+                      onChange={field.onChange}
+                      disabled={disabled}
+                      className="h-8 flex-1"
+                    />
+                  )}
+                />
                 <div className="flex flex-col">
                   <Button
                     type="button"

@@ -129,6 +129,7 @@ export type Database = {
           physical_zip: string | null
           rate_after_hours: number | null
           rate_business_hours: number | null
+          rate_holiday_hours: number | null
           signed_contract_pdf_url: string | null
           status: Database["public"]["Enums"]["facility_status"] | null
           timezone: string | null
@@ -165,6 +166,7 @@ export type Database = {
           physical_zip?: string | null
           rate_after_hours?: number | null
           rate_business_hours?: number | null
+          rate_holiday_hours?: number | null
           signed_contract_pdf_url?: string | null
           status?: Database["public"]["Enums"]["facility_status"] | null
           timezone?: string | null
@@ -201,6 +203,7 @@ export type Database = {
           physical_zip?: string | null
           rate_after_hours?: number | null
           rate_business_hours?: number | null
+          rate_holiday_hours?: number | null
           signed_contract_pdf_url?: string | null
           status?: Database["public"]["Enums"]["facility_status"] | null
           timezone?: string | null
@@ -307,6 +310,7 @@ export type Database = {
           phone: string | null
           rate_after_hours: number | null
           rate_business_hours: number | null
+          rate_holiday_hours: number | null
           rid_certified: boolean | null
           signed_contract_pdf_url: string | null
           state: string | null
@@ -341,6 +345,7 @@ export type Database = {
           phone?: string | null
           rate_after_hours?: number | null
           rate_business_hours?: number | null
+          rate_holiday_hours?: number | null
           rid_certified?: boolean | null
           signed_contract_pdf_url?: string | null
           state?: string | null
@@ -375,6 +380,7 @@ export type Database = {
           phone?: string | null
           rate_after_hours?: number | null
           rate_business_hours?: number | null
+          rate_holiday_hours?: number | null
           rid_certified?: boolean | null
           signed_contract_pdf_url?: string | null
           state?: string | null
@@ -525,6 +531,7 @@ export type Database = {
           facility_rate_adjustment: number | null
           facility_rate_after_hours: number | null
           facility_rate_business: number | null
+          facility_rate_holiday: number | null
           facility_rate_mileage: number | null
           finalized_at: string | null
           holiday_fee_applied: boolean | null
@@ -536,6 +543,7 @@ export type Database = {
           interpreter_rate_adjustment: number | null
           interpreter_rate_after_hours: number | null
           interpreter_rate_business: number | null
+          interpreter_rate_holiday: number | null
           interpreter_rate_mileage: number | null
           invoice_reminder_sent_at: string | null
           job_date: string
@@ -585,6 +593,7 @@ export type Database = {
           facility_rate_adjustment?: number | null
           facility_rate_after_hours?: number | null
           facility_rate_business?: number | null
+          facility_rate_holiday?: number | null
           facility_rate_mileage?: number | null
           finalized_at?: string | null
           holiday_fee_applied?: boolean | null
@@ -596,6 +605,7 @@ export type Database = {
           interpreter_rate_adjustment?: number | null
           interpreter_rate_after_hours?: number | null
           interpreter_rate_business?: number | null
+          interpreter_rate_holiday?: number | null
           interpreter_rate_mileage?: number | null
           invoice_reminder_sent_at?: string | null
           job_date: string
@@ -647,6 +657,7 @@ export type Database = {
           facility_rate_adjustment?: number | null
           facility_rate_after_hours?: number | null
           facility_rate_business?: number | null
+          facility_rate_holiday?: number | null
           facility_rate_mileage?: number | null
           finalized_at?: string | null
           holiday_fee_applied?: boolean | null
@@ -658,6 +669,7 @@ export type Database = {
           interpreter_rate_adjustment?: number | null
           interpreter_rate_after_hours?: number | null
           interpreter_rate_business?: number | null
+          interpreter_rate_holiday?: number | null
           interpreter_rate_mileage?: number | null
           invoice_reminder_sent_at?: string | null
           job_date?: string

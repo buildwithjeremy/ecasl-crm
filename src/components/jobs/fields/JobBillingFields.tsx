@@ -144,10 +144,12 @@ export function JobBillingFields({
   // Watch all billing-related fields for dynamic calculation updates
   const watchedFacilityRateBusiness = form.watch('facility_rate_business') ?? 0;
   const watchedFacilityRateAfterHours = form.watch('facility_rate_after_hours') ?? 0;
+  const watchedFacilityRateHoliday = form.watch('facility_rate_holiday') ?? 0;
   const watchedFacilityRateMileageRaw = form.watch('facility_rate_mileage');
   const watchedFacilityRateAdjustment = form.watch('facility_rate_adjustment') ?? 0;
   const watchedInterpreterRateBusiness = form.watch('interpreter_rate_business') ?? 0;
   const watchedInterpreterRateAfterHours = form.watch('interpreter_rate_after_hours') ?? 0;
+  const watchedInterpreterRateHoliday = form.watch('interpreter_rate_holiday') ?? 0;
   const watchedInterpreterRateMileageRaw = form.watch('interpreter_rate_mileage');
   const watchedInterpreterRateAdjustment = form.watch('interpreter_rate_adjustment') ?? 0;
   const watchedMileage = form.watch('mileage') ?? 0;
@@ -281,6 +283,7 @@ export function JobBillingFields({
             rates={[
               { label: 'Business', value: watchedFacilityRateBusiness, suffix: '/hr' },
               { label: 'After Hours', value: watchedFacilityRateAfterHours, suffix: '/hr' },
+              { label: 'Holiday', value: watchedFacilityRateHoliday, suffix: '/hr' },
             ]}
             onEditClick={onEditFacilityRates}
             disabled={disabled}
@@ -295,6 +298,7 @@ export function JobBillingFields({
               rates={[
                 { label: 'Business', value: watchedInterpreterRateBusiness, suffix: '/hr' },
                 { label: 'After Hours', value: watchedInterpreterRateAfterHours, suffix: '/hr' },
+                { label: 'Holiday', value: watchedInterpreterRateHoliday, suffix: '/hr' },
               ]}
               onEditClick={onEditInterpreterRates}
               disabled={disabled}

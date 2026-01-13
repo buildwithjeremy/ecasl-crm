@@ -59,9 +59,11 @@ const formSchema = z.object({
   travel_time_hours: z.coerce.number().optional(),
   facility_rate_business: z.coerce.number().optional(),
   facility_rate_after_hours: z.coerce.number().optional(),
+  facility_rate_holiday: z.coerce.number().optional(),
   facility_rate_mileage: z.coerce.number().optional(),
   interpreter_rate_business: z.coerce.number().optional(),
   interpreter_rate_after_hours: z.coerce.number().optional(),
+  interpreter_rate_holiday: z.coerce.number().optional(),
   interpreter_rate_mileage: z.coerce.number().optional(),
   facility_rate_adjustment: z.coerce.number().optional(),
   interpreter_rate_adjustment: z.coerce.number().optional(),
@@ -111,6 +113,7 @@ const jobToFormValues = (job: Job, defaultMileageRate: number = 0.7): FormData =
   travel_time_hours: job.travel_time_hours ?? 0,
   facility_rate_business: job.facility_rate_business ?? 0,
   facility_rate_after_hours: job.facility_rate_after_hours ?? 0,
+  facility_rate_holiday: job.facility_rate_holiday ?? 0,
   // Treat 0.00 as "unset" so the UI uses the settings default until user overrides
   facility_rate_mileage:
     job.facility_rate_mileage === null || job.facility_rate_mileage === 0
@@ -119,6 +122,7 @@ const jobToFormValues = (job: Job, defaultMileageRate: number = 0.7): FormData =
   facility_rate_adjustment: job.facility_rate_adjustment ?? 0,
   interpreter_rate_business: job.interpreter_rate_business ?? 0,
   interpreter_rate_after_hours: job.interpreter_rate_after_hours ?? 0,
+  interpreter_rate_holiday: job.interpreter_rate_holiday ?? 0,
   interpreter_rate_mileage:
     job.interpreter_rate_mileage === null || job.interpreter_rate_mileage === 0
       ? defaultMileageRate
@@ -213,7 +217,7 @@ export default function JobDetail() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('facilities')
-        .select('id, name, rate_business_hours, rate_after_hours, minimum_billable_hours, contractor, physical_address, physical_city, physical_state, physical_zip, billing_address, billing_city, billing_state, billing_zip, admin_contact_name, admin_contact_phone, admin_contact_email, emergency_fee, holiday_fee')
+        .select('id, name, rate_business_hours, rate_after_hours, rate_holiday_hours, minimum_billable_hours, contractor, physical_address, physical_city, physical_state, physical_zip, billing_address, billing_city, billing_state, billing_zip, admin_contact_name, admin_contact_phone, admin_contact_email, emergency_fee, holiday_fee')
         .order('name');
       if (error) throw error;
       return data as FacilityOption[];
@@ -225,10 +229,10 @@ export default function JobDetail() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('interpreters')
-        .select('id, first_name, last_name, rate_business_hours, rate_after_hours, minimum_hours')
+        .select('id, first_name, last_name, rate_business_hours, rate_after_hours, rate_holiday_hours, minimum_hours')
         .order('last_name');
       if (error) throw error;
-      return data as { id: string; first_name: string; last_name: string; rate_business_hours: number | null; rate_after_hours: number | null; minimum_hours: number | null }[];
+      return data as { id: string; first_name: string; last_name: string; rate_business_hours: number | null; rate_after_hours: number | null; rate_holiday_hours: number | null; minimum_hours: number | null }[];
     },
   });
 
@@ -382,6 +386,7 @@ export default function JobDetail() {
       if (interpreter) {
         form.setValue('interpreter_rate_business', interpreter.rate_business_hours || 0, { shouldDirty: true });
         form.setValue('interpreter_rate_after_hours', interpreter.rate_after_hours || 0, { shouldDirty: true });
+        form.setValue('interpreter_rate_holiday', interpreter.rate_holiday_hours || 0, { shouldDirty: true });
       }
     }
     prevInterpreterIdRef.current = watchedInterpreterId || '';
@@ -397,6 +402,7 @@ export default function JobDetail() {
       // Use shouldDirty: false to avoid marking form as dirty during initial load
       form.setValue('facility_rate_business', facility.rate_business_hours || 0, { shouldDirty: false });
       form.setValue('facility_rate_after_hours', facility.rate_after_hours || 0, { shouldDirty: false });
+      form.setValue('facility_rate_holiday', facility.rate_holiday_hours || 0, { shouldDirty: false });
     }
   }, [form]);
 
@@ -500,11 +506,13 @@ export default function JobDetail() {
         travel_time_hours: data.travel_time_hours ?? null,
         facility_rate_business: data.facility_rate_business ?? null,
         facility_rate_after_hours: data.facility_rate_after_hours ?? null,
+        facility_rate_holiday: data.facility_rate_holiday ?? null,
         // Treat 0 as "use default" and store null
         facility_rate_mileage: !data.facility_rate_mileage || data.facility_rate_mileage === 0 ? null : data.facility_rate_mileage,
         facility_rate_adjustment: data.facility_rate_adjustment ?? 0,
         interpreter_rate_business: data.interpreter_rate_business ?? null,
         interpreter_rate_after_hours: data.interpreter_rate_after_hours ?? null,
+        interpreter_rate_holiday: data.interpreter_rate_holiday ?? null,
         interpreter_rate_mileage: !data.interpreter_rate_mileage || data.interpreter_rate_mileage === 0 ? null : data.interpreter_rate_mileage,
         interpreter_rate_adjustment: data.interpreter_rate_adjustment ?? 0,
         emergency_fee_applied: data.emergency_fee_applied || false,
@@ -861,12 +869,14 @@ export default function JobDetail() {
   const handleFacilityRatesSave = (values: Record<string, number>) => {
     form.setValue('facility_rate_business', values.facility_rate_business, { shouldDirty: true });
     form.setValue('facility_rate_after_hours', values.facility_rate_after_hours, { shouldDirty: true });
+    form.setValue('facility_rate_holiday', values.facility_rate_holiday, { shouldDirty: true });
     form.setValue('facility_rate_mileage', values.facility_rate_mileage, { shouldDirty: true });
   };
 
   const handleInterpreterRatesSave = (values: Record<string, number>) => {
     form.setValue('interpreter_rate_business', values.interpreter_rate_business, { shouldDirty: true });
     form.setValue('interpreter_rate_after_hours', values.interpreter_rate_after_hours, { shouldDirty: true });
+    form.setValue('interpreter_rate_holiday', values.interpreter_rate_holiday, { shouldDirty: true });
     form.setValue('interpreter_rate_mileage', values.interpreter_rate_mileage, { shouldDirty: true });
   };
 
@@ -881,12 +891,14 @@ export default function JobDetail() {
   const facilityRateFields: RateField[] = [
     { key: 'facility_rate_business', label: 'Business ($/hr)', value: form.watch('facility_rate_business') ?? 0, suffix: '/hr' },
     { key: 'facility_rate_after_hours', label: 'After Hours ($/hr)', value: form.watch('facility_rate_after_hours') ?? 0, suffix: '/hr' },
+    { key: 'facility_rate_holiday', label: 'Holiday ($/hr)', value: form.watch('facility_rate_holiday') ?? 0, suffix: '/hr' },
     { key: 'facility_rate_mileage', label: 'Mileage ($/mi)', value: form.watch('facility_rate_mileage') ?? defaultMileageRate, suffix: '/mi' },
   ];
 
   const interpreterRateFields: RateField[] = [
     { key: 'interpreter_rate_business', label: 'Business ($/hr)', value: form.watch('interpreter_rate_business') ?? 0, suffix: '/hr' },
     { key: 'interpreter_rate_after_hours', label: 'After Hours ($/hr)', value: form.watch('interpreter_rate_after_hours') ?? 0, suffix: '/hr' },
+    { key: 'interpreter_rate_holiday', label: 'Holiday ($/hr)', value: form.watch('interpreter_rate_holiday') ?? 0, suffix: '/hr' },
     { key: 'interpreter_rate_mileage', label: 'Mileage ($/mi)', value: form.watch('interpreter_rate_mileage') ?? defaultMileageRate, suffix: '/mi' },
   ];
 

@@ -961,6 +961,8 @@ export default function JobDetail() {
               disabled={isLocked}
               minimumHours={selectedFacility?.minimum_billable_hours ?? 2}
               onHoursSplitChange={handleHoursSplitChange}
+              facilityEmergencyFee={selectedFacility?.emergency_fee}
+              facilityHolidayRate={selectedFacility?.rate_holiday_hours}
             />
 
             <JobLocationFields

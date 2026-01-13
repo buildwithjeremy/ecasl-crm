@@ -378,13 +378,13 @@ export function JobScheduleFields({
                 {hoursSplit.businessHours > 0 && (
                   <span className="flex items-center gap-1">
                     <span className="w-2 h-2 rounded-full bg-primary" />
-                    {hoursSplit.businessHours.toFixed(1)}h business
+                    {hoursSplit.businessHours.toFixed(2)}h business
                   </span>
                 )}
                 {hoursSplit.afterHours > 0 && (
                   <span className="flex items-center gap-1">
                     <span className="w-2 h-2 rounded-full bg-amber-500" />
-                    {hoursSplit.afterHours.toFixed(1)}h after-hours
+                    {hoursSplit.afterHours.toFixed(2)}h after-hours
                   </span>
                 )}
               </div>

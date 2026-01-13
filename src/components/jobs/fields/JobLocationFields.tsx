@@ -57,12 +57,17 @@ export function JobLocationFields({
     const facilityChanged = !isInitial && watchedFacilityId !== prevFacilityIdRef.current;
     const locationTypeChanged = !isInitial && watchedLocationType !== prevLocationTypeRef.current;
 
-    // Only run auto-fill logic when facility actually changes or on initial load
-    // Don't run when only location type changes for contractors (to preserve user input)
-    const shouldAutoFill = isInitial || facilityChanged;
+    // For contractors in edit mode, never auto-clear fields - the job already has saved values
+    // Only clear fields for contractors in create mode when facility first selected
+    const isEditMode = mode === 'edit';
     
-    if (!shouldAutoFill && selectedFacility.contractor && locationTypeChanged) {
-      // For contractors, just update refs without clearing fields
+    // Only run auto-fill logic when facility actually changes (not on initial load in edit mode)
+    // In edit mode, form is already populated with job data, so don't overwrite it
+    const shouldAutoFill = isEditMode ? facilityChanged : (isInitial || facilityChanged);
+    
+    if (!shouldAutoFill) {
+      // Just update refs without modifying fields
+      prevFacilityIdRef.current = watchedFacilityId;
       prevLocationTypeRef.current = watchedLocationType;
       return;
     }
@@ -94,9 +99,20 @@ export function JobLocationFields({
         setIfDifferent('location_state', state || '');
         setIfDifferent('location_zip', zip || '');
       }
-    } else if (shouldAutoFill) {
-      // Contractor: only clear fields when facility changes or on initial load
-      // This preserves user-entered data during normal form interaction
+    } else if (shouldAutoFill && !isEditMode) {
+      // Contractor in CREATE mode: clear fields when facility is selected
+      // This ensures clean slate for manual entry
+      setIfDifferent('client_business_name', '');
+      setIfDifferent('client_contact_name', '');
+      setIfDifferent('client_contact_phone', '');
+      setIfDifferent('client_contact_email', '');
+      setIfDifferent('location_address', '');
+      setIfDifferent('location_city', '');
+      setIfDifferent('location_state', '');
+      setIfDifferent('location_zip', '');
+    }
+    // For contractors in EDIT mode when facility changes, also clear for new entry
+    else if (facilityChanged && isEditMode) {
       setIfDifferent('client_business_name', '');
       setIfDifferent('client_contact_name', '');
       setIfDifferent('client_contact_phone', '');
@@ -109,7 +125,7 @@ export function JobLocationFields({
 
     prevFacilityIdRef.current = watchedFacilityId;
     prevLocationTypeRef.current = watchedLocationType;
-  }, [watchedFacilityId, watchedLocationType, selectedFacility, form]);
+  }, [watchedFacilityId, watchedLocationType, selectedFacility, form, mode]);
 
   return (
     <Card>

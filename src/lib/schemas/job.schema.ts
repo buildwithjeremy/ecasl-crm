@@ -68,12 +68,14 @@ export const jobExtendedSchema = z.object({
   // Rate fields - Facility
   facility_rate_business: currencyField,
   facility_rate_after_hours: currencyField,
+  facility_rate_holiday: currencyField,
   facility_rate_mileage: currencyField,
   facility_rate_adjustment: currencyField,
   
   // Rate fields - Interpreter
   interpreter_rate_business: currencyField,
   interpreter_rate_after_hours: currencyField,
+  interpreter_rate_holiday: currencyField,
   interpreter_rate_mileage: currencyField,
   interpreter_rate_adjustment: currencyField,
   

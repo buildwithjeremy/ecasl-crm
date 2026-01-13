@@ -45,6 +45,7 @@ export interface FacilityOption {
   admin_contact_email: string | null;
   rate_business_hours: number | null;
   rate_after_hours: number | null;
+  rate_holiday_hours: number | null;
   minimum_billable_hours: number | null;
   emergency_fee: number | null;
   holiday_fee: number | null;
@@ -77,7 +78,7 @@ export function JobCoreFields({
     queryFn: async () => {
       const { data, error } = await supabase
         .from('facilities')
-        .select('id, name, physical_address, physical_city, physical_state, physical_zip, billing_address, billing_city, billing_state, billing_zip, contractor, admin_contact_name, admin_contact_phone, admin_contact_email, rate_business_hours, rate_after_hours, minimum_billable_hours, emergency_fee, holiday_fee')
+        .select('id, name, physical_address, physical_city, physical_state, physical_zip, billing_address, billing_city, billing_state, billing_zip, contractor, admin_contact_name, admin_contact_phone, admin_contact_email, rate_business_hours, rate_after_hours, rate_holiday_hours, minimum_billable_hours, emergency_fee, holiday_fee')
         .eq('status', 'active')
         .order('name');
       if (error) throw error;

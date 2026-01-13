@@ -26,6 +26,7 @@ export const interpreterBaseSchema = z.object({
   // Rates (required on creation)
   rate_business_hours: requiredCurrencyField,
   rate_after_hours: requiredCurrencyField,
+  rate_holiday_hours: currencyField,
   
   // Payment
   payment_method: z.enum(['zelle', 'check']).nullable().optional(),

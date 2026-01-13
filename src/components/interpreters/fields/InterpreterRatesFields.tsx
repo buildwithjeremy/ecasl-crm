@@ -33,7 +33,7 @@ export function InterpreterRatesFields({
         <CardTitle className="text-lg">Rates (What We Pay)</CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <div className="space-y-2">
             <Label htmlFor="rate_business_hours">Business Hours Rate{requiredLabel}</Label>
             <div className="relative">
@@ -69,6 +69,25 @@ export function InterpreterRatesFields({
             {form.formState.errors.rate_after_hours && (
               <p className="text-sm text-destructive">
                 {form.formState.errors.rate_after_hours.message as string}
+              </p>
+            )}
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="rate_holiday_hours">Holiday Hours Rate</Label>
+            <div className="relative">
+              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">$</span>
+              <Input
+                id="rate_holiday_hours"
+                type="number"
+                step="0.01"
+                className="pl-7"
+                disabled={disabled}
+                {...form.register('rate_holiday_hours', { valueAsNumber: true })}
+              />
+            </div>
+            {form.formState.errors.rate_holiday_hours && (
+              <p className="text-sm text-destructive">
+                {form.formState.errors.rate_holiday_hours.message as string}
               </p>
             )}
           </div>

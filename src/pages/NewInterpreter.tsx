@@ -53,6 +53,7 @@ export default function NewInterpreter() {
         other_certifications: data.other_certifications || null,
         rate_business_hours: data.rate_business_hours || null,
         rate_after_hours: data.rate_after_hours || null,
+        rate_holiday_hours: data.rate_holiday_hours || null,
         minimum_hours: 2,
         eligible_emergency_fee: false,
         eligible_holiday_fee: false,

@@ -81,14 +81,6 @@ export const facilityBaseSchema = z.object({
 // ==========================================
 
 export const facilityExtendedSchema = z.object({
-  // Admin contact (legacy - now using billing contacts)
-  admin_contact_name: z.string().optional(),
-  admin_contact_phone: phoneField,
-  admin_contact_email: z.string().optional().refine(
-    (val) => !val || z.string().email().safeParse(val).success,
-    { message: 'Please enter a valid email address' }
-  ),
-  
   // Billing settings
   billing_code: z.string().optional(),
   minimum_billable_hours: currencyField,

@@ -6,11 +6,17 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
+interface BillingContact {
+  id: string;
+  name: string;
+  phone: string;
+  email: string;
+}
+
 interface FacilityData {
   id: string;
   name: string;
-  admin_contact_name: string | null;
-  admin_contact_email: string | null;
+  billing_contacts: BillingContact[] | null;
   physical_city: string | null;
   physical_state: string | null;
   rate_business_hours: number | null;
@@ -63,7 +69,9 @@ function generateContractPdf(facility: FacilityData): Uint8Array {
 
   doc.setFontSize(10);
   doc.setFont("helvetica", "normal");
-  const contactName = facility.admin_contact_name || "Authorized Representative";
+  // Get primary billing contact
+  const primaryContact = facility.billing_contacts?.[0];
+  const contactName = primaryContact?.name || "Authorized Representative";
   doc.text(`Dear ${contactName},`, margin, y);
   y += 8;
 
@@ -134,8 +142,10 @@ function generateContractPdf(facility: FacilityData): Uint8Array {
   y += policyLines.length * lineHeight + lineHeight;
 
   // Billing email
-  const billingEmail = facility.admin_contact_email || "[email address]";
-  const billingText = `All bills will be emailed to ${contactName} at ${billingEmail}.`;
+  const billingPrimaryContact = facility.billing_contacts?.[0];
+  const billingEmail = billingPrimaryContact?.email || "[email address]";
+  const billingContactName = billingPrimaryContact?.name || "Authorized Representative";
+  const billingText = `All bills will be emailed to ${billingContactName} at ${billingEmail}.`;
   const billingLines = doc.splitTextToSize(billingText, contentWidth);
   doc.text(billingLines, margin, y);
   y += billingLines.length * lineHeight + lineHeight;
@@ -252,7 +262,7 @@ Deno.serve(async (req) => {
     // Fetch facility data
     const { data: facility, error: fetchError } = await supabase
       .from("facilities")
-      .select("id, name, admin_contact_name, admin_contact_email, physical_city, physical_state, rate_business_hours, rate_after_hours, rate_holiday_hours, minimum_billable_hours")
+      .select("id, name, billing_contacts, physical_city, physical_state, rate_business_hours, rate_after_hours, rate_holiday_hours, minimum_billable_hours")
       .eq("id", facilityId)
       .single();
 

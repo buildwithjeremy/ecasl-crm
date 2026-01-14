@@ -223,7 +223,7 @@ export default function JobDetail() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('facilities')
-        .select('id, name, rate_business_hours, rate_after_hours, rate_holiday_hours, minimum_billable_hours, contractor, physical_address, physical_city, physical_state, physical_zip, billing_address, billing_city, billing_state, billing_zip, admin_contact_name, admin_contact_phone, admin_contact_email, emergency_fee, holiday_fee')
+        .select('id, name, rate_business_hours, rate_after_hours, rate_holiday_hours, minimum_billable_hours, contractor, physical_address, physical_city, physical_state, physical_zip, billing_address, billing_city, billing_state, billing_zip, billing_contacts, emergency_fee, holiday_fee')
         .order('name');
       if (error) throw error;
       return data as FacilityOption[];
@@ -605,9 +605,10 @@ export default function JobDetail() {
         ? (data.video_call_link || 'Remote - Link TBD')
         : (locationParts.join(', ') || 'TBD');
       
-      // Get contact info
-      const contactName = data.client_contact_name || facility?.admin_contact_name || 'N/A';
-      const contactPhone = data.client_contact_phone || facility?.admin_contact_phone || 'N/A';
+      // Get contact info from billing_contacts
+      const primaryContact = facility?.billing_contacts?.[0];
+      const contactName = data.client_contact_name || primaryContact?.name || 'N/A';
+      const contactPhone = data.client_contact_phone || primaryContact?.phone || 'N/A';
       
       // Get the interpreter info
       const { data: interpreterInfo, error: interpError } = await supabase
@@ -969,9 +970,10 @@ export default function JobDetail() {
         ? (data.video_call_link || 'Remote - Link TBD')
         : (locationParts.join(', ') || 'TBD');
       
-      // Get contact info
-      const contactName = data.client_contact_name || facility?.admin_contact_name || 'N/A';
-      const contactPhone = data.client_contact_phone || facility?.admin_contact_phone || 'N/A';
+      // Get contact info from billing_contacts
+      const primaryContact = facility?.billing_contacts?.[0];
+      const contactName = data.client_contact_name || primaryContact?.name || 'N/A';
+      const contactPhone = data.client_contact_phone || primaryContact?.phone || 'N/A';
       
       // Get the interpreter info
       const { data: interpreterInfo, error: interpError } = await supabase

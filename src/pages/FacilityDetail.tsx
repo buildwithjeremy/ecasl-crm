@@ -100,20 +100,12 @@ export default function FacilityDetail() {
   // Populate form when facility data loads (including billing_contacts)
   useEffect(() => {
     if (facility) {
-      // Parse billing_contacts from JSONB, with fallback to legacy admin_contact fields
+      // Parse billing_contacts from JSONB
       let billingContacts: BillingContact[] = [];
       
       if (facility.billing_contacts && Array.isArray(facility.billing_contacts) && facility.billing_contacts.length > 0) {
-        // Use the new billing_contacts column (cast through unknown for JSONB)
+        // Use the billing_contacts column (cast through unknown for JSONB)
         billingContacts = facility.billing_contacts as unknown as BillingContact[];
-      } else if (facility.admin_contact_name || facility.admin_contact_phone || facility.admin_contact_email) {
-        // Fallback to legacy admin_contact fields
-        billingContacts = [{
-          id: crypto.randomUUID(),
-          name: facility.admin_contact_name ?? '',
-          phone: facility.admin_contact_phone ?? '',
-          email: facility.admin_contact_email ?? '',
-        }];
       }
 
       form.reset({
@@ -129,9 +121,6 @@ export default function FacilityDetail() {
         physical_state: facility.physical_state ?? '',
         physical_zip: facility.physical_zip ?? '',
         timezone: facility.timezone ?? '',
-        admin_contact_name: facility.admin_contact_name ?? '',
-        admin_contact_phone: facility.admin_contact_phone ?? '',
-        admin_contact_email: facility.admin_contact_email ?? '',
         status: facility.status ?? 'pending',
         rate_business_hours: facility.rate_business_hours ?? undefined,
         rate_after_hours: facility.rate_after_hours ?? undefined,
@@ -153,13 +142,10 @@ export default function FacilityDetail() {
     mutationFn: async (data: FacilityFullFormData) => {
       if (!selectedFacilityId) return;
       
-      // Get primary billing contact (first one) for legacy admin fields
-      const primaryContact = data.billing_contacts?.[0];
-      
       const updatePayload: FacilityUpdate = {
         name: data.name,
         facility_type: data.facility_type || null,
-        // Save to new billing_contacts JSONB column
+        // Save to billing_contacts JSONB column
         billing_contacts: data.billing_contacts || [],
         billing_address: data.billing_address || null,
         billing_city: data.billing_city || null,
@@ -170,10 +156,6 @@ export default function FacilityDetail() {
         physical_state: data.physical_state || null,
         physical_zip: data.physical_zip || null,
         timezone: data.timezone || null,
-        // Also populate legacy admin_contact fields for backward compatibility
-        admin_contact_name: primaryContact?.name || null,
-        admin_contact_phone: primaryContact?.phone || null,
-        admin_contact_email: primaryContact?.email || null,
         status: data.status || null,
         rate_business_hours: data.rate_business_hours ?? null,
         rate_after_hours: data.rate_after_hours ?? null,

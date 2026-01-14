@@ -28,6 +28,14 @@ import { FormSelect } from '@/components/form';
 // Types
 // ==========================================
 
+// Type for billing contact from JSONB
+interface BillingContactData {
+  id: string;
+  name: string;
+  phone: string;
+  email: string;
+}
+
 export interface FacilityOption {
   id: string;
   name: string;
@@ -40,9 +48,7 @@ export interface FacilityOption {
   billing_city: string | null;
   billing_state: string | null;
   billing_zip: string | null;
-  admin_contact_name: string | null;
-  admin_contact_phone: string | null;
-  admin_contact_email: string | null;
+  billing_contacts: BillingContactData[] | null;
   rate_business_hours: number | null;
   rate_after_hours: number | null;
   rate_holiday_hours: number | null;

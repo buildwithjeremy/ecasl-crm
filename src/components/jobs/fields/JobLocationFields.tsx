@@ -83,10 +83,13 @@ export function JobLocationFields({
 
     if (!selectedFacility.contractor) {
       // Non-contractor: auto-fill client info and location from facility
+      // Get primary billing contact
+      const primaryContact = selectedFacility.billing_contacts?.[0];
+      
       setIfDifferent('client_business_name', selectedFacility.name || '');
-      setIfDifferent('client_contact_name', selectedFacility.admin_contact_name || '');
-      setIfDifferent('client_contact_phone', selectedFacility.admin_contact_phone || '');
-      setIfDifferent('client_contact_email', selectedFacility.admin_contact_email || '');
+      setIfDifferent('client_contact_name', primaryContact?.name || '');
+      setIfDifferent('client_contact_phone', primaryContact?.phone || '');
+      setIfDifferent('client_contact_email', primaryContact?.email || '');
 
       if (watchedLocationType === 'in_person') {
         const address = selectedFacility.physical_address || selectedFacility.billing_address;
@@ -236,20 +239,25 @@ export function JobLocationFields({
 
                   {!isContractor ? (
                     // Non-contractor: Show read-only client info
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
-                      <div>
-                        <span className="text-muted-foreground">Business Name</span>
-                        <p className="font-medium">{selectedFacility.name || '-'}</p>
-                      </div>
-                      <div>
-                        <span className="text-muted-foreground">Contact Name</span>
-                        <p className="font-medium">{selectedFacility.admin_contact_name || '-'}</p>
-                      </div>
-                      <div>
-                        <span className="text-muted-foreground">Email</span>
-                        <p className="font-medium">{selectedFacility.admin_contact_email || '-'}</p>
-                      </div>
-                    </div>
+                    (() => {
+                      const primaryContact = selectedFacility.billing_contacts?.[0];
+                      return (
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
+                          <div>
+                            <span className="text-muted-foreground">Business Name</span>
+                            <p className="font-medium">{selectedFacility.name || '-'}</p>
+                          </div>
+                          <div>
+                            <span className="text-muted-foreground">Contact Name</span>
+                            <p className="font-medium">{primaryContact?.name || '-'}</p>
+                          </div>
+                          <div>
+                            <span className="text-muted-foreground">Email</span>
+                            <p className="font-medium">{primaryContact?.email || '-'}</p>
+                          </div>
+                        </div>
+                      );
+                    })()
                   ) : (
                     // Contractor: Editable client info
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">

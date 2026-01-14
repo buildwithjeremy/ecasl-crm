@@ -33,9 +33,6 @@ export default function NewFacility() {
 
   const mutation = useMutation({
     mutationFn: async (data: FacilityBaseFormData) => {
-      // Get primary billing contact (first one) for legacy admin fields
-      const primaryContact = data.billing_contacts?.[0];
-
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const payload: any = {
         name: data.name,
@@ -49,12 +46,8 @@ export default function NewFacility() {
         physical_state: data.physical_state || null,
         physical_zip: data.physical_zip || null,
         timezone: data.timezone || null,
-        // Save to new billing_contacts JSONB column
+        // Save to billing_contacts JSONB column
         billing_contacts: data.billing_contacts || [],
-        // Also populate legacy admin_contact fields for backward compatibility
-        admin_contact_name: primaryContact?.name || null,
-        admin_contact_phone: primaryContact?.phone || null,
-        admin_contact_email: primaryContact?.email || null,
         status: 'pending',
         rate_business_hours: data.rate_business_hours || null,
         rate_after_hours: data.rate_after_hours || null,

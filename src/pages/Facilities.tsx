@@ -8,7 +8,7 @@ import { Plus, Search } from 'lucide-react';
 import { FacilitiesTable } from '@/components/facilities/FacilitiesTable';
 import { FilterDropdown, FilterOption } from '@/components/ui/filter-dropdown';
 import { useTableSort } from '@/hooks/use-table-sort';
-import type { Database } from '@/types/database';
+import type { Database } from '@/integrations/supabase/types';
 
 type Facility = Database['public']['Tables']['facilities']['Row'];
 
@@ -50,9 +50,11 @@ export default function Facilities() {
 
       if (search) {
         // Split search into words and match each word against searchable fields
+        // Search name and within billing_contacts JSONB array
         const searchTerms = search.trim().toLowerCase().split(/\s+/);
         for (const term of searchTerms) {
-          query = query.or(`name.ilike.%${term}%,admin_contact_email.ilike.%${term}%,admin_contact_name.ilike.%${term}%`);
+          // Search name or within billing_contacts JSONB (name and email fields)
+          query = query.or(`name.ilike.%${term}%,billing_contacts.cs.[{"name":"${term}"}],billing_contacts.cs.[{"email":"${term}"}]`);
         }
       }
       

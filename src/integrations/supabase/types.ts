@@ -101,9 +101,6 @@ export type Database = {
       }
       facilities: {
         Row: {
-          admin_contact_email: string | null
-          admin_contact_name: string | null
-          admin_contact_phone: string | null
           billing_address: string | null
           billing_city: string | null
           billing_code: string | null
@@ -137,9 +134,6 @@ export type Database = {
           updated_at: string | null
         }
         Insert: {
-          admin_contact_email?: string | null
-          admin_contact_name?: string | null
-          admin_contact_phone?: string | null
           billing_address?: string | null
           billing_city?: string | null
           billing_code?: string | null
@@ -175,9 +169,6 @@ export type Database = {
           updated_at?: string | null
         }
         Update: {
-          admin_contact_email?: string | null
-          admin_contact_name?: string | null
-          admin_contact_phone?: string | null
           billing_address?: string | null
           billing_city?: string | null
           billing_code?: string | null

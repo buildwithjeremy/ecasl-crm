@@ -27,6 +27,33 @@ export const facilityBaseSchema = z.object({
   is_gsa: z.boolean().optional(),
   contractor: z.boolean().optional(),
   
+  // Billing contacts (integrated with React Hook Form)
+  billing_contacts: z.array(billingContactSchema).default([]).superRefine((contacts, ctx) => {
+    if (contacts.length === 0) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: 'At least one billing contact is required',
+      });
+      return;
+    }
+    // Primary contact must have name and email
+    const primary = contacts[0];
+    if (!primary.name || primary.name.trim() === '') {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: 'Primary contact name is required',
+        path: [0, 'name'],
+      });
+    }
+    if (!primary.email || primary.email.trim() === '') {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: 'Primary contact email is required',
+        path: [0, 'email'],
+      });
+    }
+  }),
+  
   // Billing address
   billing_address: z.string().optional(),
   billing_city: z.string().optional(),
@@ -101,6 +128,7 @@ export const getFacilityBaseDefaults = (): Partial<FacilityBaseFormData> => ({
   facility_type: null,
   is_gsa: false,
   contractor: false,
+  billing_contacts: [],
 });
 
 export const getFacilityFullDefaults = (): Partial<FacilityFullFormData> => ({

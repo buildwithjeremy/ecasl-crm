@@ -1,4 +1,3 @@
-import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -14,15 +13,12 @@ import {
   FacilityRatesFields,
   FacilityBillingContacts,
   FacilityNotesFields,
-  BillingContact,
-  validateBillingContacts,
 } from '@/components/facilities/fields';
 
 export default function NewFacility() {
   const navigate = useNavigate();
   const { toast } = useToast();
   const queryClient = useQueryClient();
-  const [billingContacts, setBillingContacts] = useState<BillingContact[]>([]);
 
   const form = useForm<FacilityBaseFormData>({
     resolver: zodResolver(facilityBaseSchema),
@@ -31,13 +27,14 @@ export default function NewFacility() {
       facility_type: undefined,
       is_gsa: false,
       contractor: false,
+      billing_contacts: [],
     },
   });
 
   const mutation = useMutation({
     mutationFn: async (data: FacilityBaseFormData) => {
-      // Get primary billing contact (first one) for the main admin fields
-      const primaryContact = billingContacts[0];
+      // Get primary billing contact (first one) for legacy admin fields
+      const primaryContact = data.billing_contacts?.[0];
 
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const payload: any = {
@@ -52,6 +49,9 @@ export default function NewFacility() {
         physical_state: data.physical_state || null,
         physical_zip: data.physical_zip || null,
         timezone: data.timezone || null,
+        // Save to new billing_contacts JSONB column
+        billing_contacts: data.billing_contacts || [],
+        // Also populate legacy admin_contact fields for backward compatibility
         admin_contact_name: primaryContact?.name || null,
         admin_contact_phone: primaryContact?.phone || null,
         admin_contact_email: primaryContact?.email || null,
@@ -85,16 +85,6 @@ export default function NewFacility() {
   });
 
   const onSubmit = (data: FacilityBaseFormData) => {
-    // Validate billing contacts
-    const contactValidation = validateBillingContacts(billingContacts);
-    if (!contactValidation.valid) {
-      toast({ 
-        title: 'Please fix validation errors', 
-        description: 'At least one billing contact with name and email is required',
-        variant: 'destructive' 
-      });
-      return;
-    }
     mutation.mutate(data);
   };
 
@@ -123,11 +113,7 @@ export default function NewFacility() {
       <form id="new-facility-form" onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
         <FacilityCoreFields form={form} mode="create" />
         
-        <FacilityBillingContacts
-          mode="create"
-          contacts={billingContacts}
-          onContactsChange={setBillingContacts}
-        />
+        <FacilityBillingContacts form={form} mode="create" />
         
         <FacilityAddressFields form={form} mode="create" />
         

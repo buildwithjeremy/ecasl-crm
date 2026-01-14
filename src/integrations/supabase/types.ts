@@ -107,6 +107,7 @@ export type Database = {
           billing_address: string | null
           billing_city: string | null
           billing_code: string | null
+          billing_contacts: Json | null
           billing_name: string | null
           billing_state: string | null
           billing_zip: string | null
@@ -142,6 +143,7 @@ export type Database = {
           billing_address?: string | null
           billing_city?: string | null
           billing_code?: string | null
+          billing_contacts?: Json | null
           billing_name?: string | null
           billing_state?: string | null
           billing_zip?: string | null
@@ -179,6 +181,7 @@ export type Database = {
           billing_address?: string | null
           billing_city?: string | null
           billing_code?: string | null
+          billing_contacts?: Json | null
           billing_name?: string | null
           billing_state?: string | null
           billing_zip?: string | null

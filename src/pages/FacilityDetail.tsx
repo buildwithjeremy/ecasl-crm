@@ -16,7 +16,6 @@ import {
   FacilityBillingContacts,
   FacilityBillingSettings,
   FacilityNotesFields,
-  validateBillingContacts,
   type BillingContact,
 } from '@/components/facilities/fields';
 import {
@@ -35,7 +34,6 @@ export default function FacilityDetail() {
   const queryClient = useQueryClient();
   const [searchOpen, setSearchOpen] = useState(false);
   const [selectedFacilityId, setSelectedFacilityId] = useState<string | null>(id || null);
-  const [billingContacts, setBillingContacts] = useState<BillingContact[]>([]);
 
   // Sync URL id to selectedFacilityId state (for browser back/forward navigation)
   useEffect(() => {
@@ -84,11 +82,12 @@ export default function FacilityDetail() {
       contract_status: 'not_sent',
       is_gsa: false,
       contractor: false,
+      billing_contacts: [],
     },
     mode: 'onChange',
   });
 
-  // Unsaved changes warning
+  // Unsaved changes warning - now automatically includes billing contacts changes
   const blocker = useUnsavedChangesWarning({ isDirty: form.formState.isDirty });
 
   // Update URL when facility changes
@@ -98,12 +97,29 @@ export default function FacilityDetail() {
     }
   }, [selectedFacilityId, id, navigate]);
 
-  // Populate form when facility data loads
+  // Populate form when facility data loads (including billing_contacts)
   useEffect(() => {
     if (facility) {
+      // Parse billing_contacts from JSONB, with fallback to legacy admin_contact fields
+      let billingContacts: BillingContact[] = [];
+      
+      if (facility.billing_contacts && Array.isArray(facility.billing_contacts) && facility.billing_contacts.length > 0) {
+        // Use the new billing_contacts column (cast through unknown for JSONB)
+        billingContacts = facility.billing_contacts as unknown as BillingContact[];
+      } else if (facility.admin_contact_name || facility.admin_contact_phone || facility.admin_contact_email) {
+        // Fallback to legacy admin_contact fields
+        billingContacts = [{
+          id: crypto.randomUUID(),
+          name: facility.admin_contact_name ?? '',
+          phone: facility.admin_contact_phone ?? '',
+          email: facility.admin_contact_email ?? '',
+        }];
+      }
+
       form.reset({
         name: facility.name,
         facility_type: facility.facility_type ?? null,
+        billing_contacts: billingContacts,
         billing_address: facility.billing_address ?? '',
         billing_city: facility.billing_city ?? '',
         billing_state: facility.billing_state ?? '',
@@ -129,18 +145,6 @@ export default function FacilityDetail() {
         contractor: facility.contractor ?? false,
         notes: facility.notes ?? '',
       }, { keepDefaultValues: false });
-
-      // Populate billing contacts from existing admin contact data
-      if (facility.admin_contact_name || facility.admin_contact_phone || facility.admin_contact_email) {
-        setBillingContacts([{
-          id: crypto.randomUUID(),
-          name: facility.admin_contact_name ?? '',
-          phone: facility.admin_contact_phone ?? '',
-          email: facility.admin_contact_email ?? '',
-        }]);
-      } else {
-        setBillingContacts([]);
-      }
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [facility]);
@@ -149,12 +153,14 @@ export default function FacilityDetail() {
     mutationFn: async (data: FacilityFullFormData) => {
       if (!selectedFacilityId) return;
       
-      // Get primary billing contact (first one) for the main admin fields
-      const primaryContact = billingContacts[0];
+      // Get primary billing contact (first one) for legacy admin fields
+      const primaryContact = data.billing_contacts?.[0];
       
       const updatePayload: FacilityUpdate = {
         name: data.name,
         facility_type: data.facility_type || null,
+        // Save to new billing_contacts JSONB column
+        billing_contacts: data.billing_contacts || [],
         billing_address: data.billing_address || null,
         billing_city: data.billing_city || null,
         billing_state: data.billing_state || null,
@@ -164,6 +170,7 @@ export default function FacilityDetail() {
         physical_state: data.physical_state || null,
         physical_zip: data.physical_zip || null,
         timezone: data.timezone || null,
+        // Also populate legacy admin_contact fields for backward compatibility
         admin_contact_name: primaryContact?.name || null,
         admin_contact_phone: primaryContact?.phone || null,
         admin_contact_email: primaryContact?.email || null,
@@ -198,11 +205,7 @@ export default function FacilityDetail() {
   });
 
   const onSubmit = (data: FacilityFullFormData) => {
-    const validation = validateBillingContacts(billingContacts);
-    if (!validation.valid) {
-      toast({ title: 'Please fix validation errors', variant: 'destructive' });
-      return;
-    }
+    // Validation is now handled by the Zod schema via React Hook Form
     mutation.mutate(data);
   };
 
@@ -256,12 +259,8 @@ export default function FacilityDetail() {
           {/* Basic Information */}
           <FacilityCoreFields form={form} mode="edit" showStatus />
 
-          {/* Billing Contacts */}
-          <FacilityBillingContacts
-            mode="edit"
-            contacts={billingContacts}
-            onContactsChange={setBillingContacts}
-          />
+          {/* Billing Contacts - now integrated with React Hook Form */}
+          <FacilityBillingContacts form={form} mode="edit" />
 
           {/* Addresses */}
           <FacilityAddressFields form={form} mode="edit" />

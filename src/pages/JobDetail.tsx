@@ -14,6 +14,7 @@ import { format } from 'date-fns';
 import { RecordPageLayout, RecordOption } from '@/components/layout/RecordPageLayout';
 import { RatesEditDialog, RateField } from '@/components/jobs/RatesEditDialog';
 import { ContactEditDialog, ContactField } from '@/components/jobs/ContactEditDialog';
+import { EmailPreviewDialog, EmailPreviewData } from '@/components/jobs/EmailPreviewDialog';
 import {
   JobCoreFields,
   JobScheduleFields,
@@ -176,6 +177,11 @@ export default function JobDetail() {
   const [facilityRatesDialogOpen, setFacilityRatesDialogOpen] = useState(false);
   const [interpreterRatesDialogOpen, setInterpreterRatesDialogOpen] = useState(false);
   const [clientContactDialogOpen, setClientContactDialogOpen] = useState(false);
+  
+  // Email preview state
+  const [emailPreviewOpen, setEmailPreviewOpen] = useState(false);
+  const [emailPreviewData, setEmailPreviewData] = useState<EmailPreviewData | null>(null);
+  const [isPreparingEmail, setIsPreparingEmail] = useState(false);
 
   // Form
   const form = useForm<FormData>({
@@ -469,6 +475,211 @@ export default function JobDetail() {
   }, [defaultMileageRate]);
 
   // ==========================================
+  // Email Preview Handlers
+  // ==========================================
+
+  const prepareOutreachEmailPreview = useCallback(async () => {
+    if (!selectedJobId) return;
+    
+    setIsPreparingEmail(true);
+    try {
+      const data = form.getValues();
+      const potentialInterpreterIds = data.potential_interpreter_ids || [];
+      
+      if (potentialInterpreterIds.length === 0) {
+        toast({ title: 'No potential interpreters selected', variant: 'destructive' });
+        return;
+      }
+      
+      const normalizedStartTime = normalizeTimeToHHMM(data.start_time);
+      const normalizedEndTime = normalizeTimeToHHMM(data.end_time);
+      
+      if (!normalizedStartTime || !normalizedEndTime) {
+        toast({ title: 'Invalid time', description: 'Please select valid start and end times.', variant: 'destructive' });
+        return;
+      }
+      
+      // Get facility info
+      const facility = facilities?.find(f => f.id === data.facility_id);
+      const facilityName = facility?.name || 'Unknown Facility';
+      
+      // Build location string
+      const locationParts = [data.location_address, data.location_city, data.location_state, data.location_zip].filter(Boolean);
+      const location = data.location_type === 'remote' 
+        ? (data.video_call_link || 'Remote - Link TBD')
+        : (locationParts.join(', ') || 'TBD');
+      
+      // Get rate info
+      const businessRate = data.facility_rate_business || facility?.rate_business_hours || 0;
+      const rateInfo = `$${businessRate.toFixed(2)}/hr`;
+      
+      // Get the email template
+      const { data: templateData, error: templateError } = await supabase
+        .from('email_templates')
+        .select('subject, body')
+        .eq('name', 'interpreter_outreach')
+        .single();
+      
+      if (templateError || !templateData) {
+        toast({ title: 'Error', description: 'Could not find outreach email template', variant: 'destructive' });
+        return;
+      }
+      
+      const template = templateData as { subject: string; body: string };
+      
+      // Get interpreter info
+      const { data: potentialInterpreters, error: interpError } = await supabase
+        .from('interpreters')
+        .select('id, email, first_name, last_name')
+        .in('id', potentialInterpreterIds);
+      
+      if (interpError) {
+        toast({ title: 'Error', description: 'Could not fetch interpreter information', variant: 'destructive' });
+        return;
+      }
+      
+      const interpreterList = potentialInterpreters as { id: string; email: string; first_name: string; last_name: string }[] | null;
+      
+      // Use first interpreter for preview template variables
+      const firstInterpreter = interpreterList?.[0];
+      const templateVariables = {
+        interpreter_name: firstInterpreter ? `${firstInterpreter.first_name} ${firstInterpreter.last_name}` : '[Interpreter Name]',
+        facility_name: facilityName,
+        job_date: format(new Date(data.job_date), 'MMMM d, yyyy'),
+        start_time: normalizedStartTime,
+        end_time: normalizedEndTime,
+        location: location,
+        rate_info: rateInfo,
+      };
+      
+      const recipients = (interpreterList || []).map(i => ({
+        id: i.id,
+        email: i.email,
+        name: `${i.first_name} ${i.last_name}`,
+      }));
+      
+      setEmailPreviewData({
+        type: 'outreach',
+        subject: template.subject,
+        body: template.body,
+        recipients,
+        templateVariables,
+      });
+      setEmailPreviewOpen(true);
+    } catch (error) {
+      console.error('Error preparing outreach email preview:', error);
+      toast({ title: 'Error', description: 'Failed to prepare email preview', variant: 'destructive' });
+    } finally {
+      setIsPreparingEmail(false);
+    }
+  }, [selectedJobId, facilities, form, toast]);
+
+  const prepareConfirmationEmailPreview = useCallback(async () => {
+    if (!selectedJobId) return;
+    
+    setIsPreparingEmail(true);
+    try {
+      const data = form.getValues();
+      const interpreterId = data.interpreter_id;
+      
+      if (!interpreterId) {
+        toast({ title: 'No interpreter selected', variant: 'destructive' });
+        return;
+      }
+      
+      const normalizedStartTime = normalizeTimeToHHMM(data.start_time);
+      const normalizedEndTime = normalizeTimeToHHMM(data.end_time);
+      
+      if (!normalizedStartTime || !normalizedEndTime) {
+        toast({ title: 'Invalid time', description: 'Please select valid start and end times.', variant: 'destructive' });
+        return;
+      }
+      
+      // Get facility info
+      const facility = facilities?.find(f => f.id === data.facility_id);
+      const facilityName = facility?.name || 'Unknown Facility';
+      
+      // Build location string
+      const locationParts = [data.location_address, data.location_city, data.location_state, data.location_zip].filter(Boolean);
+      const location = data.location_type === 'remote' 
+        ? (data.video_call_link || 'Remote - Link TBD')
+        : (locationParts.join(', ') || 'TBD');
+      
+      // Get contact info
+      const contactName = data.client_contact_name || facility?.admin_contact_name || 'N/A';
+      const contactPhone = data.client_contact_phone || facility?.admin_contact_phone || 'N/A';
+      
+      // Get the interpreter info
+      const { data: interpreterInfo, error: interpError } = await supabase
+        .from('interpreters')
+        .select('email, first_name, last_name')
+        .eq('id', interpreterId)
+        .single();
+      
+      if (interpError || !interpreterInfo) {
+        toast({ title: 'Error', description: 'Could not find interpreter information', variant: 'destructive' });
+        return;
+      }
+      
+      const confirmedInterpreter = interpreterInfo as { email: string; first_name: string; last_name: string };
+      
+      // Get the email template
+      const { data: templateData, error: templateError } = await supabase
+        .from('email_templates')
+        .select('subject, body')
+        .eq('name', 'interpreter_confirmation')
+        .single();
+      
+      if (templateError || !templateData) {
+        toast({ title: 'Error', description: 'Could not find confirmation email template', variant: 'destructive' });
+        return;
+      }
+      
+      const template = templateData as { subject: string; body: string };
+      
+      const templateVariables = {
+        interpreter_name: `${confirmedInterpreter.first_name} ${confirmedInterpreter.last_name}`,
+        job_number: job?.job_number || 'N/A',
+        facility_name: facilityName,
+        job_date: format(new Date(data.job_date), 'MMMM d, yyyy'),
+        start_time: normalizedStartTime,
+        end_time: normalizedEndTime,
+        location: location,
+        contact_name: contactName,
+        contact_phone: contactPhone,
+      };
+      
+      setEmailPreviewData({
+        type: 'confirmation',
+        subject: template.subject,
+        body: template.body,
+        recipients: [{
+          id: interpreterId,
+          email: confirmedInterpreter.email,
+          name: `${confirmedInterpreter.first_name} ${confirmedInterpreter.last_name}`,
+        }],
+        templateVariables,
+      });
+      setEmailPreviewOpen(true);
+    } catch (error) {
+      console.error('Error preparing confirmation email preview:', error);
+      toast({ title: 'Error', description: 'Failed to prepare email preview', variant: 'destructive' });
+    } finally {
+      setIsPreparingEmail(false);
+    }
+  }, [selectedJobId, facilities, job, form, toast]);
+
+  const handleConfirmSendEmail = useCallback(() => {
+    if (!emailPreviewData) return;
+    
+    if (emailPreviewData.type === 'outreach') {
+      sendOutreachMutation.mutate();
+    } else {
+      confirmInterpreterMutation.mutate();
+    }
+  }, [emailPreviewData]);
+
+  // ==========================================
   // Mutations
   // ==========================================
 
@@ -713,6 +924,8 @@ export default function JobDetail() {
       return { savedJob: savedJob as Job, emailCount: potentialInterpreters?.length || 0 };
     },
     onSuccess: ({ savedJob, emailCount }) => {
+      setEmailPreviewOpen(false);
+      setEmailPreviewData(null);
       queryClient.invalidateQueries({ queryKey: ['job', selectedJobId] });
       queryClient.invalidateQueries({ queryKey: ['jobs'] });
       queryClient.invalidateQueries({ queryKey: ['jobs-list'] });
@@ -894,6 +1107,8 @@ export default function JobDetail() {
       return { savedJob: savedJob as Job, interpreterName: `${confirmedInterpreter.first_name} ${confirmedInterpreter.last_name}` };
     },
     onSuccess: ({ savedJob, interpreterName }) => {
+      setEmailPreviewOpen(false);
+      setEmailPreviewData(null);
       queryClient.invalidateQueries({ queryKey: ['job', selectedJobId] });
       queryClient.invalidateQueries({ queryKey: ['jobs'] });
       queryClient.invalidateQueries({ queryKey: ['jobs-list'] });
@@ -1148,10 +1363,10 @@ export default function JobDetail() {
               mode="edit"
               disabled={isLocked}
               interpreters={interpreters}
-              onSendOutreach={() => sendOutreachMutation.mutate()}
-              onConfirmInterpreter={() => confirmInterpreterMutation.mutate()}
-              isSendingOutreach={sendOutreachMutation.isPending}
-              isConfirmingInterpreter={confirmInterpreterMutation.isPending}
+              onSendOutreach={prepareOutreachEmailPreview}
+              onConfirmInterpreter={prepareConfirmationEmailPreview}
+              isSendingOutreach={isPreparingEmail || sendOutreachMutation.isPending}
+              isConfirmingInterpreter={isPreparingEmail || confirmInterpreterMutation.isPending}
               canSendOutreach={canSendOutreach}
               canConfirmInterpreter={canConfirmInterpreter}
             />
@@ -1216,6 +1431,15 @@ export default function JobDetail() {
         fields={clientContactFields}
         onSave={handleClientContactSave}
         disabled={isLocked}
+      />
+      
+      {/* Email Preview Dialog */}
+      <EmailPreviewDialog
+        open={emailPreviewOpen}
+        onOpenChange={setEmailPreviewOpen}
+        emailData={emailPreviewData}
+        onConfirmSend={handleConfirmSendEmail}
+        isSending={sendOutreachMutation.isPending || confirmInterpreterMutation.isPending}
       />
     </RecordPageLayout>
   );

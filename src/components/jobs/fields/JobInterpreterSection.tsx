@@ -19,17 +19,6 @@ import {
   CommandItem,
   CommandList,
 } from '@/components/ui/command';
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-  AlertDialogTrigger,
-} from '@/components/ui/alert-dialog';
 import { Check, ChevronsUpDown, Mail } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { FormMode } from '@/lib/schemas/shared';
@@ -196,34 +185,16 @@ export function JobInterpreterSection({
             </Popover>
 
             {onSendOutreach && (
-              <AlertDialog>
-                <AlertDialogTrigger asChild>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    className="h-10 whitespace-nowrap"
-                    disabled={disabled || !canSendOutreach || isSendingOutreach}
-                  >
-                    <Mail className="mr-2 h-4 w-4" />
-                    {isSendingOutreach ? 'Sending...' : 'Send Outreach'}
-                  </Button>
-                </AlertDialogTrigger>
-                <AlertDialogContent>
-                  <AlertDialogHeader>
-                    <AlertDialogTitle>Send Outreach Email?</AlertDialogTitle>
-                    <AlertDialogDescription>
-                      This will send an email to {watchedPotentialInterpreterIds.length} potential interpreter
-                      {watchedPotentialInterpreterIds.length !== 1 ? 's' : ''} and change the job status to "Outreach In Progress".
-                    </AlertDialogDescription>
-                  </AlertDialogHeader>
-                  <AlertDialogFooter>
-                    <AlertDialogCancel>Cancel</AlertDialogCancel>
-                    <AlertDialogAction onClick={onSendOutreach}>
-                      Send Email
-                    </AlertDialogAction>
-                  </AlertDialogFooter>
-                </AlertDialogContent>
-              </AlertDialog>
+              <Button
+                type="button"
+                variant="outline"
+                className="h-10 whitespace-nowrap"
+                disabled={disabled || !canSendOutreach || isSendingOutreach}
+                onClick={onSendOutreach}
+              >
+                <Mail className="mr-2 h-4 w-4" />
+                {isSendingOutreach ? 'Loading...' : 'Send Outreach'}
+              </Button>
             )}
           </div>
         </div>
@@ -277,33 +248,16 @@ export function JobInterpreterSection({
             </Popover>
 
             {onConfirmInterpreter && (
-              <AlertDialog>
-                <AlertDialogTrigger asChild>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    className="h-10 whitespace-nowrap"
-                    disabled={disabled || !canConfirmInterpreter || isConfirmingInterpreter}
-                  >
-                    <Mail className="mr-2 h-4 w-4" />
-                    {isConfirmingInterpreter ? 'Confirming...' : 'Confirm Interpreter'}
-                  </Button>
-                </AlertDialogTrigger>
-                <AlertDialogContent>
-                  <AlertDialogHeader>
-                    <AlertDialogTitle>Confirm Interpreter?</AlertDialogTitle>
-                    <AlertDialogDescription>
-                      This will assign {selectedInterpreter ? `${selectedInterpreter.first_name} ${selectedInterpreter.last_name}` : 'the interpreter'} to this job, save all changes, and update the job status to "Confirmed".
-                    </AlertDialogDescription>
-                  </AlertDialogHeader>
-                  <AlertDialogFooter>
-                    <AlertDialogCancel>Cancel</AlertDialogCancel>
-                    <AlertDialogAction onClick={onConfirmInterpreter}>
-                      Confirm
-                    </AlertDialogAction>
-                  </AlertDialogFooter>
-                </AlertDialogContent>
-              </AlertDialog>
+              <Button
+                type="button"
+                variant="outline"
+                className="h-10 whitespace-nowrap"
+                disabled={disabled || !canConfirmInterpreter || isConfirmingInterpreter}
+                onClick={onConfirmInterpreter}
+              >
+                <Mail className="mr-2 h-4 w-4" />
+                {isConfirmingInterpreter ? 'Loading...' : 'Confirm Interpreter'}
+              </Button>
             )}
           </div>
         </div>

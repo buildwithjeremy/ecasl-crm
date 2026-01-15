@@ -165,12 +165,24 @@ async function importInterpreters(supabase: any, csvData: string) {
   
   console.log(`Parsed ${interpreters.length} interpreters, skipped ${skipped}`);
   
-  // Delete existing interpreters (cascade will handle related records)
+  // First, delete interpreter_bills that reference interpreters
+  console.log('Deleting existing interpreter bills...');
+  const { error: deleteBillsError } = await supabase
+    .from('interpreter_bills')
+    .delete()
+    .neq('id', '00000000-0000-0000-0000-000000000000');
+  
+  if (deleteBillsError) {
+    console.error('Delete bills error:', deleteBillsError);
+    throw new Error(`Failed to delete interpreter bills: ${deleteBillsError.message}`);
+  }
+  
+  // Then delete existing interpreters
   console.log('Deleting existing interpreters...');
   const { error: deleteError } = await supabase
     .from('interpreters')
     .delete()
-    .neq('id', '00000000-0000-0000-0000-000000000000'); // Delete all
+    .neq('id', '00000000-0000-0000-0000-000000000000');
   
   if (deleteError) {
     console.error('Delete error:', deleteError);
@@ -276,12 +288,48 @@ async function importFacilities(supabase: any, csvData: string) {
   
   console.log(`Parsed ${facilities.length} facilities, skipped ${skipped}`);
   
-  // Delete existing facilities
+  // First, delete invoice_items that reference jobs
+  console.log('Deleting existing invoice items...');
+  const { error: deleteItemsError } = await supabase
+    .from('invoice_items')
+    .delete()
+    .neq('id', '00000000-0000-0000-0000-000000000000');
+  
+  if (deleteItemsError) {
+    console.error('Delete invoice items error:', deleteItemsError);
+    throw new Error(`Failed to delete invoice items: ${deleteItemsError.message}`);
+  }
+  
+  // Delete invoices that reference facilities
+  console.log('Deleting existing invoices...');
+  const { error: deleteInvoicesError } = await supabase
+    .from('invoices')
+    .delete()
+    .neq('id', '00000000-0000-0000-0000-000000000000');
+  
+  if (deleteInvoicesError) {
+    console.error('Delete invoices error:', deleteInvoicesError);
+    throw new Error(`Failed to delete invoices: ${deleteInvoicesError.message}`);
+  }
+  
+  // Delete jobs that reference facilities
+  console.log('Deleting existing jobs...');
+  const { error: deleteJobsError } = await supabase
+    .from('jobs')
+    .delete()
+    .neq('id', '00000000-0000-0000-0000-000000000000');
+  
+  if (deleteJobsError) {
+    console.error('Delete jobs error:', deleteJobsError);
+    throw new Error(`Failed to delete jobs: ${deleteJobsError.message}`);
+  }
+  
+  // Then delete existing facilities
   console.log('Deleting existing facilities...');
   const { error: deleteError } = await supabase
     .from('facilities')
     .delete()
-    .neq('id', '00000000-0000-0000-0000-000000000000'); // Delete all
+    .neq('id', '00000000-0000-0000-0000-000000000000');
   
   if (deleteError) {
     console.error('Delete error:', deleteError);

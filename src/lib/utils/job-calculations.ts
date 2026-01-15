@@ -151,6 +151,7 @@ export interface BillableTotal {
   facilityMileageTotal: number;
   facilityTravelTimeTotal: number;
   facilityFeesTotal: number;
+  facilityEmergencyFee: number;
   facilityTotal: number;
   facilityBusinessRate: number;
   facilityAfterHoursRate: number;
@@ -177,6 +178,7 @@ export interface BillableTotal {
   parking: number;
   tolls: number;
   miscFee: number;
+  emergencyFeeApplied: boolean;
 }
 
 export interface BillableCalculationInputs {
@@ -186,6 +188,8 @@ export interface BillableCalculationInputs {
   facilityHolidayRate?: number;
   facilityMileageRate: number;
   facilityRateAdjustment: number;
+  facilityEmergencyFee?: number;
+  emergencyFeeApplied?: boolean;
   interpreterBusinessRate: number;
   interpreterAfterHoursRate: number;
   interpreterHolidayRate?: number;
@@ -210,6 +214,8 @@ export function calculateBillableTotal(inputs: BillableCalculationInputs): Billa
     facilityHolidayRate = 0,
     facilityMileageRate,
     facilityRateAdjustment,
+    facilityEmergencyFee = 0,
+    emergencyFeeApplied = false,
     interpreterBusinessRate,
     interpreterAfterHoursRate,
     interpreterHolidayRate = 0,
@@ -262,6 +268,7 @@ export function calculateBillableTotal(inputs: BillableCalculationInputs): Billa
   const facilityMileageTotal = mileage * facilityMileageRate;
   const facilityTravelTimeTotal = travelTimeHours * travelTimeRate;
   const facilityFeesTotal = parking + tolls + miscFee;
+  const emergencyFeeTotal = emergencyFeeApplied ? facilityEmergencyFee : 0;
 
   const interpreterMileageTotal = mileage * interpreterMileageRate;
   const interpreterTravelTimeTotal = travelTimeHours * travelTimeRate;
@@ -275,7 +282,8 @@ export function calculateBillableTotal(inputs: BillableCalculationInputs): Billa
     facilityTravelTimeTotal,
     facilityTravelTimeRate: travelTimeRate,
     facilityFeesTotal,
-    facilityTotal: facilityBusinessTotal + facilityAfterHoursTotal + facilityMileageTotal + facilityTravelTimeTotal + facilityFeesTotal,
+    facilityEmergencyFee: emergencyFeeTotal,
+    facilityTotal: facilityBusinessTotal + facilityAfterHoursTotal + facilityMileageTotal + facilityTravelTimeTotal + facilityFeesTotal + emergencyFeeTotal,
     facilityBusinessRate: useHolidayRate ? adjustedFacilityHolidayRate : adjustedFacilityBusinessRate,
     facilityAfterHoursRate: useHolidayRate ? adjustedFacilityHolidayRate : adjustedFacilityAfterHoursRate,
     facilityRateAdjustment,
@@ -295,6 +303,7 @@ export function calculateBillableTotal(inputs: BillableCalculationInputs): Billa
     parking,
     tolls,
     miscFee,
+    emergencyFeeApplied,
   };
 }
 

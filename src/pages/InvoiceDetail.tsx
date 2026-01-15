@@ -338,8 +338,16 @@ export default function InvoiceDetail() {
   const hourlyTotal = job?.facility_hourly_total ?? 0;
   const emergencyFeeAmount = (job?.emergency_fee_applied && job?.facility?.emergency_fee) ? job.facility.emergency_fee : 0;
   const holidayFeeAmount = (job?.holiday_fee_applied && job?.facility?.holiday_fee) ? job.facility.holiday_fee : 0;
-  const travelFeeTotal = (job?.total_facility_charge ?? 0) - hourlyTotal;
-  const overallTotal = job?.total_facility_charge ?? 0;
+  
+  // Calculate travel/fee total by summing all individual fees
+  const mileageAmount = (job?.mileage ?? 0) * (job?.facility_rate_mileage ?? 0);
+  const travelTimeAmount = (job?.travel_time_hours ?? 0) * (job?.travel_time_rate ?? 0);
+  const parkingAmount = job?.parking ?? 0;
+  const tollsAmount = job?.tolls ?? 0;
+  const miscFeeAmount = job?.misc_fee ?? 0;
+  const travelFeeTotal = mileageAmount + travelTimeAmount + parkingAmount + tollsAmount + miscFeeAmount + emergencyFeeAmount + holidayFeeAmount;
+  
+  const overallTotal = hourlyTotal + travelFeeTotal;
 
   const formatCurrency = (value: number | null | undefined) => {
     if (value === null || value === undefined) return '-';

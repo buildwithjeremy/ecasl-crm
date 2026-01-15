@@ -24,13 +24,15 @@ export function InterpreterCertifications({
   mode,
   disabled = false,
 }: InterpreterCertificationsProps) {
+  const ridCertified = form.watch('rid_certified');
+
   return (
     <Card>
       <CardHeader className="pb-4">
         <CardTitle className="text-lg">Certifications</CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
-        <div className="flex gap-6">
+        <div className="flex flex-wrap gap-6">
           <Controller
             control={form.control}
             name="rid_certified"
@@ -62,6 +64,17 @@ export function InterpreterCertifications({
             )}
           />
         </div>
+        {ridCertified && (
+          <div className="space-y-2">
+            <Label htmlFor="rid_number">RID #</Label>
+            <Input
+              id="rid_number"
+              disabled={disabled}
+              placeholder="Enter RID number"
+              {...form.register('rid_number')}
+            />
+          </div>
+        )}
         <div className="space-y-2">
           <Label htmlFor="other_certifications">Other Certifications</Label>
           <Input

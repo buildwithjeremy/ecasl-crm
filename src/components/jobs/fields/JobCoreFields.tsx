@@ -84,7 +84,7 @@ export function JobCoreFields({
     queryFn: async () => {
       const { data, error } = await supabase
         .from('facilities')
-        .select('id, name, physical_address, physical_city, physical_state, physical_zip, billing_address, billing_city, billing_state, billing_zip, contractor, admin_contact_name, admin_contact_phone, admin_contact_email, rate_business_hours, rate_after_hours, rate_holiday_hours, minimum_billable_hours, emergency_fee, holiday_fee')
+        .select('id, name, physical_address, physical_city, physical_state, physical_zip, billing_address, billing_city, billing_state, billing_zip, contractor, billing_contacts, rate_business_hours, rate_after_hours, rate_holiday_hours, minimum_billable_hours, emergency_fee, holiday_fee')
         .eq('status', 'active')
         .order('name');
       if (error) throw error;

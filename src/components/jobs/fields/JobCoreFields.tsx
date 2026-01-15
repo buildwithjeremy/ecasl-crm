@@ -40,6 +40,7 @@ export interface FacilityOption {
   id: string;
   name: string;
   contractor: boolean | null;
+  is_gsa: boolean | null;
   physical_address: string | null;
   physical_city: string | null;
   physical_state: string | null;
@@ -84,7 +85,7 @@ export function JobCoreFields({
     queryFn: async () => {
       const { data, error } = await supabase
         .from('facilities')
-        .select('id, name, physical_address, physical_city, physical_state, physical_zip, billing_address, billing_city, billing_state, billing_zip, contractor, billing_contacts, rate_business_hours, rate_after_hours, rate_holiday_hours, minimum_billable_hours, emergency_fee, holiday_fee')
+        .select('id, name, physical_address, physical_city, physical_state, physical_zip, billing_address, billing_city, billing_state, billing_zip, contractor, is_gsa, billing_contacts, rate_business_hours, rate_after_hours, rate_holiday_hours, minimum_billable_hours, emergency_fee, holiday_fee')
         .eq('status', 'active')
         .order('name');
       if (error) throw error;
@@ -130,7 +131,10 @@ export function JobCoreFields({
                   {selectedFacility ? (
                     <span className="flex items-center gap-2 truncate">
                       {selectedFacility.name}
-                      {selectedFacility.contractor && (
+                      {selectedFacility.is_gsa && (
+                        <Badge variant="secondary" className="text-xs">GSA</Badge>
+                      )}
+                      {selectedFacility.contractor && !selectedFacility.is_gsa && (
                         <Badge variant="secondary" className="text-xs">Contractor</Badge>
                       )}
                     </span>
@@ -162,7 +166,10 @@ export function JobCoreFields({
                             )}
                           />
                           <span className="flex-1">{facility.name}</span>
-                          {facility.contractor && (
+                          {facility.is_gsa && (
+                            <Badge variant="secondary" className="ml-2 text-xs">GSA</Badge>
+                          )}
+                          {facility.contractor && !facility.is_gsa && (
                             <Badge variant="secondary" className="ml-2 text-xs">Contractor</Badge>
                           )}
                         </CommandItem>

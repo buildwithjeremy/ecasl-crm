@@ -43,7 +43,7 @@ export function JobLocationFields({
 }: JobLocationFieldsProps) {
   const watchedLocationType = form.watch('location_type');
   const watchedFacilityId = form.watch('facility_id');
-  const isContractor = selectedFacility?.contractor ?? false;
+  const isContractorOrGsa = (selectedFacility?.contractor || selectedFacility?.is_gsa) ?? false;
 
   // Prevent auto-fill from marking form dirty on initial load / resets
   const prevFacilityIdRef = useRef<string | null>(null);
@@ -81,8 +81,8 @@ export function JobLocationFields({
       }
     };
 
-    if (!selectedFacility.contractor) {
-      // Non-contractor: auto-fill client info and location from facility
+    if (!selectedFacility.contractor && !selectedFacility.is_gsa) {
+      // Non-contractor/non-GSA: auto-fill client info and location from facility
       // Get primary billing contact
       const primaryContact = selectedFacility.billing_contacts?.[0];
       
@@ -103,7 +103,7 @@ export function JobLocationFields({
         setIfDifferent('location_zip', zip || '');
       }
     } else if (shouldAutoFill && !isEditMode) {
-      // Contractor in CREATE mode: clear fields when facility is selected
+      // Contractor/GSA in CREATE mode: clear fields when facility is selected
       // This ensures clean slate for manual entry
       setIfDifferent('client_business_name', '');
       setIfDifferent('client_contact_name', '');
@@ -114,7 +114,7 @@ export function JobLocationFields({
       setIfDifferent('location_state', '');
       setIfDifferent('location_zip', '');
     }
-    // For contractors in EDIT mode when facility changes, also clear for new entry
+    // For contractors/GSA in EDIT mode when facility changes, also clear for new entry
     else if (facilityChanged && isEditMode) {
       setIfDifferent('client_business_name', '');
       setIfDifferent('client_contact_name', '');
@@ -177,8 +177,8 @@ export function JobLocationFields({
 
         {watchedLocationType === 'in_person' ? (
           <>
-            {/* Contractor Card */}
-            {selectedFacility && isContractor && (
+            {/* Contractor/GSA Card */}
+            {selectedFacility && isContractorOrGsa && (
               <div className="rounded-lg border bg-muted/30 p-4">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-3">
@@ -186,7 +186,11 @@ export function JobLocationFields({
                       <Building2 className="h-4 w-4 text-muted-foreground" />
                       <span className="font-medium">{selectedFacility.name}</span>
                     </div>
-                    <Badge variant="secondary" className="text-xs">Contractor</Badge>
+                    {selectedFacility.is_gsa ? (
+                      <Badge variant="secondary" className="text-xs">GSA</Badge>
+                    ) : (
+                      <Badge variant="secondary" className="text-xs">Contractor</Badge>
+                    )}
                   </div>
                   <Button
                     type="button"
@@ -205,8 +209,8 @@ export function JobLocationFields({
             {/* Facility Information Card - Only show when facility is selected */}
             {selectedFacility && (
               <div className="rounded-lg border p-4 space-y-4">
-                {/* Header with View Facility link - only for non-contractors */}
-                {!isContractor && (
+                {/* Header with View Facility link - only for non-contractors/non-GSA */}
+                {!isContractorOrGsa && (
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
                       <span className="font-medium text-sm">Facility Information</span>
@@ -233,11 +237,11 @@ export function JobLocationFields({
                   <div className="flex items-center gap-2">
                     <User className="h-4 w-4 text-muted-foreground" />
                     <span className="font-medium text-sm">
-                      {isContractor ? 'Client Contact (for this job)' : 'Client Contact'}
+                      {isContractorOrGsa ? 'Client Contact (for this job)' : 'Client Contact'}
                     </span>
                   </div>
 
-                  {!isContractor ? (
+                  {!isContractorOrGsa ? (
                     // Non-contractor: Show read-only client info
                     (() => {
                       const primaryContact = selectedFacility.billing_contacts?.[0];
@@ -315,11 +319,11 @@ export function JobLocationFields({
                   <div className="flex items-center gap-2">
                     <MapPin className="h-4 w-4 text-muted-foreground" />
                     <span className="font-medium text-sm">
-                      {isContractor ? 'Job Location (for this job)' : 'Job Location'}
+                      {isContractorOrGsa ? 'Job Location (for this job)' : 'Job Location'}
                     </span>
                   </div>
 
-                  {!isContractor ? (
+                  {!isContractorOrGsa ? (
                     // Non-contractor: Show read-only location
                     <div className="text-sm">
                       <span className="text-muted-foreground">Address</span>

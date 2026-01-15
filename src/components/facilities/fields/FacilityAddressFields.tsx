@@ -37,6 +37,9 @@ export function FacilityAddressFields({
   requiredFields = false,
 }: FacilityAddressFieldsProps) {
   const watchedPhysicalState = form.watch('physical_state');
+  const watchedContractor = form.watch('contractor');
+  const watchedIsGsa = form.watch('is_gsa');
+  const isContractorOrGsa = watchedContractor || watchedIsGsa;
   const detectedTimezone = getTimezoneFromState(watchedPhysicalState);
 
   // Auto-update timezone when physical state changes
@@ -131,74 +134,86 @@ export function FacilityAddressFields({
         <CardHeader className="pb-4">
           <div className="flex items-center justify-between">
             <CardTitle className="text-lg">Physical Address (for Job Locations)</CardTitle>
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              onClick={copyBillingToPhysical}
-              disabled={disabled}
-              className="h-8"
-            >
-              <Copy className="h-3 w-3 mr-1" />
-              Copy from Billing
-            </Button>
+            {!isContractorOrGsa && (
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={copyBillingToPhysical}
+                disabled={disabled}
+                className="h-8"
+              >
+                <Copy className="h-3 w-3 mr-1" />
+                Copy from Billing
+              </Button>
+            )}
           </div>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div className="space-y-2">
-            <Label htmlFor="physical_address">Address{requiredLabel}</Label>
-            <Input
-              id="physical_address"
-              disabled={disabled}
-              {...form.register('physical_address')}
-            />
-            {form.formState.errors.physical_address && (
-              <p className="text-sm text-destructive">
-                {form.formState.errors.physical_address.message as string}
-              </p>
-            )}
-          </div>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="physical_city">City{requiredLabel}</Label>
-              <Input
-                id="physical_city"
-                disabled={disabled}
-                {...form.register('physical_city')}
-              />
-              {form.formState.errors.physical_city && (
-                <p className="text-sm text-destructive">
-                  {form.formState.errors.physical_city.message as string}
-                </p>
-              )}
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="physical_state">State{requiredLabel}</Label>
-              <Input
-                id="physical_state"
-                disabled={disabled}
-                {...form.register('physical_state')}
-              />
-              {form.formState.errors.physical_state && (
-                <p className="text-sm text-destructive">
-                  {form.formState.errors.physical_state.message as string}
-                </p>
-              )}
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="physical_zip">Zip{requiredLabel}</Label>
-              <Input
-                id="physical_zip"
-                disabled={disabled}
-                {...form.register('physical_zip')}
-              />
-              {form.formState.errors.physical_zip && (
-                <p className="text-sm text-destructive">
-                  {form.formState.errors.physical_zip.message as string}
-                </p>
-              )}
-            </div>
-          </div>
+          {isContractorOrGsa ? (
+            // Contractor/GSA: Show informational message instead of address fields
+            <p className="text-sm text-muted-foreground">
+              Effective Communication is a contractor for this facility. Physical addresses are provided on a job-by-job basis.
+            </p>
+          ) : (
+            // Regular facility: Show all address fields
+            <>
+              <div className="space-y-2">
+                <Label htmlFor="physical_address">Address{requiredLabel}</Label>
+                <Input
+                  id="physical_address"
+                  disabled={disabled}
+                  {...form.register('physical_address')}
+                />
+                {form.formState.errors.physical_address && (
+                  <p className="text-sm text-destructive">
+                    {form.formState.errors.physical_address.message as string}
+                  </p>
+                )}
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="physical_city">City{requiredLabel}</Label>
+                  <Input
+                    id="physical_city"
+                    disabled={disabled}
+                    {...form.register('physical_city')}
+                  />
+                  {form.formState.errors.physical_city && (
+                    <p className="text-sm text-destructive">
+                      {form.formState.errors.physical_city.message as string}
+                    </p>
+                  )}
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="physical_state">State{requiredLabel}</Label>
+                  <Input
+                    id="physical_state"
+                    disabled={disabled}
+                    {...form.register('physical_state')}
+                  />
+                  {form.formState.errors.physical_state && (
+                    <p className="text-sm text-destructive">
+                      {form.formState.errors.physical_state.message as string}
+                    </p>
+                  )}
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="physical_zip">Zip{requiredLabel}</Label>
+                  <Input
+                    id="physical_zip"
+                    disabled={disabled}
+                    {...form.register('physical_zip')}
+                  />
+                  {form.formState.errors.physical_zip && (
+                    <p className="text-sm text-destructive">
+                      {form.formState.errors.physical_zip.message as string}
+                    </p>
+                  )}
+                </div>
+              </div>
+            </>
+          )}
           <div className="space-y-2">
             <Label htmlFor="timezone">Timezone</Label>
             <Controller

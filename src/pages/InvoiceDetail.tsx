@@ -53,6 +53,7 @@ import { useToast } from '@/hooks/use-toast';
 import { Check, ChevronsUpDown, ArrowLeft, FileText, Loader2, Trash2, Send, DollarSign } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Badge } from '@/components/ui/badge';
+import { SendInvoiceDialog } from '@/components/invoices/SendInvoiceDialog';
 
 const formSchema = z.object({
   issued_date: z.string().optional(),
@@ -121,6 +122,7 @@ export default function InvoiceDetail() {
   const [selectedInvoiceId, setSelectedInvoiceId] = useState<string | null>(id || null);
   const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
   const [pdfUrl, setPdfUrl] = useState<string | null>(null);
+  const [sendDialogOpen, setSendDialogOpen] = useState(false);
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
@@ -580,12 +582,11 @@ export default function InvoiceDetail() {
                     <Button
                       type="button"
                       variant="outline"
-                      onClick={() => statusMutation.mutate('submitted')}
-                      disabled={statusMutation.isPending}
+                      onClick={() => setSendDialogOpen(true)}
                       size="sm"
                     >
                       <Send className="mr-2 h-4 w-4" />
-                      Mark as Sent
+                      Send Invoice
                     </Button>
                   )}
                   {invoice.status === 'submitted' && (
@@ -724,6 +725,23 @@ export default function InvoiceDetail() {
       )}
 
       <UnsavedChangesDialog blocker={blocker} />
+
+      {invoice && (
+        <SendInvoiceDialog
+          open={sendDialogOpen}
+          onOpenChange={setSendDialogOpen}
+          invoiceId={invoice.id}
+          invoiceNumber={invoice.invoice_number}
+          facilityName={invoice.facility?.name || 'Customer'}
+          pdfStoragePath={invoice.pdf_url}
+          dueDate={invoice.due_date}
+          total={overallTotal}
+          onSuccess={() => {
+            queryClient.invalidateQueries({ queryKey: ['invoice', selectedInvoiceId] });
+            queryClient.invalidateQueries({ queryKey: ['invoices'] });
+          }}
+        />
+      )}
     </div>
   );
 }

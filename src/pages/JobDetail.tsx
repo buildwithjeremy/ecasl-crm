@@ -473,6 +473,8 @@ export default function JobDetail() {
       interpreter_billable_total: interpreterBillableTotal,
       total_interpreter_pay: interpreterBillableTotal,
       travel_time_rate: travelTimeRate,
+      business_hours_worked: currentHoursSplit?.businessHours ?? null,
+      after_hours_worked: currentHoursSplit?.afterHours ?? null,
     };
   }, [defaultMileageRate]);
 

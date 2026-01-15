@@ -153,7 +153,7 @@ export function FacilityAddressFields({
           {isContractorOrGsa ? (
             // Contractor/GSA: Show informational message instead of address fields
             <p className="text-sm text-muted-foreground">
-              Effective Communication is a contractor for this facility. Physical addresses are provided on a job-by-job basis.
+              Effective Communication is a contractor for this facility. Physical addresses and timezones are provided on a job-by-job basis.
             </p>
           ) : (
             // Regular facility: Show all address fields
@@ -212,36 +212,36 @@ export function FacilityAddressFields({
                   )}
                 </div>
               </div>
+              <div className="space-y-2">
+                <Label htmlFor="timezone">Timezone</Label>
+                <Controller
+                  control={form.control}
+                  name="timezone"
+                  render={({ field }) => (
+                    <Select
+                      value={field.value || ''}
+                      onValueChange={field.onChange}
+                      disabled={disabled}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select timezone" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {timezoneOptions.map((option) => (
+                          <SelectItem key={option.value} value={option.value}>
+                            {option.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  )}
+                />
+                <p className="text-xs text-muted-foreground">
+                  Auto-detected from state. For border areas with split time zones, please verify and adjust if needed.
+                </p>
+              </div>
             </>
           )}
-          <div className="space-y-2">
-            <Label htmlFor="timezone">Timezone</Label>
-            <Controller
-              control={form.control}
-              name="timezone"
-              render={({ field }) => (
-                <Select
-                  value={field.value || ''}
-                  onValueChange={field.onChange}
-                  disabled={disabled}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select timezone" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {timezoneOptions.map((option) => (
-                      <SelectItem key={option.value} value={option.value}>
-                        {option.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              )}
-            />
-            <p className="text-xs text-muted-foreground">
-              Auto-detected from state. For border areas with split time zones, please verify and adjust if needed.
-            </p>
-          </div>
         </CardContent>
       </Card>
     </>

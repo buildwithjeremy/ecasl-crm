@@ -1,6 +1,6 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { UseFormReturn, Controller } from 'react-hook-form';
-import { format } from 'date-fns';
+import { format, parse, isValid } from 'date-fns';
 import { CalendarIcon } from 'lucide-react';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
@@ -50,6 +50,32 @@ export function InterpreterPaymentFields({
   const [datePickerOpen, setDatePickerOpen] = useState(false);
   const watchedInsuranceEndDate = form.watch('insurance_end_date');
   const requiredLabel = requiredPaymentMethod ? ' *' : '';
+  
+  // Direct date input state
+  const [dateInputValue, setDateInputValue] = useState('');
+  
+  // Sync input value with watched date
+  useEffect(() => {
+    if (watchedInsuranceEndDate) {
+      setDateInputValue(format(watchedInsuranceEndDate, 'MM/dd/yyyy'));
+    } else {
+      setDateInputValue('');
+    }
+  }, [watchedInsuranceEndDate]);
+  
+  const handleDateInputChange = (value: string) => {
+    setDateInputValue(value);
+    
+    // Try to parse as MM/dd/yyyy
+    if (value.length === 10) {
+      const parsed = parse(value, 'MM/dd/yyyy', new Date());
+      if (isValid(parsed)) {
+        form.setValue('insurance_end_date', parsed, { shouldDirty: true });
+      }
+    } else if (value === '') {
+      form.setValue('insurance_end_date', null, { shouldDirty: true });
+    }
+  };
 
   return (
     <Card>
@@ -121,35 +147,42 @@ export function InterpreterPaymentFields({
           />
           <div className="space-y-2">
             <Label>Insurance End Date</Label>
-            <Popover open={datePickerOpen} onOpenChange={setDatePickerOpen}>
-              <PopoverTrigger asChild>
-                <Button
-                  variant="outline"
-                  disabled={disabled}
-                  className={cn(
-                    'w-full justify-start text-left font-normal',
-                    !watchedInsuranceEndDate && 'text-muted-foreground'
-                  )}
-                >
-                  <CalendarIcon className="mr-2 h-4 w-4" />
-                  {watchedInsuranceEndDate
-                    ? format(watchedInsuranceEndDate, 'PPP')
-                    : 'Pick a date'}
-                </Button>
-              </PopoverTrigger>
-              <PopoverContent className="w-auto p-0" align="start">
-                <Calendar
-                  mode="single"
-                  selected={watchedInsuranceEndDate || undefined}
-                  onSelect={(date) => {
-                    form.setValue('insurance_end_date', date || null, { shouldDirty: true });
-                    setDatePickerOpen(false);
-                  }}
-                  initialFocus
-                  className={cn("p-3 pointer-events-auto")}
-                />
-              </PopoverContent>
-            </Popover>
+            <div className="flex gap-2">
+              <Input
+                placeholder="MM/DD/YYYY"
+                value={dateInputValue}
+                onChange={(e) => handleDateInputChange(e.target.value)}
+                disabled={disabled}
+                className="flex-1"
+              />
+              <Popover open={datePickerOpen} onOpenChange={setDatePickerOpen}>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    size="icon"
+                    disabled={disabled}
+                    type="button"
+                  >
+                    <CalendarIcon className="h-4 w-4" />
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0" align="end">
+                  <Calendar
+                    mode="single"
+                    selected={watchedInsuranceEndDate || undefined}
+                    onSelect={(date) => {
+                      form.setValue('insurance_end_date', date || null, { shouldDirty: true });
+                      setDatePickerOpen(false);
+                    }}
+                    initialFocus
+                    className={cn("p-3 pointer-events-auto")}
+                    captionLayout="dropdown-buttons"
+                    fromYear={new Date().getFullYear()}
+                    toYear={new Date().getFullYear() + 10}
+                  />
+                </PopoverContent>
+              </Popover>
+            </div>
           </div>
         </div>
       </CardContent>

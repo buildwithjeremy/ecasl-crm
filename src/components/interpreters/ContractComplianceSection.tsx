@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { useMutation } from '@tanstack/react-query';
 import { UseFormReturn, Controller } from 'react-hook-form';
 import { supabase } from '@/integrations/supabase/client';
@@ -10,9 +10,13 @@ import { useToast } from '@/hooks/use-toast';
 import { FileText, ExternalLink, Loader2, Send, CheckCircle, Upload } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { SignedContractUploadDialog } from '@/components/contracts/SignedContractUploadDialog';
+import { ContractEmailDialog, ContractEmailData } from '@/components/contracts/ContractEmailDialog';
 
 interface Interpreter {
   id: string;
+  first_name: string;
+  last_name: string;
+  email: string;
   contract_pdf_url?: string | null;
   signed_contract_pdf_url?: string | null;
 }
@@ -37,7 +41,10 @@ export function ContractComplianceSection({
   const { toast } = useToast();
   const [isGenerating, setIsGenerating] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
+  const [isSendingEmail, setIsSendingEmail] = useState(false);
   const [showUploadDialog, setShowUploadDialog] = useState(false);
+  const [showEmailDialog, setShowEmailDialog] = useState(false);
+  const [emailData, setEmailData] = useState<ContractEmailData | null>(null);
   const [contractPdfUrl, setContractPdfUrl] = useState<string | null>(null);
   const [signedContractPdfUrl, setSignedContractPdfUrl] = useState<string | null>(null);
 
@@ -132,9 +139,91 @@ export function ContractComplianceSection({
     }
   };
 
-  const handleMarkAsSent = () => {
-    form.setValue('contract_status', 'sent', { shouldDirty: true });
-  };
+  const handleSendContract = useCallback(() => {
+    const interpreterName = `${interpreter.first_name} ${interpreter.last_name}`;
+    const interpreterEmail = interpreter.email;
+
+    if (!interpreterEmail) {
+      toast({ 
+        title: 'No email address', 
+        description: 'This interpreter does not have an email address.',
+        variant: 'destructive' 
+      });
+      return;
+    }
+    
+    // Build email content
+    const subject = `Contract from Effective Communication - ${interpreterName}`;
+    const body = `
+      <p>Dear ${interpreter.first_name},</p>
+      <p>Please find attached your interpreter contract from Effective Communication ASL Services.</p>
+      ${contractPdfUrl ? `<p><a href="${contractPdfUrl}">Click here to view and download the contract PDF</a></p>` : ''}
+      <p>Please review the contract at your earliest convenience. If you have any questions or need any modifications, please don't hesitate to reach out.</p>
+      <p>Once reviewed, please sign and return the contract to complete the onboarding process.</p>
+      <p>Thank you for partnering with Effective Communication ASL Services.</p>
+      <p>Best regards,<br>Effective Communication ASL Services</p>
+    `;
+
+    setEmailData({
+      entityType: 'interpreter',
+      subject,
+      body,
+      recipient: {
+        id: interpreter.id,
+        email: interpreterEmail,
+        name: interpreterName,
+      },
+      contractPdfUrl,
+    });
+    setShowEmailDialog(true);
+  }, [interpreter, contractPdfUrl, toast]);
+
+  const handleConfirmSendEmail = useCallback(async () => {
+    if (!emailData) return;
+    
+    setIsSendingEmail(true);
+    try {
+      const { data: session } = await supabase.auth.getSession();
+      if (!session?.session?.access_token) {
+        throw new Error('Not authenticated');
+      }
+
+      const response = await fetch('https://umyjqvmpvjfikljhoofy.supabase.co/functions/v1/send-email', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session.session.access_token}`,
+        },
+        body: JSON.stringify({
+          to: emailData.recipient.email,
+          subject: emailData.subject,
+          body: emailData.body,
+          template_name: 'interpreter_contract',
+          interpreter_id: interpreter.id,
+        }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to send email');
+      }
+
+      // Update contract status to sent
+      form.setValue('contract_status', 'sent', { shouldDirty: true });
+      setShowEmailDialog(false);
+      setEmailData(null);
+      toast({ title: 'Contract email sent successfully' });
+    } catch (error) {
+      console.error('Error sending contract email:', error);
+      toast({ 
+        title: 'Error sending email', 
+        description: error instanceof Error ? error.message : 'Unknown error',
+        variant: 'destructive' 
+      });
+    } finally {
+      setIsSendingEmail(false);
+    }
+  }, [emailData, interpreter.id, form, toast]);
 
   const handleMarkAsSignedClick = () => {
     setShowUploadDialog(true);
@@ -245,15 +334,15 @@ export function ContractComplianceSection({
               </Button>
             )}
 
-            {/* Mark as Sent Button */}
+            {/* Send Contract Button */}
             {contractStatus === 'not_sent' && (
               <Button
                 type="button"
                 variant="outline"
-                onClick={handleMarkAsSent}
+                onClick={handleSendContract}
               >
                 <Send className="h-4 w-4 mr-2" />
-                Mark as Sent
+                Send Contract
               </Button>
             )}
 
@@ -331,6 +420,14 @@ export function ContractComplianceSection({
         onSkip={handleSkipUpload}
         isUploading={isUploading}
         entityType="interpreter"
+      />
+
+      <ContractEmailDialog
+        open={showEmailDialog}
+        onOpenChange={setShowEmailDialog}
+        emailData={emailData}
+        onConfirmSend={handleConfirmSendEmail}
+        isSending={isSendingEmail}
       />
     </>
   );

@@ -244,6 +244,9 @@ export default function InterpreterDetail() {
             form={form} 
             interpreter={{
               id: interpreter.id,
+              first_name: interpreter.first_name,
+              last_name: interpreter.last_name,
+              email: interpreter.email,
               contract_pdf_url: interpreter.contract_pdf_url,
               signed_contract_pdf_url: interpreter.signed_contract_pdf_url
             }}

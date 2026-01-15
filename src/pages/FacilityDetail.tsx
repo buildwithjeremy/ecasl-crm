@@ -257,7 +257,8 @@ export default function FacilityDetail() {
           <FacilityContractSection
             form={form}
             facility={{ 
-              id: facility.id, 
+              id: facility.id,
+              name: facility.name,
               contract_pdf_url: facility.contract_pdf_url,
               signed_contract_pdf_url: facility.signed_contract_pdf_url
             }}

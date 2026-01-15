@@ -35,16 +35,41 @@ function cleanCurrency(value: string): number | null {
 
 function parseDate(value: string): string | null {
   if (!value || value.trim() === '') return null;
-  // Try MM/DD/YYYY format
-  const parts = value.split('/');
+  
+  const cleaned = value.trim();
+  
+  // Try MM/DD/YYYY or M/D/YYYY format
+  const parts = cleaned.split('/');
   if (parts.length === 3) {
-    const [month, day, year] = parts;
-    let fullYear = year;
-    if (year.length === 2) {
-      fullYear = parseInt(year) > 50 ? `19${year}` : `20${year}`;
+    let [month, day, year] = parts.map(p => p.trim());
+    
+    // Validate parts are numeric
+    if (!/^\d+$/.test(month) || !/^\d+$/.test(day) || !/^\d+$/.test(year)) {
+      console.log(`Invalid date parts (non-numeric): ${value}`);
+      return null;
     }
-    return `${fullYear}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
+    
+    let monthNum = parseInt(month, 10);
+    let dayNum = parseInt(day, 10);
+    let yearNum = parseInt(year, 10);
+    
+    // Handle 2-digit years
+    if (yearNum < 100) {
+      yearNum = yearNum > 50 ? 1900 + yearNum : 2000 + yearNum;
+    }
+    
+    // Validate ranges
+    if (monthNum < 1 || monthNum > 12 || dayNum < 1 || dayNum > 31 || yearNum < 1900 || yearNum > 2100) {
+      console.log(`Invalid date range: ${value} -> month=${monthNum}, day=${dayNum}, year=${yearNum}`);
+      return null;
+    }
+    
+    // Format as YYYY-MM-DD
+    const result = `${yearNum}-${String(monthNum).padStart(2, '0')}-${String(dayNum).padStart(2, '0')}`;
+    return result;
   }
+  
+  console.log(`Could not parse date: ${value}`);
   return null;
 }
 

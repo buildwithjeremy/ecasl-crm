@@ -21,6 +21,7 @@ import InvoiceDetail from "./pages/InvoiceDetail";
 import Payables from "./pages/Payables";
 import PayableDetail from "./pages/PayableDetail";
 import Settings from "./pages/Settings";
+import AdminImport from "./pages/AdminImport";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -42,6 +43,7 @@ const router = createBrowserRouter([
   { path: "/payables", element: <AppLayout><Payables /></AppLayout> },
   { path: "/payables/:id", element: <AppLayout><PayableDetail /></AppLayout> },
   { path: "/settings", element: <AppLayout><Settings /></AppLayout> },
+  { path: "/admin/import", element: <AppLayout><AdminImport /></AppLayout> },
   { path: "*", element: <NotFound /> },
 ]);
 

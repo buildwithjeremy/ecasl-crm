@@ -17,3 +17,6 @@ verify_jwt = false
 
 [functions.send-invoice-email]
 verify_jwt = false
+
+[functions.import-csv-data]
+verify_jwt = false

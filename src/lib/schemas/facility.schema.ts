@@ -71,6 +71,7 @@ export const facilityBaseSchema = z.object({
   rate_business_hours: currencyField,
   rate_after_hours: currencyField,
   rate_holiday_hours: currencyField,
+  emergency_fee: currencyField,
   
   // Notes
   notes: z.string().optional(),

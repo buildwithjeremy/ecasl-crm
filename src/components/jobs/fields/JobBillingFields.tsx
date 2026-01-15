@@ -117,6 +117,7 @@ interface JobBillingFieldsProps {
   canGenerateBilling?: boolean;
   selectedInterpreterName?: string;
   hasInterpreter?: boolean;
+  facilityEmergencyFee?: number | null;
 }
 
 // ==========================================
@@ -138,6 +139,7 @@ export function JobBillingFields({
   canGenerateBilling = false,
   selectedInterpreterName,
   hasInterpreter = false,
+  facilityEmergencyFee,
 }: JobBillingFieldsProps) {
   const navigate = useNavigate();
 
@@ -158,6 +160,7 @@ export function JobBillingFields({
   const watchedTolls = form.watch('tolls') ?? 0;
   const watchedMiscFee = form.watch('misc_fee') ?? 0;
   const watchedHolidayFeeApplied = form.watch('holiday_fee_applied') ?? false;
+  const watchedEmergencyFeeApplied = form.watch('emergency_fee_applied') ?? false;
 
   // Resolve mileage rates with default fallback
   const facilityMileageRate = watchedFacilityRateMileageRaw === null || watchedFacilityRateMileageRaw === undefined || watchedFacilityRateMileageRaw === 0
@@ -178,6 +181,8 @@ export function JobBillingFields({
       facilityHolidayRate: watchedFacilityRateHoliday,
       facilityMileageRate,
       facilityRateAdjustment: watchedFacilityRateAdjustment,
+      facilityEmergencyFee: facilityEmergencyFee ?? 0,
+      emergencyFeeApplied: watchedEmergencyFeeApplied,
       interpreterBusinessRate: watchedInterpreterRateBusiness,
       interpreterAfterHoursRate: watchedInterpreterRateAfterHours,
       interpreterHolidayRate: watchedInterpreterRateHoliday,
@@ -197,6 +202,8 @@ export function JobBillingFields({
     watchedFacilityRateHoliday,
     facilityMileageRate,
     watchedFacilityRateAdjustment,
+    facilityEmergencyFee,
+    watchedEmergencyFeeApplied,
     watchedInterpreterRateBusiness,
     watchedInterpreterRateAfterHours,
     watchedInterpreterRateHoliday,
@@ -611,6 +618,12 @@ export function JobBillingFields({
                       <div className="flex justify-between">
                         <span className="text-muted-foreground">Fees (Parking + Tolls + Misc)</span>
                         <span>${billableTotal.facilityFeesTotal.toFixed(2)}</span>
+                      </div>
+                    )}
+                    {billableTotal.emergencyFeeApplied && billableTotal.facilityEmergencyFee > 0 && (
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">Emergency Fee</span>
+                        <span>${billableTotal.facilityEmergencyFee.toFixed(2)}</span>
                       </div>
                     )}
                     <div className="flex justify-between border-t pt-1 font-semibold">

@@ -1391,6 +1391,7 @@ export default function JobDetail() {
               canGenerateBilling={canGenerateBilling}
               selectedInterpreterName={selectedInterpreter ? `${selectedInterpreter.first_name} ${selectedInterpreter.last_name}` : undefined}
               hasInterpreter={!!watchedInterpreterId}
+              facilityEmergencyFee={selectedFacility?.emergency_fee}
             />
 
             <JobNotesFields

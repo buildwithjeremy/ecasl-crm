@@ -33,7 +33,7 @@ export function FacilityRatesFields({
         <CardTitle className="text-lg">Rates (What We Charge)</CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
           <div className="space-y-2">
             <Label htmlFor="rate_business_hours">Business Hours Rate{requiredLabel}</Label>
             <div className="relative">
@@ -88,6 +88,25 @@ export function FacilityRatesFields({
             {form.formState.errors.rate_holiday_hours && (
               <p className="text-sm text-destructive">
                 {form.formState.errors.rate_holiday_hours.message as string}
+              </p>
+            )}
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="emergency_fee">Emergency Fee</Label>
+            <div className="relative">
+              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">$</span>
+              <Input
+                id="emergency_fee"
+                type="number"
+                step="0.01"
+                className="pl-7"
+                disabled={disabled}
+                {...form.register('emergency_fee', { valueAsNumber: true })}
+              />
+            </div>
+            {form.formState.errors.emergency_fee && (
+              <p className="text-sm text-destructive">
+                {form.formState.errors.emergency_fee.message as string}
               </p>
             )}
           </div>

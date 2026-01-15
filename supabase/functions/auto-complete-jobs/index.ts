@@ -5,6 +5,40 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 }
 
+// Helper to get current time in a specific timezone
+function getCurrentTimeInTimezone(timezone: string): { date: string; time: string } {
+  try {
+    const now = new Date()
+    const formatter = new Intl.DateTimeFormat('en-CA', {
+      timeZone: timezone,
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit',
+      hour12: false,
+    })
+    
+    const parts = formatter.formatToParts(now)
+    const dateParts: Record<string, string> = {}
+    parts.forEach(p => { dateParts[p.type] = p.value })
+    
+    const date = `${dateParts.year}-${dateParts.month}-${dateParts.day}`
+    const time = `${dateParts.hour}:${dateParts.minute}:${dateParts.second}`
+    
+    return { date, time }
+  } catch (e) {
+    // Fallback to UTC if timezone is invalid
+    console.warn(`Invalid timezone: ${timezone}, falling back to UTC`)
+    const now = new Date()
+    return {
+      date: now.toISOString().split('T')[0],
+      time: now.toISOString().split('T')[1].split('.')[0]
+    }
+  }
+}
+
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders })
@@ -64,25 +98,52 @@ Deno.serve(async (req) => {
     // Use service role client for all database operations
     const supabase = createClient(supabaseUrl, supabaseServiceKey)
 
-    // Get current timestamp
-    const now = new Date()
-    const currentDate = now.toISOString().split('T')[0]
-    const currentTime = now.toTimeString().split(' ')[0]
-
-    // Find confirmed jobs where job_date < today, OR job_date = today AND end_time <= current time
-    const { data: jobsToComplete, error: fetchError } = await supabase
+    // Fetch all confirmed jobs
+    const { data: confirmedJobs, error: fetchError } = await supabase
       .from('jobs')
-      .select('id, job_number, job_date, end_time')
+      .select('id, job_number, job_date, end_time, timezone')
       .eq('status', 'confirmed')
-      .or(`job_date.lt.${currentDate},and(job_date.eq.${currentDate},end_time.lte.${currentTime})`)
 
     if (fetchError) {
       console.error('Error fetching jobs:', fetchError)
       throw fetchError
     }
 
-    if (!jobsToComplete || jobsToComplete.length === 0) {
-      console.log('No jobs to auto-complete')
+    if (!confirmedJobs || confirmedJobs.length === 0) {
+      console.log('No confirmed jobs found')
+      return new Response(
+        JSON.stringify({ message: 'No jobs to auto-complete', updated: 0 }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      )
+    }
+
+    // Filter jobs that have passed their end time in their respective timezone
+    const jobsToComplete = confirmedJobs.filter(job => {
+      // Use job timezone, fallback to America/Chicago (CST) if not set
+      const timezone = job.timezone || 'America/Chicago'
+      const { date: currentDate, time: currentTime } = getCurrentTimeInTimezone(timezone)
+      
+      // Job is complete if:
+      // 1. job_date is before current date in that timezone, OR
+      // 2. job_date equals current date AND end_time <= current time
+      const jobDate = job.job_date
+      const jobEndTime = job.end_time
+      
+      const isPastDate = jobDate < currentDate
+      const isToday = jobDate === currentDate
+      const isPastEndTime = jobEndTime <= currentTime
+      
+      const shouldComplete = isPastDate || (isToday && isPastEndTime)
+      
+      if (shouldComplete) {
+        console.log(`Job ${job.job_number} (TZ: ${timezone}): job_date=${jobDate}, end_time=${jobEndTime}, current=${currentDate} ${currentTime} - marking complete`)
+      }
+      
+      return shouldComplete
+    })
+
+    if (jobsToComplete.length === 0) {
+      console.log('No jobs to auto-complete after timezone check')
       return new Response(
         JSON.stringify({ message: 'No jobs to auto-complete', updated: 0 }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }

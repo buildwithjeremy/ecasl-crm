@@ -306,6 +306,7 @@ export type Database = {
           rate_business_hours: number | null
           rate_holiday_hours: number | null
           rid_certified: boolean | null
+          rid_number: string | null
           signed_contract_pdf_url: string | null
           state: string | null
           status: Database["public"]["Enums"]["interpreter_status"] | null
@@ -341,6 +342,7 @@ export type Database = {
           rate_business_hours?: number | null
           rate_holiday_hours?: number | null
           rid_certified?: boolean | null
+          rid_number?: string | null
           signed_contract_pdf_url?: string | null
           state?: string | null
           status?: Database["public"]["Enums"]["interpreter_status"] | null
@@ -376,6 +378,7 @@ export type Database = {
           rate_business_hours?: number | null
           rate_holiday_hours?: number | null
           rid_certified?: boolean | null
+          rid_number?: string | null
           signed_contract_pdf_url?: string | null
           state?: string | null
           status?: Database["public"]["Enums"]["interpreter_status"] | null

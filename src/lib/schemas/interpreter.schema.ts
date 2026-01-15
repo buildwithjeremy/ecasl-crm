@@ -20,6 +20,7 @@ export const interpreterBaseSchema = z.object({
   
   // Certifications
   rid_certified: z.boolean(),
+  rid_number: z.string().optional(),
   nic_certified: z.boolean(),
   other_certifications: z.string().optional(),
   

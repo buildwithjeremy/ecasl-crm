@@ -336,6 +336,8 @@ export default function InvoiceDetail() {
 
   // Use pre-calculated values from job for consistency with job detail page
   const hourlyTotal = job?.facility_hourly_total ?? 0;
+  const emergencyFeeAmount = (job?.emergency_fee_applied && job?.facility?.emergency_fee) ? job.facility.emergency_fee : 0;
+  const holidayFeeAmount = (job?.holiday_fee_applied && job?.facility?.holiday_fee) ? job.facility.holiday_fee : 0;
   const travelFeeTotal = (job?.total_facility_charge ?? 0) - hourlyTotal;
   const overallTotal = job?.total_facility_charge ?? 0;
 
@@ -465,19 +467,70 @@ export default function InvoiceDetail() {
                 <CardTitle className="text-lg">Invoice Summary</CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-6 bg-muted/50 rounded-lg p-4">
-                  <div className="space-y-1">
-                    <p className="text-sm font-medium text-muted-foreground">Hourly Total</p>
-                    <p className="text-lg font-semibold">{formatCurrency(hourlyTotal)}</p>
+                <div className="space-y-4">
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-6 bg-muted/50 rounded-lg p-4">
+                    <div className="space-y-1">
+                      <p className="text-sm font-medium text-muted-foreground">Hourly Total</p>
+                      <p className="text-lg font-semibold">{formatCurrency(hourlyTotal)}</p>
+                    </div>
+                    <div className="space-y-1">
+                      <p className="text-sm font-medium text-muted-foreground">Travel/Fee Total</p>
+                      <p className="text-lg font-semibold">{formatCurrency(travelFeeTotal)}</p>
+                    </div>
+                    <div className="space-y-1">
+                      <p className="text-sm font-medium text-muted-foreground">Overall Total</p>
+                      <p className="text-lg font-semibold text-primary">{formatCurrency(overallTotal)}</p>
+                    </div>
                   </div>
-                  <div className="space-y-1">
-                    <p className="text-sm font-medium text-muted-foreground">Travel/Fee Total</p>
-                    <p className="text-lg font-semibold">{formatCurrency(travelFeeTotal)}</p>
-                  </div>
-                  <div className="space-y-1">
-                    <p className="text-sm font-medium text-muted-foreground">Overall Total</p>
-                    <p className="text-lg font-semibold text-primary">{formatCurrency(overallTotal)}</p>
-                  </div>
+                  
+                  {/* Fee Breakdown */}
+                  {(emergencyFeeAmount > 0 || holidayFeeAmount > 0 || (job?.mileage ?? 0) > 0 || (job?.travel_time_hours ?? 0) > 0 || (job?.parking ?? 0) > 0 || (job?.tolls ?? 0) > 0 || (job?.misc_fee ?? 0) > 0) && (
+                    <div className="text-sm space-y-1 pt-2 border-t">
+                      <p className="text-xs font-medium text-muted-foreground mb-2">Travel/Fee Breakdown</p>
+                      {(job?.mileage ?? 0) > 0 && (job?.facility_rate_mileage ?? 0) > 0 && (
+                        <div className="flex justify-between">
+                          <span className="text-muted-foreground">Mileage ({job?.mileage} mi × ${job?.facility_rate_mileage?.toFixed(2)})</span>
+                          <span>{formatCurrency((job?.mileage ?? 0) * (job?.facility_rate_mileage ?? 0))}</span>
+                        </div>
+                      )}
+                      {(job?.travel_time_hours ?? 0) > 0 && (job?.travel_time_rate ?? 0) > 0 && (
+                        <div className="flex justify-between">
+                          <span className="text-muted-foreground">Travel Time ({job?.travel_time_hours?.toFixed(2)} hrs × ${job?.travel_time_rate?.toFixed(2)})</span>
+                          <span>{formatCurrency((job?.travel_time_hours ?? 0) * (job?.travel_time_rate ?? 0))}</span>
+                        </div>
+                      )}
+                      {(job?.parking ?? 0) > 0 && (
+                        <div className="flex justify-between">
+                          <span className="text-muted-foreground">Parking</span>
+                          <span>{formatCurrency(job?.parking)}</span>
+                        </div>
+                      )}
+                      {(job?.tolls ?? 0) > 0 && (
+                        <div className="flex justify-between">
+                          <span className="text-muted-foreground">Tolls</span>
+                          <span>{formatCurrency(job?.tolls)}</span>
+                        </div>
+                      )}
+                      {(job?.misc_fee ?? 0) > 0 && (
+                        <div className="flex justify-between">
+                          <span className="text-muted-foreground">Misc Fee</span>
+                          <span>{formatCurrency(job?.misc_fee)}</span>
+                        </div>
+                      )}
+                      {emergencyFeeAmount > 0 && (
+                        <div className="flex justify-between">
+                          <span className="text-muted-foreground">Emergency Fee</span>
+                          <span>{formatCurrency(emergencyFeeAmount)}</span>
+                        </div>
+                      )}
+                      {holidayFeeAmount > 0 && (
+                        <div className="flex justify-between">
+                          <span className="text-muted-foreground">Holiday Fee</span>
+                          <span>{formatCurrency(holidayFeeAmount)}</span>
+                        </div>
+                      )}
+                    </div>
+                  )}
                 </div>
               </CardContent>
             </Card>

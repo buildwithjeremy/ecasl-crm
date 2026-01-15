@@ -290,7 +290,7 @@ export type Database = {
           created_at: string | null
           eligible_emergency_fee: boolean | null
           eligible_holiday_fee: boolean | null
-          email: string
+          email: string | null
           first_name: string
           id: string
           insurance_end_date: string | null
@@ -326,7 +326,7 @@ export type Database = {
           created_at?: string | null
           eligible_emergency_fee?: boolean | null
           eligible_holiday_fee?: boolean | null
-          email: string
+          email?: string | null
           first_name: string
           id?: string
           insurance_end_date?: string | null
@@ -362,7 +362,7 @@ export type Database = {
           created_at?: string | null
           eligible_emergency_fee?: boolean | null
           eligible_holiday_fee?: boolean | null
-          email?: string
+          email?: string | null
           first_name?: string
           id?: string
           insurance_end_date?: string | null

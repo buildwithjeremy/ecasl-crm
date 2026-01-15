@@ -152,14 +152,14 @@ async function importInterpreters(supabase: any, csvData: string) {
     }
     
     // Get email - prefer Email column, fallback to Email Address
-    let email = row[colMap['email']] || '';
+    let email: string | null = row[colMap['email']] || '';
     if (!email && colMap['email address'] !== undefined) {
       email = row[colMap['email address']] || '';
     }
     
-    // If still no email, generate a placeholder
-    if (!email) {
-      email = `${firstName.toLowerCase().replace(/\s+/g, '')}.${lastName.toLowerCase().replace(/\s+/g, '')}@placeholder.com`;
+    // Leave email as null if not provided (don't generate placeholder)
+    if (!email || !email.trim()) {
+      email = null;
     }
     
     const notes = row[colMap['notes']] || '';
@@ -171,7 +171,7 @@ async function importInterpreters(supabase: any, csvData: string) {
     interpreters.push({
       first_name: firstName.trim(),
       last_name: lastName.trim(),
-      email: email.trim(),
+      email: email ? email.trim() : null,
       rate_business_hours: cleanCurrency(row[colMap['businesshourrate']]),
       rate_after_hours: cleanCurrency(row[colMap['afterhoursrate']]),
       rate_holiday_hours: cleanCurrency(row[colMap['holidayrate']]),

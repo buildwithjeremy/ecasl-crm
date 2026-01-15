@@ -557,6 +557,7 @@ export type Database = {
           reminder_sent_at: string | null
           start_time: string
           status: Database["public"]["Enums"]["job_status"] | null
+          timezone: string | null
           tolls: number | null
           total_facility_charge: number | null
           total_interpreter_pay: number | null
@@ -621,6 +622,7 @@ export type Database = {
           reminder_sent_at?: string | null
           start_time: string
           status?: Database["public"]["Enums"]["job_status"] | null
+          timezone?: string | null
           tolls?: number | null
           total_facility_charge?: number | null
           total_interpreter_pay?: number | null
@@ -685,6 +687,7 @@ export type Database = {
           reminder_sent_at?: string | null
           start_time?: string
           status?: Database["public"]["Enums"]["job_status"] | null
+          timezone?: string | null
           tolls?: number | null
           total_facility_charge?: number | null
           total_interpreter_pay?: number | null

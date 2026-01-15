@@ -49,6 +49,7 @@ export default function NewInterpreter() {
         zip_code: data.zip_code || null,
         status: 'pending',
         rid_certified: data.rid_certified,
+        rid_number: data.rid_number || null,
         nic_certified: data.nic_certified,
         other_certifications: data.other_certifications || null,
         rate_business_hours: data.rate_business_hours || null,

@@ -49,6 +49,7 @@ const formSchema = z.object({
   location_city: z.string().optional(),
   location_state: z.string().optional(),
   location_zip: z.string().optional(),
+  timezone: z.string().optional(),
   video_call_link: z.string().optional(),
   status: z.enum(['new', 'outreach_in_progress', 'confirmed', 'complete', 'ready_to_bill', 'billed', 'paid', 'cancelled']),
   opportunity_source: z.enum(['direct', 'agency', 'gsa', 'referral', 'repeat', 'other']).nullable().optional(),
@@ -103,6 +104,7 @@ const jobToFormValues = (job: Job, defaultMileageRate: number = 0.7): FormData =
   location_city: job.location_city ?? '',
   location_state: job.location_state ?? '',
   location_zip: job.location_zip ?? '',
+  timezone: job.timezone ?? '',
   video_call_link: job.video_call_link ?? '',
   status: job.status ?? 'new',
   opportunity_source: job.opportunity_source ?? null,
@@ -223,7 +225,7 @@ export default function JobDetail() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('facilities')
-        .select('id, name, rate_business_hours, rate_after_hours, rate_holiday_hours, minimum_billable_hours, contractor, is_gsa, physical_address, physical_city, physical_state, physical_zip, billing_address, billing_city, billing_state, billing_zip, billing_contacts, emergency_fee, holiday_fee')
+        .select('id, name, rate_business_hours, rate_after_hours, rate_holiday_hours, minimum_billable_hours, contractor, is_gsa, physical_address, physical_city, physical_state, physical_zip, timezone, billing_address, billing_city, billing_state, billing_zip, billing_contacts, emergency_fee, holiday_fee')
         .order('name');
       if (error) throw error;
       return data as FacilityOption[];
@@ -715,6 +717,7 @@ export default function JobDetail() {
         location_city: data.location_city || null,
         location_state: data.location_state || null,
         location_zip: data.location_zip || null,
+        timezone: data.timezone || null,
         video_call_link: data.video_call_link || null,
         status: data.status,
         opportunity_source: opportunitySource,

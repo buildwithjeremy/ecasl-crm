@@ -45,6 +45,7 @@ export interface FacilityOption {
   physical_city: string | null;
   physical_state: string | null;
   physical_zip: string | null;
+  timezone: string | null;
   billing_address: string | null;
   billing_city: string | null;
   billing_state: string | null;

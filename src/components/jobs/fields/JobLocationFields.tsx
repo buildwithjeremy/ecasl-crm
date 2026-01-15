@@ -12,10 +12,11 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Building2, MapPin, User, ExternalLink } from 'lucide-react';
+import { Building2, MapPin, User, ExternalLink, Globe } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { FormMode, LOCATION_TYPES, US_STATES } from '@/lib/schemas/shared';
 import type { FacilityOption } from './JobCoreFields';
+import { timezoneOptions, getTimezoneFromState } from '@/lib/timezone-utils';
 
 // Sentinel for state selector (empty state = unselected)
 const STATE_NONE = '';
@@ -101,6 +102,10 @@ export function JobLocationFields({
         setIfDifferent('location_city', city || '');
         setIfDifferent('location_state', state || '');
         setIfDifferent('location_zip', zip || '');
+        
+        // Auto-populate timezone from facility's timezone or derive from state
+        const facilityTimezone = selectedFacility.timezone || getTimezoneFromState(state);
+        setIfDifferent('timezone', facilityTimezone || '');
       }
     } else if (shouldAutoFill && !isEditMode) {
       // Contractor/GSA in CREATE mode: clear fields when facility is selected
@@ -113,6 +118,7 @@ export function JobLocationFields({
       setIfDifferent('location_city', '');
       setIfDifferent('location_state', '');
       setIfDifferent('location_zip', '');
+      setIfDifferent('timezone', '');
     }
     // For contractors/GSA in EDIT mode when facility changes, also clear for new entry
     else if (facilityChanged && isEditMode) {
@@ -124,6 +130,7 @@ export function JobLocationFields({
       setIfDifferent('location_city', '');
       setIfDifferent('location_state', '');
       setIfDifferent('location_zip', '');
+      setIfDifferent('timezone', '');
     }
 
     prevFacilityIdRef.current = watchedFacilityId;
@@ -367,6 +374,13 @@ export function JobLocationFields({
                                 value={field.value || STATE_NONE}
                                 onValueChange={(value) => {
                                   field.onChange(value || null);
+                                  // Auto-detect timezone from selected state for contractors
+                                  if (isContractorOrGsa && value) {
+                                    const detectedTimezone = getTimezoneFromState(value);
+                                    if (detectedTimezone) {
+                                      form.setValue('timezone', detectedTimezone, { shouldDirty: true });
+                                    }
+                                  }
                                 }}
                                 disabled={disabled}
                               >
@@ -393,6 +407,58 @@ export function JobLocationFields({
                           />
                         </div>
                       </div>
+                    </div>
+                  )}
+                </div>
+
+                {/* Timezone Section */}
+                <div className="space-y-3 pt-2 border-t">
+                  <div className="flex items-center gap-2">
+                    <Globe className="h-4 w-4 text-muted-foreground" />
+                    <span className="font-medium text-sm">Timezone</span>
+                  </div>
+
+                  {!isContractorOrGsa ? (
+                    // Non-contractor: Show read-only timezone
+                    <div className="text-sm">
+                      <p className="font-medium">
+                        {(() => {
+                          const tz = form.watch('timezone');
+                          const option = timezoneOptions.find(o => o.value === tz);
+                          return option?.label || tz || '-';
+                        })()}
+                      </p>
+                    </div>
+                  ) : (
+                    // Contractor/GSA: Editable timezone
+                    <div className="space-y-2">
+                      <Controller
+                        control={form.control}
+                        name="timezone"
+                        render={({ field }) => (
+                          <Select
+                            value={field.value || ''}
+                            onValueChange={(value) => {
+                              field.onChange(value || null);
+                            }}
+                            disabled={disabled}
+                          >
+                            <SelectTrigger>
+                              <SelectValue placeholder="Select timezone" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {timezoneOptions.map((tz) => (
+                                <SelectItem key={tz.value} value={tz.value}>
+                                  {tz.label}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        )}
+                      />
+                      <p className="text-xs text-muted-foreground">
+                        Auto-detected from state. For border areas with split time zones, please verify and adjust if needed.
+                      </p>
                     </div>
                   )}
                 </div>

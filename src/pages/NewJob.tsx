@@ -104,6 +104,7 @@ export default function NewJob() {
         location_city: data.location_city || null,
         location_state: data.location_state || null,
         location_zip: data.location_zip || null,
+        timezone: data.timezone || null,
         video_call_link: data.video_call_link || null,
         opportunity_source: data.opportunity_source || null,
         internal_notes: data.internal_notes || null,

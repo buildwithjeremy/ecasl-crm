@@ -274,6 +274,7 @@ export interface Database {
           location_city: string | null;
           location_state: string | null;
           location_zip: string | null;
+          timezone: string | null;
           video_call_link: string | null;
           status: JobStatus;
           opportunity_source: OpportunitySource | null;
@@ -329,6 +330,7 @@ export interface Database {
           location_city?: string | null;
           location_state?: string | null;
           location_zip?: string | null;
+          timezone?: string | null;
           video_call_link?: string | null;
           status?: JobStatus;
           opportunity_source?: OpportunitySource | null;
@@ -384,6 +386,7 @@ export interface Database {
           location_city?: string | null;
           location_state?: string | null;
           location_zip?: string | null;
+          timezone?: string | null;
           video_call_link?: string | null;
           status?: JobStatus;
           opportunity_source?: OpportunitySource | null;

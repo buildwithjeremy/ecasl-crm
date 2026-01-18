@@ -154,41 +154,43 @@ export default function Invoices() {
       </div>
 
       <Card>
-        <CardHeader>
-          <div className="flex flex-wrap items-center gap-4">
-            <div className="relative flex-1">
-              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-              <Input
-                placeholder="Search invoices..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-10"
-              />
+        <CardHeader className="pb-3">
+          <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:flex-1">
+              <div className="relative flex-1 sm:max-w-sm">
+                <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                <Input
+                  placeholder="Search invoices..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="pl-10"
+                />
+              </div>
+              <div className="flex flex-wrap items-center gap-2">
+                <FilterDropdown
+                  label="Status"
+                  options={statusOptions}
+                  value={statusFilter}
+                  onValueChange={setStatusFilter}
+                />
+                <FilterDropdown
+                  label="Has PDF"
+                  options={hasPdfOptions}
+                  value={hasPdfFilter}
+                  onValueChange={setHasPdfFilter}
+                />
+                <FilterDropdown
+                  label="Due Date"
+                  options={dueDateOptions}
+                  value={dueDateFilter}
+                  onValueChange={setDueDateFilter}
+                />
+              </div>
             </div>
-            <div className="flex items-center gap-2">
-              <FilterDropdown
-                label="Status"
-                options={statusOptions}
-                value={statusFilter}
-                onValueChange={setStatusFilter}
-              />
-              <FilterDropdown
-                label="Has PDF"
-                options={hasPdfOptions}
-                value={hasPdfFilter}
-                onValueChange={setHasPdfFilter}
-              />
-              <FilterDropdown
-                label="Due Date"
-                options={dueDateOptions}
-                value={dueDateFilter}
-                onValueChange={setDueDateFilter}
-              />
-            </div>
+            <RecordCount count={invoices?.length ?? 0} label="invoice" isLoading={isLoading} />
           </div>
         </CardHeader>
         <CardContent>
-          <RecordCount count={invoices?.length ?? 0} label="invoice" isLoading={isLoading} />
           {isLoading ? (
             <p className="text-muted-foreground">Loading invoices...</p>
           ) : !invoices?.length ? (

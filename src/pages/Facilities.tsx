@@ -80,51 +80,52 @@ export default function Facilities() {
   });
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
+    <div className="space-y-4">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h1 className="text-3xl font-bold text-foreground">Facilities</h1>
           <p className="text-muted-foreground">Manage client organizations</p>
         </div>
-        <Button onClick={() => navigate('/facilities/new')}>
+        <Button onClick={() => navigate('/facilities/new')} className="w-full sm:w-auto">
           <Plus className="mr-2 h-4 w-4" />
           New Facility
         </Button>
       </div>
 
-      <div className="flex flex-wrap items-center gap-4">
-        <div className="relative flex-1 max-w-sm">
-          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-          <Input
-            placeholder="Search facilities..."
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            className="pl-10"
-          />
+      <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:flex-1">
+          <div className="relative flex-1 sm:max-w-sm">
+            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+            <Input
+              placeholder="Search facilities..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className="pl-10"
+            />
+          </div>
+          <div className="flex flex-wrap items-center gap-2">
+            <FilterDropdown
+              label="Status"
+              options={statusOptions}
+              value={statusFilter}
+              onValueChange={setStatusFilter}
+            />
+            <FilterDropdown
+              label="GSA"
+              options={gsaOptions}
+              value={gsaFilter}
+              onValueChange={setGsaFilter}
+            />
+            <FilterDropdown
+              label="Contract"
+              options={contractStatusOptions}
+              value={contractStatusFilter}
+              onValueChange={setContractStatusFilter}
+            />
+          </div>
         </div>
-        <div className="flex items-center gap-2">
-          <FilterDropdown
-            label="Status"
-            options={statusOptions}
-            value={statusFilter}
-            onValueChange={setStatusFilter}
-          />
-          <FilterDropdown
-            label="GSA"
-            options={gsaOptions}
-            value={gsaFilter}
-            onValueChange={setGsaFilter}
-          />
-          <FilterDropdown
-            label="Contract"
-            options={contractStatusOptions}
-            value={contractStatusFilter}
-            onValueChange={setContractStatusFilter}
-          />
-        </div>
+        <RecordCount count={facilities?.length ?? 0} label="facility" isLoading={isLoading} />
       </div>
-
-      <RecordCount count={facilities?.length ?? 0} label="facility" isLoading={isLoading} />
 
       <FacilitiesTable
         facilities={facilities || []}

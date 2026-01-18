@@ -127,35 +127,37 @@ export default function Payables() {
       </div>
 
       <Card>
-        <CardHeader>
-          <div className="flex flex-wrap items-center gap-4">
-            <div className="relative flex-1">
-              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-              <Input
-                placeholder="Search payables..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-10"
-              />
+        <CardHeader className="pb-3">
+          <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:flex-1">
+              <div className="relative flex-1 sm:max-w-sm">
+                <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                <Input
+                  placeholder="Search payables..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="pl-10"
+                />
+              </div>
+              <div className="flex flex-wrap items-center gap-2">
+                <FilterDropdown
+                  label="Status"
+                  options={statusOptions}
+                  value={statusFilter}
+                  onValueChange={setStatusFilter}
+                />
+                <FilterDropdown
+                  label="Payment"
+                  options={paymentMethodOptions}
+                  value={paymentMethodFilter}
+                  onValueChange={setPaymentMethodFilter}
+                />
+              </div>
             </div>
-            <div className="flex items-center gap-2">
-              <FilterDropdown
-                label="Status"
-                options={statusOptions}
-                value={statusFilter}
-                onValueChange={setStatusFilter}
-              />
-              <FilterDropdown
-                label="Payment"
-                options={paymentMethodOptions}
-                value={paymentMethodFilter}
-                onValueChange={setPaymentMethodFilter}
-              />
-            </div>
+            <RecordCount count={payables?.length ?? 0} label="payable" isLoading={isLoading} />
           </div>
         </CardHeader>
         <CardContent>
-          <RecordCount count={payables?.length ?? 0} label="payable" isLoading={isLoading} />
           {isLoading ? (
             <p className="text-muted-foreground">Loading payables...</p>
           ) : !payables?.length ? (

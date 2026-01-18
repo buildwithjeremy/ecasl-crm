@@ -20,6 +20,7 @@ import { PayableDialog } from '@/components/payables/PayableDialog';
 import { FilterDropdown, FilterOption } from '@/components/ui/filter-dropdown';
 import { SortableTableHead } from '@/components/ui/sortable-table-head';
 import { useTableSort } from '@/hooks/use-table-sort';
+import { RecordCount } from '@/components/ui/record-count';
 
 type Payable = {
   id: string;
@@ -154,6 +155,7 @@ export default function Payables() {
           </div>
         </CardHeader>
         <CardContent>
+          <RecordCount count={payables?.length ?? 0} label="payable" isLoading={isLoading} />
           {isLoading ? (
             <p className="text-muted-foreground">Loading payables...</p>
           ) : !payables?.length ? (

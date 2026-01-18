@@ -10,6 +10,7 @@ import { JobsCalendar } from '@/components/jobs/JobsCalendar';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { FilterDropdown, FilterOption } from '@/components/ui/filter-dropdown';
 import { useTableSort } from '@/hooks/use-table-sort';
+import { RecordCount } from '@/components/ui/record-count';
 
 const statusOptions: FilterOption[] = [
   { value: 'new', label: 'New' },
@@ -142,6 +143,8 @@ export default function Jobs() {
           </TabsList>
         </Tabs>
       </div>
+
+      <RecordCount count={jobs?.length ?? 0} label="job" isLoading={isLoading} />
 
       {viewMode === 'table' ? (
         <JobsTable

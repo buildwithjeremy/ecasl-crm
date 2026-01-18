@@ -8,6 +8,7 @@ import { Plus, Search } from 'lucide-react';
 import { InterpretersTable } from '@/components/interpreters/InterpretersTable';
 import { FilterDropdown, FilterOption } from '@/components/ui/filter-dropdown';
 import { useTableSort } from '@/hooks/use-table-sort';
+import { RecordCount } from '@/components/ui/record-count';
 import type { Database } from '@/types/database';
 
 type Interpreter = Database['public']['Tables']['interpreters']['Row'];
@@ -126,6 +127,8 @@ export default function Interpreters() {
           />
         </div>
       </div>
+
+      <RecordCount count={interpreters?.length ?? 0} label="interpreter" isLoading={isLoading} />
 
       <InterpretersTable
         interpreters={interpreters || []}

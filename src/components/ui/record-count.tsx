@@ -14,7 +14,15 @@ export function RecordCount({ count, label, isLoading, className }: RecordCountP
     );
   }
 
-  const pluralLabel = count === 1 ? label : `${label}s`;
+  // Handle irregular plurals
+  let pluralLabel: string;
+  if (count === 1) {
+    pluralLabel = label;
+  } else if (label.endsWith('y')) {
+    pluralLabel = label.slice(0, -1) + 'ies';
+  } else {
+    pluralLabel = label + 's';
+  }
 
   return (
     <p className={cn("text-sm text-muted-foreground whitespace-nowrap", className)}>

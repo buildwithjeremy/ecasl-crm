@@ -8,6 +8,7 @@ import { Plus, Search } from 'lucide-react';
 import { FacilitiesTable } from '@/components/facilities/FacilitiesTable';
 import { FilterDropdown, FilterOption } from '@/components/ui/filter-dropdown';
 import { useTableSort } from '@/hooks/use-table-sort';
+import { RecordCount } from '@/components/ui/record-count';
 import type { Database } from '@/integrations/supabase/types';
 
 type Facility = Database['public']['Tables']['facilities']['Row'];
@@ -122,6 +123,8 @@ export default function Facilities() {
           />
         </div>
       </div>
+
+      <RecordCount count={facilities?.length ?? 0} label="facility" isLoading={isLoading} />
 
       <FacilitiesTable
         facilities={facilities || []}

@@ -20,6 +20,7 @@ import { InvoiceDialog } from '@/components/invoices/InvoiceDialog';
 import { FilterDropdown, FilterOption } from '@/components/ui/filter-dropdown';
 import { SortableTableHead, SortDirection } from '@/components/ui/sortable-table-head';
 import { useTableSort } from '@/hooks/use-table-sort';
+import { RecordCount } from '@/components/ui/record-count';
 
 type Invoice = {
   id: string;
@@ -187,6 +188,7 @@ export default function Invoices() {
           </div>
         </CardHeader>
         <CardContent>
+          <RecordCount count={invoices?.length ?? 0} label="invoice" isLoading={isLoading} />
           {isLoading ? (
             <p className="text-muted-foreground">Loading invoices...</p>
           ) : !invoices?.length ? (

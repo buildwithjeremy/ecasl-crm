@@ -91,8 +91,8 @@ export default function Jobs() {
     <div className="space-y-4">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="text-3xl font-bold text-foreground">Jobs</h1>
-          <p className="text-muted-foreground">Manage interpreting assignments</p>
+          <h1 className="text-2xl sm:text-3xl font-bold text-foreground">Jobs</h1>
+          <p className="text-sm sm:text-base text-muted-foreground">Manage interpreting assignments</p>
         </div>
         <Button onClick={() => navigate('/jobs/new')} className="w-full sm:w-auto">
           <Plus className="mr-2 h-4 w-4" />
@@ -100,17 +100,17 @@ export default function Jobs() {
         </Button>
       </div>
 
-      <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:flex-1 sm:flex-wrap">
-          <div className="relative flex-1 sm:max-w-sm sm:min-w-[200px]">
-            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-            <Input
-              placeholder="Search jobs..."
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              className="pl-10"
-            />
-          </div>
+      <div className="flex flex-col gap-3">
+        <div className="relative w-full sm:max-w-sm">
+          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+          <Input
+            placeholder="Search jobs..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="pl-10 text-base sm:text-sm"
+          />
+        </div>
+        <div className="flex flex-wrap items-center gap-2 justify-between">
           <div className="flex flex-wrap items-center gap-2">
             <FilterDropdown
               label="Status"
@@ -130,21 +130,21 @@ export default function Jobs() {
               value={sourceFilter}
               onValueChange={setSourceFilter}
             />
+            <Tabs value={viewMode} onValueChange={(v) => setViewMode(v as 'table' | 'calendar')}>
+              <TabsList className="h-9">
+                <TabsTrigger value="table" className="gap-1.5 px-2 sm:px-3">
+                  <List className="h-4 w-4" />
+                  <span className="hidden sm:inline">Table</span>
+                </TabsTrigger>
+                <TabsTrigger value="calendar" className="gap-1.5 px-2 sm:px-3">
+                  <CalendarDays className="h-4 w-4" />
+                  <span className="hidden sm:inline">Calendar</span>
+                </TabsTrigger>
+              </TabsList>
+            </Tabs>
           </div>
-          <Tabs value={viewMode} onValueChange={(v) => setViewMode(v as 'table' | 'calendar')}>
-            <TabsList>
-              <TabsTrigger value="table" className="gap-2">
-                <List className="h-4 w-4" />
-                Table
-              </TabsTrigger>
-              <TabsTrigger value="calendar" className="gap-2">
-                <CalendarDays className="h-4 w-4" />
-                Calendar
-              </TabsTrigger>
-            </TabsList>
-          </Tabs>
+          <RecordCount count={jobs?.length ?? 0} label="job" isLoading={isLoading} />
         </div>
-        <RecordCount count={jobs?.length ?? 0} label="job" isLoading={isLoading} />
       </div>
 
       {viewMode === 'table' ? (

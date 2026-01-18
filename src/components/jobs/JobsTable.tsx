@@ -59,16 +59,16 @@ export function JobsTable({ jobs, isLoading, sort, onSort }: JobsTableProps) {
   }
 
   return (
-    <div className="rounded-md border">
-      <Table>
+    <div className="rounded-md border overflow-x-auto">
+      <Table className="min-w-[700px]">
         <TableHeader>
           <TableRow>
             <SortableTableHead column="job_number" label="Job #" currentSort={sort} onSort={onSort} />
             <SortableTableHead column="job_date" label="Date" currentSort={sort} onSort={onSort} />
-            <SortableTableHead column="start_time" label="Time" currentSort={sort} onSort={onSort} />
+            <SortableTableHead column="start_time" label="Time" currentSort={sort} onSort={onSort} className="hidden sm:table-cell" />
             <SortableTableHead column="facility_id" label="Facility" currentSort={sort} onSort={onSort} />
-            <SortableTableHead column="interpreter_id" label="Interpreter" currentSort={sort} onSort={onSort} />
-            <SortableTableHead column="location_type" label="Location" currentSort={sort} onSort={onSort} />
+            <SortableTableHead column="interpreter_id" label="Interpreter" currentSort={sort} onSort={onSort} className="hidden md:table-cell" />
+            <SortableTableHead column="location_type" label="Loc" currentSort={sort} onSort={onSort} className="hidden lg:table-cell" />
             <SortableTableHead column="status" label="Status" currentSort={sort} onSort={onSort} />
           </TableRow>
         </TableHeader>
@@ -80,18 +80,18 @@ export function JobsTable({ jobs, isLoading, sort, onSort }: JobsTableProps) {
               onClick={() => navigate(`/jobs/${job.id}`)}
             >
               <TableCell className="font-medium">{job.job_number}</TableCell>
-              <TableCell>{format(new Date(job.job_date), 'MMM d, yyyy')}</TableCell>
-              <TableCell>
+              <TableCell>{format(new Date(job.job_date), 'MMM d')}</TableCell>
+              <TableCell className="hidden sm:table-cell">
                 {job.start_time.slice(0, 5)} - {job.end_time.slice(0, 5)}
               </TableCell>
-              <TableCell>{job.facility?.name || '-'}</TableCell>
-              <TableCell>
+              <TableCell className="max-w-[120px] truncate">{job.facility?.name || '-'}</TableCell>
+              <TableCell className="hidden md:table-cell">
                 {job.interpreter
                   ? `${job.interpreter.first_name} ${job.interpreter.last_name}`
                   : <span className="text-muted-foreground">Unassigned</span>
                 }
               </TableCell>
-              <TableCell>
+              <TableCell className="hidden lg:table-cell">
                 <Badge variant="outline">
                   {job.location_type === 'in_person' ? 'In-Person' : 'Remote'}
                 </Badge>

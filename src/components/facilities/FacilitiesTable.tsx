@@ -55,16 +55,16 @@ export function FacilitiesTable({ facilities, isLoading, sort, onSort }: Facilit
   };
 
   return (
-    <div className="rounded-md border">
-      <Table>
+    <div className="rounded-md border overflow-x-auto">
+      <Table className="min-w-[700px]">
         <TableHeader>
           <TableRow>
             <SortableTableHead column="name" label="Name" currentSort={sort} onSort={onSort} />
-            <TableHead>Contact</TableHead>
+            <TableHead className="hidden sm:table-cell">Contact</TableHead>
             <SortableTableHead column="status" label="Status" currentSort={sort} onSort={onSort} />
-            <SortableTableHead column="is_gsa" label="GSA" currentSort={sort} onSort={onSort} />
-            <SortableTableHead column="contract_status" label="Contract" currentSort={sort} onSort={onSort} />
-            <SortableTableHead column="rate_business_hours" label="Rate (Business)" currentSort={sort} onSort={onSort} />
+            <SortableTableHead column="is_gsa" label="GSA" currentSort={sort} onSort={onSort} className="hidden md:table-cell" />
+            <SortableTableHead column="contract_status" label="Contract" currentSort={sort} onSort={onSort} className="hidden lg:table-cell" />
+            <SortableTableHead column="rate_business_hours" label="Rate" currentSort={sort} onSort={onSort} />
           </TableRow>
         </TableHeader>
         <TableBody>
@@ -76,8 +76,8 @@ export function FacilitiesTable({ facilities, isLoading, sort, onSort }: Facilit
                 className="cursor-pointer hover:bg-muted/50"
                 onClick={() => handleRowClick(facility.id)}
               >
-                <TableCell className="font-medium">{facility.name}</TableCell>
-                <TableCell>
+              <TableCell className="font-medium">{facility.name}</TableCell>
+                <TableCell className="hidden sm:table-cell">
                   <div className="text-sm">
                     <div>{primaryContact?.name || '-'}</div>
                     <div className="text-muted-foreground">{primaryContact?.email || ''}</div>
@@ -88,10 +88,10 @@ export function FacilitiesTable({ facilities, isLoading, sort, onSort }: Facilit
                     {facility.status}
                   </Badge>
                 </TableCell>
-                <TableCell>
+                <TableCell className="hidden md:table-cell">
                   {facility.is_gsa && <Badge variant="outline">GSA</Badge>}
                 </TableCell>
-                <TableCell>
+                <TableCell className="hidden lg:table-cell">
                   <Badge variant="outline">{facility.contract_status || 'not_sent'}</Badge>
                 </TableCell>
                 <TableCell>

@@ -87,8 +87,8 @@ export default function Interpreters() {
     <div className="space-y-4">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="text-3xl font-bold text-foreground">Interpreters</h1>
-          <p className="text-muted-foreground">Manage ASL interpreters in your network</p>
+          <h1 className="text-2xl sm:text-3xl font-bold text-foreground">Interpreters</h1>
+          <p className="text-sm sm:text-base text-muted-foreground">Manage ASL interpreters in your network</p>
         </div>
         <Button onClick={() => navigate('/interpreters/new')} className="w-full sm:w-auto">
           <Plus className="mr-2 h-4 w-4" />
@@ -96,17 +96,17 @@ export default function Interpreters() {
         </Button>
       </div>
 
-      <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:flex-1">
-          <div className="relative flex-1 sm:max-w-sm">
-            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-            <Input
-              placeholder="Search interpreters..."
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              className="pl-10"
-            />
-          </div>
+      <div className="flex flex-col gap-3">
+        <div className="relative w-full sm:max-w-sm">
+          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+          <Input
+            placeholder="Search interpreters..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="pl-10 text-base sm:text-sm"
+          />
+        </div>
+        <div className="flex flex-wrap items-center gap-2 justify-between">
           <div className="flex flex-wrap items-center gap-2">
             <FilterDropdown
               label="Status"
@@ -115,7 +115,7 @@ export default function Interpreters() {
               onValueChange={setStatusFilter}
             />
             <FilterDropdown
-              label="Certification"
+              label="Cert"
               options={certificationOptions}
               value={certificationFilter}
               onValueChange={setCertificationFilter}
@@ -127,8 +127,8 @@ export default function Interpreters() {
               onValueChange={setPaymentMethodFilter}
             />
           </div>
+          <RecordCount count={interpreters?.length ?? 0} label="interpreter" isLoading={isLoading} />
         </div>
-        <RecordCount count={interpreters?.length ?? 0} label="interpreter" isLoading={isLoading} />
       </div>
 
       <InterpretersTable

@@ -158,19 +158,20 @@ export default function NewJob() {
   return (
     <div className="space-y-4">
       {/* Sticky Header */}
-      <div className="sticky top-14 z-10 bg-background py-3 border-b -mx-6 px-6 -mt-6 mb-4">
-        <div className="flex items-center gap-3">
-          <Button variant="ghost" size="icon" onClick={() => navigate('/jobs')}>
+      <div className="sticky top-14 z-10 bg-background py-3 border-b -mx-4 px-4 sm:-mx-6 sm:px-6 -mt-4 sm:-mt-6 mb-4">
+        <div className="flex items-center gap-2 sm:gap-3">
+          <Button variant="ghost" size="icon" className="h-9 w-9 sm:h-10 sm:w-10" onClick={() => navigate('/jobs')}>
             <ArrowLeft className="h-4 w-4" />
           </Button>
-          <h1 className="text-xl font-bold text-foreground">New Job</h1>
+          <h1 className="text-lg sm:text-xl font-bold text-foreground">New Job</h1>
 
           <div className="ml-auto">
             <Button 
               onClick={handleSubmitWithValidation} 
               disabled={mutation.isPending}
+              className="h-9 sm:h-10"
             >
-              {mutation.isPending ? 'Creating...' : 'Create Job'}
+              {mutation.isPending ? 'Creating...' : 'Create'}
             </Button>
           </div>
         </div>

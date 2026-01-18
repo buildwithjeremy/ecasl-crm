@@ -41,16 +41,16 @@ export function InterpretersTable({ interpreters, isLoading, sort, onSort }: Int
   }
 
   return (
-    <div className="rounded-md border">
-      <Table>
+    <div className="rounded-md border overflow-x-auto">
+      <Table className="min-w-[650px]">
         <TableHeader>
           <TableRow>
             <SortableTableHead column="last_name" label="Name" currentSort={sort} onSort={onSort} />
-            <SortableTableHead column="email" label="Email" currentSort={sort} onSort={onSort} />
-            <SortableTableHead column="phone" label="Phone" currentSort={sort} onSort={onSort} />
+            <SortableTableHead column="email" label="Email" currentSort={sort} onSort={onSort} className="hidden sm:table-cell" />
+            <SortableTableHead column="phone" label="Phone" currentSort={sort} onSort={onSort} className="hidden md:table-cell" />
             <SortableTableHead column="status" label="Status" currentSort={sort} onSort={onSort} />
-            <SortableTableHead column="rid_certified" label="Certifications" currentSort={sort} onSort={onSort} />
-            <SortableTableHead column="rate_business_hours" label="Rate (Business)" currentSort={sort} onSort={onSort} />
+            <SortableTableHead column="rid_certified" label="Certs" currentSort={sort} onSort={onSort} />
+            <SortableTableHead column="rate_business_hours" label="Rate" currentSort={sort} onSort={onSort} />
           </TableRow>
         </TableHeader>
         <TableBody>
@@ -63,8 +63,8 @@ export function InterpretersTable({ interpreters, isLoading, sort, onSort }: Int
               <TableCell className="font-medium">
                 {interpreter.first_name} {interpreter.last_name}
               </TableCell>
-              <TableCell>{interpreter.email}</TableCell>
-              <TableCell>{interpreter.phone || '-'}</TableCell>
+              <TableCell className="hidden sm:table-cell">{interpreter.email}</TableCell>
+              <TableCell className="hidden md:table-cell">{interpreter.phone || '-'}</TableCell>
               <TableCell>
                 <Badge variant={statusColors[interpreter.status] || 'secondary'}>
                   {interpreter.status}

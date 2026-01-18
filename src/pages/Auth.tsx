@@ -96,7 +96,7 @@ function PasswordInput({
         value={value}
         onChange={onChange}
         required
-        className="pr-10"
+        className="pr-10 text-base sm:text-sm"
       />
       <button
         type="button"
@@ -266,6 +266,7 @@ export default function Auth() {
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   required
+                  className="text-base sm:text-sm"
                 />
               </div>
               <Button type="submit" className="w-full" disabled={isSubmitting}>
@@ -319,6 +320,7 @@ export default function Auth() {
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     required
+                    className="text-base sm:text-sm"
                   />
                 </div>
                 <div className="space-y-2">
@@ -361,6 +363,7 @@ export default function Auth() {
                       placeholder="John"
                       value={firstName}
                       onChange={(e) => setFirstName(e.target.value)}
+                      className="text-base sm:text-sm"
                     />
                   </div>
                   <div className="space-y-2">
@@ -370,6 +373,7 @@ export default function Auth() {
                       placeholder="Doe"
                       value={lastName}
                       onChange={(e) => setLastName(e.target.value)}
+                      className="text-base sm:text-sm"
                     />
                   </div>
                 </div>
@@ -382,6 +386,7 @@ export default function Auth() {
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     required
+                    className="text-base sm:text-sm"
                   />
                 </div>
                 <div className="space-y-2">

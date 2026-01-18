@@ -112,59 +112,61 @@ export function RecordPageLayout({
   return (
     <div className="space-y-4">
       {/* Sticky Header */}
-      <div className="sticky top-14 z-10 bg-background py-3 border-b -mx-6 px-6 -mt-6 mb-4">
-        <div className="flex items-center gap-3">
-          {/* Back Button */}
-          <Button variant="ghost" size="icon" onClick={() => navigate(backRoute)}>
-            <ArrowLeft className="h-4 w-4" />
-          </Button>
+      <div className="sticky top-14 z-10 bg-background py-3 border-b -mx-4 px-4 sm:-mx-6 sm:px-6 -mt-4 sm:-mt-6 mb-4">
+        <div className="flex flex-wrap items-center gap-2 sm:gap-3">
+          {/* Back Button + Title */}
+          <div className="flex items-center gap-2">
+            <Button variant="ghost" size="icon" className="h-9 w-9 sm:h-10 sm:w-10" onClick={() => navigate(backRoute)}>
+              <ArrowLeft className="h-4 w-4" />
+            </Button>
+            <h1 className="text-lg sm:text-xl font-bold text-foreground truncate">{title}</h1>
+          </div>
 
-          {/* Page Title */}
-          <h1 className="text-xl font-bold text-foreground">{title}</h1>
-
-          {/* Record Selector */}
-          <Popover open={selector.isOpen} onOpenChange={selector.onOpenChange}>
-            <PopoverTrigger asChild>
-              <Button
-                variant="outline"
-                role="combobox"
-                className={cn('justify-between text-sm', selector.width ?? 'w-[200px]')}
-              >
-                <span className="truncate">
-                  {selectedOption?.label || selector.placeholder || 'Select...'}
-                </span>
-                <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-              </Button>
-            </PopoverTrigger>
-            <PopoverContent className="w-[300px] p-0">
-              <Command>
-                <CommandInput placeholder={selector.searchPlaceholder || 'Search...'} />
-                <CommandList>
-                  <CommandEmpty>{selector.emptyMessage || 'No results found.'}</CommandEmpty>
-                  <CommandGroup>
-                    {selector.options.map((option) => (
-                      <CommandItem
-                        key={option.id}
-                        value={option.searchValue || option.label}
-                        onSelect={() => {
-                          selector.onSelect(option.id);
-                          selector.onOpenChange(false);
-                        }}
-                      >
-                        <Check
-                          className={cn(
-                            'mr-2 h-4 w-4',
-                            selector.selectedId === option.id ? 'opacity-100' : 'opacity-0'
-                          )}
-                        />
-                        {option.label}
-                      </CommandItem>
-                    ))}
-                  </CommandGroup>
-                </CommandList>
-              </Command>
-            </PopoverContent>
-          </Popover>
+          {/* Record Selector - full width on mobile */}
+          <div className="w-full sm:w-auto order-last sm:order-none">
+            <Popover open={selector.isOpen} onOpenChange={selector.onOpenChange}>
+              <PopoverTrigger asChild>
+                <Button
+                  variant="outline"
+                  role="combobox"
+                  className={cn('justify-between text-sm w-full sm:w-auto', selector.width ?? 'sm:w-[200px]')}
+                >
+                  <span className="truncate">
+                    {selectedOption?.label || selector.placeholder || 'Select...'}
+                  </span>
+                  <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-[calc(100vw-2rem)] sm:w-[300px] p-0">
+                <Command>
+                  <CommandInput placeholder={selector.searchPlaceholder || 'Search...'} />
+                  <CommandList>
+                    <CommandEmpty>{selector.emptyMessage || 'No results found.'}</CommandEmpty>
+                    <CommandGroup>
+                      {selector.options.map((option) => (
+                        <CommandItem
+                          key={option.id}
+                          value={option.searchValue || option.label}
+                          onSelect={() => {
+                            selector.onSelect(option.id);
+                            selector.onOpenChange(false);
+                          }}
+                        >
+                          <Check
+                            className={cn(
+                              'mr-2 h-4 w-4',
+                              selector.selectedId === option.id ? 'opacity-100' : 'opacity-0'
+                            )}
+                          />
+                          {option.label}
+                        </CommandItem>
+                      ))}
+                    </CommandGroup>
+                  </CommandList>
+                </Command>
+              </PopoverContent>
+            </Popover>
+          </div>
 
           {/* Custom Header Actions */}
           {headerActions}
@@ -172,9 +174,9 @@ export function RecordPageLayout({
           {/* Save and Delete buttons */}
           {hasRecord && (
             <div className="ml-auto flex items-center gap-2">
-              {/* Unsaved Indicator */}
+              {/* Unsaved Indicator - hide on mobile */}
               {isDirty && (
-                <span className="flex items-center gap-1 text-sm text-muted-foreground">
+                <span className="hidden sm:flex items-center gap-1 text-sm text-muted-foreground">
                   <span className="h-2 w-2 rounded-full bg-orange-500" />
                   Unsaved
                 </span>
@@ -184,11 +186,11 @@ export function RecordPageLayout({
               {deleteConfig && !deleteConfig.hidden && (
                 <AlertDialog>
                   <AlertDialogTrigger asChild>
-                    <Button variant="outline" size="icon">
+                    <Button variant="outline" size="icon" className="h-9 w-9 sm:h-10 sm:w-10">
                       <Trash2 className="h-4 w-4" />
                     </Button>
                   </AlertDialogTrigger>
-                  <AlertDialogContent>
+                  <AlertDialogContent className="max-w-[calc(100vw-2rem)] sm:max-w-lg">
                     <AlertDialogHeader>
                       <AlertDialogTitle>{deleteConfig.title}</AlertDialogTitle>
                       <AlertDialogDescription>{deleteConfig.description}</AlertDialogDescription>
@@ -202,8 +204,8 @@ export function RecordPageLayout({
               )}
 
               {/* Save Button */}
-              <Button type="submit" form={formId} disabled={isSaving}>
-                {isSaving ? 'Saving...' : 'Save Changes'}
+              <Button type="submit" form={formId} disabled={isSaving} className="h-9 sm:h-10">
+                {isSaving ? 'Saving...' : 'Save'}
               </Button>
             </div>
           )}

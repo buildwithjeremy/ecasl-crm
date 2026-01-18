@@ -141,31 +141,31 @@ export default function Invoices() {
   };
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
+    <div className="space-y-4 sm:space-y-6">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="text-3xl font-bold text-foreground">Invoices</h1>
-          <p className="text-muted-foreground">Manage invoices to facilities</p>
+          <h1 className="text-2xl sm:text-3xl font-bold text-foreground">Invoices</h1>
+          <p className="text-sm sm:text-base text-muted-foreground">Manage invoices to facilities</p>
         </div>
-        <Button onClick={() => setDialogOpen(true)}>
+        <Button onClick={() => setDialogOpen(true)} className="w-full sm:w-auto">
           <Plus className="mr-2 h-4 w-4" />
           New Invoice
         </Button>
       </div>
 
       <Card>
-        <CardHeader className="pb-3">
-          <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:flex-1">
-              <div className="relative flex-1 sm:max-w-sm">
-                <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                <Input
-                  placeholder="Search invoices..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="pl-10"
-                />
-              </div>
+        <CardHeader className="pb-3 px-3 sm:px-6">
+          <div className="flex flex-col gap-3">
+            <div className="relative w-full sm:max-w-sm">
+              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+              <Input
+                placeholder="Search invoices..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="pl-10 text-base sm:text-sm"
+              />
+            </div>
+            <div className="flex flex-wrap items-center gap-2 justify-between">
               <div className="flex flex-wrap items-center gap-2">
                 <FilterDropdown
                   label="Status"
@@ -174,85 +174,89 @@ export default function Invoices() {
                   onValueChange={setStatusFilter}
                 />
                 <FilterDropdown
-                  label="Has PDF"
+                  label="PDF"
                   options={hasPdfOptions}
                   value={hasPdfFilter}
                   onValueChange={setHasPdfFilter}
                 />
                 <FilterDropdown
-                  label="Due Date"
+                  label="Due"
                   options={dueDateOptions}
                   value={dueDateFilter}
                   onValueChange={setDueDateFilter}
                 />
               </div>
+              <RecordCount count={invoices?.length ?? 0} label="invoice" isLoading={isLoading} />
             </div>
-            <RecordCount count={invoices?.length ?? 0} label="invoice" isLoading={isLoading} />
           </div>
         </CardHeader>
-        <CardContent>
+        <CardContent className="px-3 sm:px-6">
           {isLoading ? (
             <p className="text-muted-foreground">Loading invoices...</p>
           ) : !invoices?.length ? (
             <p className="text-muted-foreground">No invoices found.</p>
           ) : (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <SortableTableHead column="invoice_number" label="Invoice #" currentSort={sort} onSort={handleSort} />
-                  <SortableTableHead column="job_id" label="Job #" currentSort={sort} onSort={handleSort} />
-                  <SortableTableHead column="facility_id" label="Facility" currentSort={sort} onSort={handleSort} />
-                  <SortableTableHead column="issued_date" label="Invoice Date" currentSort={sort} onSort={handleSort} />
-                  <SortableTableHead column="due_date" label="Due Date" currentSort={sort} onSort={handleSort} />
-                  <SortableTableHead column="paid_date" label="Paid Date" currentSort={sort} onSort={handleSort} />
-                  <SortableTableHead column="status" label="Status" currentSort={sort} onSort={handleSort} />
-                  <SortableTableHead column="pdf_url" label="PDF" currentSort={sort} onSort={handleSort} />
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {invoices.map((invoice) => (
-                  <TableRow
-                    key={invoice.id}
-                    className="cursor-pointer hover:bg-muted/50"
-                    onClick={() => navigate(`/invoices/${invoice.id}`)}
-                  >
-                    <TableCell className="font-medium">{invoice.invoice_number}</TableCell>
-                    <TableCell>{invoice.job?.job_number || '-'}</TableCell>
-                    <TableCell>{invoice.facility?.name || '-'}</TableCell>
-                    <TableCell>
-                      {invoice.issued_date ? format(new Date(invoice.issued_date), 'MMM d, yyyy') : '-'}
-                    </TableCell>
-                    <TableCell>
-                      {invoice.due_date ? format(new Date(invoice.due_date), 'MMM d, yyyy') : '-'}
-                    </TableCell>
-                    <TableCell>
-                      {invoice.paid_date ? format(new Date(invoice.paid_date), 'MMM d, yyyy') : '-'}
-                    </TableCell>
-                    <TableCell>
-                      {invoice.status && (
-                        <Badge variant={statusVariantMap[invoice.status]}>
-                          {statusDisplayMap[invoice.status]}
-                        </Badge>
-                      )}
-                    </TableCell>
-                    <TableCell>
-                      {invoice.pdf_url ? (
-                        <a
-                          href={invoice.pdf_url}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          onClick={(e) => e.stopPropagation()}
-                        >
-                          <FileText className="h-4 w-4 text-primary" />
-                        </a>
-                      ) : (
-                        '-'
-                      )}
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
+            <div className="overflow-x-auto -mx-3 sm:-mx-6">
+              <div className="min-w-[700px] px-3 sm:px-6">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <SortableTableHead column="invoice_number" label="Invoice #" currentSort={sort} onSort={handleSort} />
+                      <SortableTableHead column="job_id" label="Job #" currentSort={sort} onSort={handleSort} className="hidden sm:table-cell" />
+                      <SortableTableHead column="facility_id" label="Facility" currentSort={sort} onSort={handleSort} />
+                      <SortableTableHead column="issued_date" label="Date" currentSort={sort} onSort={handleSort} />
+                      <SortableTableHead column="due_date" label="Due" currentSort={sort} onSort={handleSort} className="hidden md:table-cell" />
+                      <SortableTableHead column="paid_date" label="Paid" currentSort={sort} onSort={handleSort} className="hidden lg:table-cell" />
+                      <SortableTableHead column="status" label="Status" currentSort={sort} onSort={handleSort} />
+                      <SortableTableHead column="pdf_url" label="PDF" currentSort={sort} onSort={handleSort} />
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {invoices.map((invoice) => (
+                      <TableRow
+                        key={invoice.id}
+                        className="cursor-pointer hover:bg-muted/50"
+                        onClick={() => navigate(`/invoices/${invoice.id}`)}
+                      >
+                        <TableCell className="font-medium">{invoice.invoice_number}</TableCell>
+                        <TableCell className="hidden sm:table-cell">{invoice.job?.job_number || '-'}</TableCell>
+                        <TableCell className="max-w-[120px] truncate">{invoice.facility?.name || '-'}</TableCell>
+                        <TableCell>
+                          {invoice.issued_date ? format(new Date(invoice.issued_date), 'MMM d') : '-'}
+                        </TableCell>
+                        <TableCell className="hidden md:table-cell">
+                          {invoice.due_date ? format(new Date(invoice.due_date), 'MMM d') : '-'}
+                        </TableCell>
+                        <TableCell className="hidden lg:table-cell">
+                          {invoice.paid_date ? format(new Date(invoice.paid_date), 'MMM d') : '-'}
+                        </TableCell>
+                        <TableCell>
+                          {invoice.status && (
+                            <Badge variant={statusVariantMap[invoice.status]}>
+                              {statusDisplayMap[invoice.status]}
+                            </Badge>
+                          )}
+                        </TableCell>
+                        <TableCell>
+                          {invoice.pdf_url ? (
+                            <a
+                              href={invoice.pdf_url}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              onClick={(e) => e.stopPropagation()}
+                            >
+                              <FileText className="h-4 w-4 text-primary" />
+                            </a>
+                          ) : (
+                            '-'
+                          )}
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+            </div>
           )}
         </CardContent>
       </Card>

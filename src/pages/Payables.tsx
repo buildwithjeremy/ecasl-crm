@@ -114,31 +114,31 @@ export default function Payables() {
   };
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
+    <div className="space-y-4 sm:space-y-6">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="text-3xl font-bold text-foreground">Payables</h1>
-          <p className="text-muted-foreground">Manage payments to interpreters</p>
+          <h1 className="text-2xl sm:text-3xl font-bold text-foreground">Payables</h1>
+          <p className="text-sm sm:text-base text-muted-foreground">Manage payments to interpreters</p>
         </div>
-        <Button onClick={() => setDialogOpen(true)}>
+        <Button onClick={() => setDialogOpen(true)} className="w-full sm:w-auto">
           <Plus className="mr-2 h-4 w-4" />
           New Payable
         </Button>
       </div>
 
       <Card>
-        <CardHeader className="pb-3">
-          <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:flex-1">
-              <div className="relative flex-1 sm:max-w-sm">
-                <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                <Input
-                  placeholder="Search payables..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="pl-10"
-                />
-              </div>
+        <CardHeader className="pb-3 px-3 sm:px-6">
+          <div className="flex flex-col gap-3">
+            <div className="relative w-full sm:max-w-sm">
+              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+              <Input
+                placeholder="Search payables..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="pl-10 text-base sm:text-sm"
+              />
+            </div>
+            <div className="flex flex-wrap items-center gap-2 justify-between">
               <div className="flex flex-wrap items-center gap-2">
                 <FilterDropdown
                   label="Status"
@@ -153,56 +153,60 @@ export default function Payables() {
                   onValueChange={setPaymentMethodFilter}
                 />
               </div>
+              <RecordCount count={payables?.length ?? 0} label="payable" isLoading={isLoading} />
             </div>
-            <RecordCount count={payables?.length ?? 0} label="payable" isLoading={isLoading} />
           </div>
         </CardHeader>
-        <CardContent>
+        <CardContent className="px-3 sm:px-6">
           {isLoading ? (
             <p className="text-muted-foreground">Loading payables...</p>
           ) : !payables?.length ? (
             <p className="text-muted-foreground">No payables found.</p>
           ) : (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <SortableTableHead column="bill_number" label="Bill #" currentSort={sort} onSort={handleSort} />
-                  <SortableTableHead column="interpreter_id" label="Interpreter" currentSort={sort} onSort={handleSort} />
-                  <SortableTableHead column="job_id" label="Job #" currentSort={sort} onSort={handleSort} />
-                  <SortableTableHead column="total" label="Total" currentSort={sort} onSort={handleSort} />
-                  <SortableTableHead column="paid_date" label="Paid Date" currentSort={sort} onSort={handleSort} />
-                  <SortableTableHead column="status" label="Status" currentSort={sort} onSort={handleSort} />
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {payables.map((payable) => (
-                  <TableRow
-                    key={payable.id}
-                    className="cursor-pointer hover:bg-muted/50"
-                    onClick={() => navigate(`/payables/${payable.id}`)}
-                  >
-                    <TableCell className="font-medium">{payable.bill_number || '-'}</TableCell>
-                    <TableCell>
-                      {payable.interpreter
-                        ? `${payable.interpreter.first_name} ${payable.interpreter.last_name}`
-                        : '-'}
-                    </TableCell>
-                    <TableCell>{payable.job?.job_number || '-'}</TableCell>
-                    <TableCell>{formatCurrency(payable.total)}</TableCell>
-                    <TableCell>
-                      {payable.paid_date ? format(new Date(payable.paid_date), 'MMM d, yyyy') : '-'}
-                    </TableCell>
-                    <TableCell>
-                      {payable.status && (
-                        <Badge variant={statusVariantMap[payable.status]}>
-                          {statusDisplayMap[payable.status]}
-                        </Badge>
-                      )}
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
+            <div className="overflow-x-auto -mx-3 sm:-mx-6">
+              <div className="min-w-[600px] px-3 sm:px-6">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <SortableTableHead column="bill_number" label="Bill #" currentSort={sort} onSort={handleSort} />
+                      <SortableTableHead column="interpreter_id" label="Interpreter" currentSort={sort} onSort={handleSort} />
+                      <SortableTableHead column="job_id" label="Job #" currentSort={sort} onSort={handleSort} className="hidden sm:table-cell" />
+                      <SortableTableHead column="total" label="Total" currentSort={sort} onSort={handleSort} />
+                      <SortableTableHead column="paid_date" label="Paid" currentSort={sort} onSort={handleSort} className="hidden md:table-cell" />
+                      <SortableTableHead column="status" label="Status" currentSort={sort} onSort={handleSort} />
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {payables.map((payable) => (
+                      <TableRow
+                        key={payable.id}
+                        className="cursor-pointer hover:bg-muted/50"
+                        onClick={() => navigate(`/payables/${payable.id}`)}
+                      >
+                        <TableCell className="font-medium">{payable.bill_number || '-'}</TableCell>
+                        <TableCell className="max-w-[120px] truncate">
+                          {payable.interpreter
+                            ? `${payable.interpreter.first_name} ${payable.interpreter.last_name}`
+                            : '-'}
+                        </TableCell>
+                        <TableCell className="hidden sm:table-cell">{payable.job?.job_number || '-'}</TableCell>
+                        <TableCell>{formatCurrency(payable.total)}</TableCell>
+                        <TableCell className="hidden md:table-cell">
+                          {payable.paid_date ? format(new Date(payable.paid_date), 'MMM d') : '-'}
+                        </TableCell>
+                        <TableCell>
+                          {payable.status && (
+                            <Badge variant={statusVariantMap[payable.status]}>
+                              {statusDisplayMap[payable.status]}
+                            </Badge>
+                          )}
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+            </div>
           )}
         </CardContent>
       </Card>

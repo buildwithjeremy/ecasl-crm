@@ -3,7 +3,6 @@ import { UseFormReturn } from 'react-hook-form';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Label } from '@/components/ui/label';
-import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import {
@@ -22,6 +21,7 @@ import {
 import { Check, ChevronsUpDown, Mail } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { FormMode } from '@/lib/schemas/shared';
+import { InterpreterChip } from '@/components/jobs/fields/InterpreterChip';
 
 // ==========================================
 // Types
@@ -122,6 +122,10 @@ export function JobInterpreterSection({
     }
   };
 
+  const handleRemoveSelectedInterpreter = () => {
+    form.setValue('interpreter_id', null, { shouldDirty: true });
+  };
+
   return (
     <Card>
       <CardHeader className="pb-4">
@@ -146,9 +150,12 @@ export function JobInterpreterSection({
                   <div className="flex flex-wrap gap-1">
                     {selectedPotentialInterpreters.length > 0 ? (
                       selectedPotentialInterpreters.map((interpreter) => (
-                        <Badge key={interpreter.id} variant="secondary" className="mr-1">
-                          {interpreter.first_name} {interpreter.last_name}
-                        </Badge>
+                        <InterpreterChip
+                          key={interpreter.id}
+                          label={`${interpreter.first_name} ${interpreter.last_name}`}
+                          disabled={disabled}
+                          onRemove={() => handleTogglePotentialInterpreter(interpreter.id)}
+                        />
                       ))
                     ) : (
                       'Select potential interpreters...'
@@ -211,9 +218,17 @@ export function JobInterpreterSection({
                   disabled={disabled}
                   className={cn('w-full justify-between h-10', !watchedInterpreterId && 'text-muted-foreground')}
                 >
-                  {selectedInterpreter
-                    ? `${selectedInterpreter.first_name} ${selectedInterpreter.last_name}`
-                    : 'Select interpreter...'}
+                  <div className="flex flex-wrap gap-1">
+                    {selectedInterpreter ? (
+                      <InterpreterChip
+                        label={`${selectedInterpreter.first_name} ${selectedInterpreter.last_name}`}
+                        disabled={disabled}
+                        onRemove={handleRemoveSelectedInterpreter}
+                      />
+                    ) : (
+                      'Select interpreter...'
+                    )}
+                  </div>
                   <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                 </Button>
               </PopoverTrigger>

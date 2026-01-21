@@ -26,6 +26,8 @@ import {
 } from '@/components/jobs/fields';
 import { HoursSplit, calculateBillableTotal } from '@/lib/utils/job-calculations';
 import { normalizeTimeToHHMM } from '@/lib/utils/time-helpers';
+import { formatTimeForDisplay } from '@/lib/utils/form-helpers';
+import { getTimezoneDisplayName } from '@/lib/timezone-utils';
 import type { Tables } from '@/integrations/supabase/types';
 
 type Job = Tables<'jobs'>;
@@ -641,14 +643,19 @@ export default function JobDetail() {
       }
       
       const template = templateData as { subject: string; body: string };
+
+      const timezoneLabel = getTimezoneDisplayName(
+        data.timezone || facility?.timezone || job?.timezone || null
+      );
       
       const templateVariables = {
         interpreter_name: `${confirmedInterpreter.first_name} ${confirmedInterpreter.last_name}`,
         job_number: job?.job_number || 'N/A',
         facility_name: facilityName,
         job_date: format(new Date(data.job_date), 'MMMM d, yyyy'),
-        start_time: normalizedStartTime,
-        end_time: normalizedEndTime,
+        start_time: formatTimeForDisplay(normalizedStartTime),
+        end_time: formatTimeForDisplay(normalizedEndTime),
+        timezone: timezoneLabel,
         location: location,
         contact_name: contactName,
         contact_phone: contactPhone,
@@ -1005,6 +1012,10 @@ export default function JobDetail() {
       }
       
       const template = templateData as { subject: string; body: string };
+
+      const timezoneLabel = getTimezoneDisplayName(
+        data.timezone || facility?.timezone || job?.timezone || null
+      );
       
       // Send confirmation email
       const { data: session } = await supabase.auth.getSession();
@@ -1017,8 +1028,9 @@ export default function JobDetail() {
         job_number: job?.job_number || 'N/A',
         facility_name: facilityName,
         job_date: format(new Date(data.job_date), 'MMMM d, yyyy'),
-        start_time: normalizedStartTime,
-        end_time: normalizedEndTime,
+        start_time: formatTimeForDisplay(normalizedStartTime),
+        end_time: formatTimeForDisplay(normalizedEndTime),
+        timezone: timezoneLabel,
         location: location,
         contact_name: contactName,
         contact_phone: contactPhone,

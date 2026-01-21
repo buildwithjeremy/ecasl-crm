@@ -577,11 +577,11 @@ export function JobBillingFields({
                 </div>
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 border-t pt-3">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 border-t pt-3 items-stretch">
                 {/* Facility Totals */}
-                <div className="space-y-1">
+                <div className="space-y-1 flex flex-col h-full">
                   <h5 className="text-sm font-medium">Facility Charge</h5>
-                  <div className="text-sm space-y-0.5">
+                  <div className="text-sm space-y-0.5 flex-1">
                     {hoursSplit.businessHours > 0 && (
                       <div className="flex justify-between">
                         <span className="text-muted-foreground">
@@ -626,17 +626,17 @@ export function JobBillingFields({
                         <span>${billableTotal.facilityEmergencyFee.toFixed(2)}</span>
                       </div>
                     )}
-                    <div className="flex justify-between border-t pt-1 font-semibold">
-                      <span>Total</span>
-                      <span>${billableTotal.facilityTotal.toFixed(2)}</span>
-                    </div>
+                  </div>
+                  <div className="flex justify-between border-t pt-1 font-semibold mt-2">
+                    <span>Total</span>
+                    <span>${billableTotal.facilityTotal.toFixed(2)}</span>
                   </div>
                 </div>
 
                 {/* Interpreter Totals */}
-                <div className="space-y-1">
+                <div className="space-y-1 flex flex-col h-full">
                   <h5 className="text-sm font-medium">Interpreter Pay</h5>
-                  <div className="text-sm space-y-0.5">
+                  <div className="text-sm space-y-0.5 flex-1">
                     {hoursSplit.businessHours > 0 && (
                       <div className="flex justify-between">
                         <span className="text-muted-foreground">
@@ -675,10 +675,10 @@ export function JobBillingFields({
                         <span>${billableTotal.interpreterFeesTotal.toFixed(2)}</span>
                       </div>
                     )}
-                    <div className="flex justify-between border-t pt-1 font-semibold">
-                      <span>Total</span>
-                      <span>${billableTotal.interpreterTotal.toFixed(2)}</span>
-                    </div>
+                  </div>
+                  <div className="flex justify-between border-t pt-1 font-semibold mt-2">
+                    <span>Total</span>
+                    <span>${billableTotal.interpreterTotal.toFixed(2)}</span>
                   </div>
                 </div>
               </div>

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
@@ -39,6 +39,7 @@ interface SendInvoiceDialogProps {
   invoiceId: string;
   invoiceNumber: string;
   facilityName: string;
+  defaultTo?: string | null;
   pdfStoragePath: string | null;
   dueDate: string | null;
   total: number;
@@ -51,6 +52,7 @@ export function SendInvoiceDialog({
   invoiceId,
   invoiceNumber,
   facilityName,
+  defaultTo,
   pdfStoragePath,
   dueDate,
   total,
@@ -92,11 +94,22 @@ ECASL`;
   const form = useForm<FormData>({
     resolver: zodResolver(formSchema),
     defaultValues: {
-      to: '',
+      to: defaultTo || '',
       subject: defaultSubject,
       body: defaultBody,
     },
   });
+
+  // When the dialog opens, prefill the recipient with the facility's primary billing contact
+  // (but don't clobber if the user already typed something).
+  useEffect(() => {
+    if (!open) return;
+    if (!defaultTo) return;
+    const currentTo = form.getValues('to');
+    if (!currentTo) {
+      form.setValue('to', defaultTo, { shouldDirty: false });
+    }
+  }, [open, defaultTo, form]);
 
   const handleSend = async (data: FormData) => {
     if (!pdfStoragePath) {

@@ -11,11 +11,18 @@ const corsHeaders = {
 
 interface SendInvoiceEmailRequest {
   invoiceId: string;
-  to: string;
+  to?: string;
   subject: string;
   body: string;
   pdfStoragePath: string;
 }
+
+type BillingContact = {
+  id?: string;
+  name?: string;
+  email?: string;
+  phone?: string;
+};
 
 const handler = async (req: Request): Promise<Response> => {
   console.log("send-invoice-email function invoked");
@@ -77,10 +84,46 @@ const handler = async (req: Request): Promise<Response> => {
     const { invoiceId, to, subject, body, pdfStoragePath } = requestData;
 
     // Validate required fields
-    if (!invoiceId || !to || !subject || !body || !pdfStoragePath) {
+    if (!invoiceId || !subject || !body || !pdfStoragePath) {
       console.error("Missing required fields");
       return new Response(
         JSON.stringify({ error: "Missing required fields" }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // Prefer facility billing contact email (primary contact) over any other facility emails.
+    // Fallback to provided `to` if billing contact isn't available.
+    let resolvedRecipient: string | null = null;
+    try {
+      const { data: invoiceRow, error: invErr } = await supabase
+        .from('invoices')
+        .select('id, facility_id')
+        .eq('id', invoiceId)
+        .single();
+
+      if (invErr) throw invErr;
+
+      const { data: facilityRow, error: facErr } = await supabase
+        .from('facilities')
+        .select('billing_contacts')
+        .eq('id', invoiceRow.facility_id)
+        .single();
+
+      if (facErr) throw facErr;
+
+      const contacts = (facilityRow?.billing_contacts as BillingContact[] | null) || [];
+      const primary = contacts.find((c) => !!c?.email && !!c?.name) || contacts.find((c) => !!c?.email);
+      resolvedRecipient = primary?.email?.trim() || null;
+    } catch (e) {
+      console.warn('Unable to resolve billing contact; falling back to provided recipient', e);
+    }
+
+    const finalTo = resolvedRecipient || (to ? to.trim() : '');
+
+    if (!finalTo) {
+      return new Response(
+        JSON.stringify({ error: "No billing contact email found for this facility." }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
@@ -115,7 +158,7 @@ const handler = async (req: Request): Promise<Response> => {
       .replace(/\n/g, '<br>');
 
     // Send email via Resend REST API with attachment
-    console.log("Sending email to:", to);
+    console.log("Sending email to:", finalTo);
     const resendResponse = await fetch("https://api.resend.com/emails", {
       method: "POST",
       headers: {
@@ -124,7 +167,7 @@ const handler = async (req: Request): Promise<Response> => {
       },
       body: JSON.stringify({
         from: "ECASL <onboarding@resend.dev>", // Update to verified domain when available
-        to: [to],
+        to: [finalTo],
         subject: subject,
         html: htmlBody,
         attachments: [
@@ -146,7 +189,7 @@ const handler = async (req: Request): Promise<Response> => {
 
       // Log failed email attempt
       await supabase.from("email_logs").insert({
-        recipient_email: to,
+        recipient_email: finalTo,
         subject: subject,
         template_name: 'invoice_send',
         status: "failed",
@@ -161,7 +204,7 @@ const handler = async (req: Request): Promise<Response> => {
 
     // Log successful email
     await supabase.from("email_logs").insert({
-      recipient_email: to,
+      recipient_email: finalTo,
       subject: subject,
       template_name: 'invoice_send',
       status: "sent",

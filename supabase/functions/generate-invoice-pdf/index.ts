@@ -281,10 +281,7 @@ Deno.serve(async (req) => {
       
       // Add business hours line item if applicable
       if (businessHoursWorked > 0 && adjustedBusinessRate > 0) {
-        let description = 'Interpreter Services (Business Hours)';
-        if (trilingualUplift > 0 || facilityRateAdjustment > 0) {
-          description = 'Interpreter Services (Business Hours, adjusted)';
-        }
+        const description = 'Interpreter Services (Business Hours)';
         lineItems.push({
           description,
           qty: businessHoursWorked,
@@ -295,10 +292,7 @@ Deno.serve(async (req) => {
       
       // Add after hours line item if applicable
       if (afterHoursWorked > 0 && adjustedAfterHoursRate > 0) {
-        let description = 'Interpreter Services (After Hours)';
-        if (trilingualUplift > 0 || facilityRateAdjustment > 0) {
-          description = 'Interpreter Services (After Hours, adjusted)';
-        }
+        const description = 'Interpreter Services (After Hours)';
         lineItems.push({
           description,
           qty: afterHoursWorked,
@@ -309,10 +303,7 @@ Deno.serve(async (req) => {
       
       // Fallback: if no hours split data, use billable_hours with business rate
       if (businessHoursWorked === 0 && afterHoursWorked === 0 && billableHours > 0 && adjustedBusinessRate > 0) {
-        let description = 'Interpreter Services';
-        if (trilingualUplift > 0 || facilityRateAdjustment > 0) {
-          description = 'Interpreter Services (adjusted)';
-        }
+        const description = 'Interpreter Services';
         lineItems.push({
           description,
           qty: billableHours,

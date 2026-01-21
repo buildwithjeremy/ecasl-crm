@@ -76,7 +76,7 @@ type Invoice = {
   pdf_url: string | null;
   notes: string | null;
   total: number | null;
-  facility: { name: string } | null;
+  facility: { name: string; billing_contacts?: { name?: string; email?: string; phone?: string; id?: string }[] | null } | null;
 };
 
 type Job = {
@@ -159,7 +159,7 @@ export default function InvoiceDetail() {
       if (!selectedInvoiceId) return null;
       const { data, error } = await supabase
         .from('invoices')
-        .select('*, facility:facilities(name)')
+        .select('*, facility:facilities(name, billing_contacts)')
         .eq('id', selectedInvoiceId)
         .maybeSingle();
       if (error) throw error;
@@ -355,6 +355,11 @@ export default function InvoiceDetail() {
     if (value === null || value === undefined) return '-';
     return `$${value.toFixed(2)}`;
   };
+
+  const billingRecipientEmail =
+    invoice?.facility?.billing_contacts?.find((c) => !!c?.email && !!c?.name)?.email ||
+    invoice?.facility?.billing_contacts?.find((c) => !!c?.email)?.email ||
+    null;
 
   return (
     <div className="space-y-4">
@@ -733,6 +738,7 @@ export default function InvoiceDetail() {
           invoiceId={invoice.id}
           invoiceNumber={invoice.invoice_number}
           facilityName={invoice.facility?.name || 'Customer'}
+          defaultTo={billingRecipientEmail}
           pdfStoragePath={invoice.pdf_url}
           dueDate={invoice.due_date}
           total={overallTotal}

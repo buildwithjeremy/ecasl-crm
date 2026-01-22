@@ -857,14 +857,20 @@ export default function JobDetail() {
       }
       
       const template = templateData as { subject: string; body: string };
+
+      const timezoneLabel = getTimezoneDisplayName(
+        data.timezone || facility?.timezone || job?.timezone || null
+      );
       
       // Get interpreter emails
-      const { data: potentialInterpreters, error: interpError } = await supabase
+      const interpRes = await supabase
         .from('interpreters')
         .select('id, email, first_name, last_name')
         .in('id', potentialInterpreterIds);
-      
-      if (interpError) throw interpError;
+
+      if (interpRes.error) throw interpRes.error;
+
+      const interpreterListSafe = (interpRes.data ?? []) as any[];
       
       // Send emails to all potential interpreters
       const { data: session } = await supabase.auth.getSession();
@@ -872,39 +878,44 @@ export default function JobDetail() {
         throw new Error('Not authenticated');
       }
       
-      const emailPromises = (potentialInterpreters || []).map(async (interpreter) => {
-        const templateVariables = {
-          interpreter_name: `${interpreter.first_name} ${interpreter.last_name}`,
-          facility_name: facilityName,
-          job_date: format(new Date(data.job_date), 'MMMM d, yyyy'),
-          start_time: normalizedStartTime,
-          end_time: normalizedEndTime,
-          location: location,
-          rate_info: rateInfo,
-        };
-        
-        const response = await fetch('https://umyjqvmpvjfikljhoofy.supabase.co/functions/v1/send-email', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${session.session.access_token}`,
-          },
-          body: JSON.stringify({
-            to: interpreter.email,
-            subject: template.subject,
-            body: template.body,
-            template_name: 'interpreter_outreach',
-            template_variables: templateVariables,
-            job_id: selectedJobId,
-            interpreter_id: interpreter.id,
-          }),
-        });
-        
-        if (!response.ok) {
-          console.error(`Failed to send email to ${interpreter.email}`);
-        }
-        return response;
-      });
+      const emailPromises: Promise<Response>[] = [];
+      for (const interpreter of interpreterListSafe as any[]) {
+        emailPromises.push((async () => {
+          const templateVariables = {
+            interpreter_name: `${interpreter.first_name} ${interpreter.last_name}`,
+            facility_name: facilityName,
+            // Avoid off-by-one day from local timezone when parsing YYYY-MM-DD
+            job_date: format(new Date(`${data.job_date}T00:00:00`), 'MMMM d, yyyy'),
+            start_time: formatTimeForDisplay(normalizedStartTime),
+            // Outreach template doesn't have a timezone placeholder, so append it here.
+            end_time: `${formatTimeForDisplay(normalizedEndTime)} ${timezoneLabel}`,
+            location: location,
+            rate_info: rateInfo,
+          };
+
+          const response = await fetch('https://umyjqvmpvjfikljhoofy.supabase.co/functions/v1/send-email', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${session.session.access_token}`,
+            },
+            body: JSON.stringify({
+              to: interpreter.email,
+              subject: template.subject,
+              body: template.body,
+              template_name: 'interpreter_outreach',
+              template_variables: templateVariables,
+              job_id: selectedJobId,
+              interpreter_id: interpreter.id,
+            }),
+          });
+
+          if (!response.ok) {
+            console.error(`Failed to send email to ${interpreter.email}`);
+          }
+          return response;
+        })());
+      }
       
       await Promise.allSettled(emailPromises);
       
@@ -963,7 +974,7 @@ export default function JobDetail() {
         .select('*')
         .single();
       if (error) throw error;
-      return { savedJob: savedJob as Job, emailCount: potentialInterpreters?.length || 0 };
+      return { savedJob: savedJob as Job, emailCount: interpreterListSafe.length };
     },
     onSuccess: ({ savedJob, emailCount }) => {
       setEmailPreviewOpen(false);
@@ -1056,7 +1067,8 @@ export default function JobDetail() {
         interpreter_name: `${confirmedInterpreter.first_name} ${confirmedInterpreter.last_name}`,
         job_number: job?.job_number || 'N/A',
         facility_name: facilityName,
-        job_date: format(new Date(data.job_date), 'MMMM d, yyyy'),
+        // Avoid off-by-one day from local timezone when parsing YYYY-MM-DD
+        job_date: format(new Date(`${data.job_date}T00:00:00`), 'MMMM d, yyyy'),
         start_time: formatTimeForDisplay(normalizedStartTime),
         end_time: formatTimeForDisplay(normalizedEndTime),
         timezone: timezoneLabel,

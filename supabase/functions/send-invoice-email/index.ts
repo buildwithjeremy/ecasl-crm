@@ -11,10 +11,22 @@ const corsHeaders = {
 
 interface SendInvoiceEmailRequest {
   invoiceId: string;
-  to?: string;
+  to?: string | string[];
   subject: string;
   body: string;
   pdfStoragePath: string;
+}
+
+function normalizeRecipients(to: string | string[] | undefined): string[] {
+  if (!to) return [];
+  if (Array.isArray(to)) {
+    return to.map((t) => (t || '').trim()).filter(Boolean);
+  }
+  // Allow callers to pass comma/semicolon/space separated list
+  return to
+    .split(/[\n,;\s]+/g)
+    .map((t) => t.trim())
+    .filter(Boolean);
 }
 
 type BillingContact = {
@@ -92,36 +104,44 @@ const handler = async (req: Request): Promise<Response> => {
       );
     }
 
-    // Prefer facility billing contact email (primary contact) over any other facility emails.
-    // Fallback to provided `to` if billing contact isn't available.
-    let resolvedRecipient: string | null = null;
-    try {
-      const { data: invoiceRow, error: invErr } = await supabase
-        .from('invoices')
-        .select('id, facility_id')
-        .eq('id', invoiceId)
-        .single();
+    // If caller provided recipients, respect them. Otherwise default to facility primary billing contact.
+    const providedRecipients = normalizeRecipients(to);
 
-      if (invErr) throw invErr;
+    let finalToList: string[] = providedRecipients;
 
-      const { data: facilityRow, error: facErr } = await supabase
-        .from('facilities')
-        .select('billing_contacts')
-        .eq('id', invoiceRow.facility_id)
-        .single();
+    if (finalToList.length === 0) {
+      let resolvedRecipient: string | null = null;
+      try {
+        const { data: invoiceRow, error: invErr } = await supabase
+          .from('invoices')
+          .select('id, facility_id')
+          .eq('id', invoiceId)
+          .single();
 
-      if (facErr) throw facErr;
+        if (invErr) throw invErr;
 
-      const contacts = (facilityRow?.billing_contacts as BillingContact[] | null) || [];
-      const primary = contacts.find((c) => !!c?.email && !!c?.name) || contacts.find((c) => !!c?.email);
-      resolvedRecipient = primary?.email?.trim() || null;
-    } catch (e) {
-      console.warn('Unable to resolve billing contact; falling back to provided recipient', e);
+        const { data: facilityRow, error: facErr } = await supabase
+          .from('facilities')
+          .select('billing_contacts')
+          .eq('id', invoiceRow.facility_id)
+          .single();
+
+        if (facErr) throw facErr;
+
+        const contacts = (facilityRow?.billing_contacts as BillingContact[] | null) || [];
+        const primary = contacts.find((c) => !!c?.email && !!c?.name) || contacts.find((c) => !!c?.email);
+        resolvedRecipient = primary?.email?.trim() || null;
+      } catch (e) {
+        console.warn('Unable to resolve billing contact', e);
+      }
+
+      finalToList = resolvedRecipient ? [resolvedRecipient] : [];
     }
 
-    const finalTo = resolvedRecipient || (to ? to.trim() : '');
+    // de-dupe
+    finalToList = Array.from(new Set(finalToList.map((e) => e.trim()).filter(Boolean)));
 
-    if (!finalTo) {
+    if (finalToList.length === 0) {
       return new Response(
         JSON.stringify({ error: "No billing contact email found for this facility." }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
@@ -158,7 +178,7 @@ const handler = async (req: Request): Promise<Response> => {
       .replace(/\n/g, '<br>');
 
     // Send email via Resend REST API with attachment
-    console.log("Sending email to:", finalTo);
+    console.log("Sending email to:", finalToList.join(', '));
     const resendResponse = await fetch("https://api.resend.com/emails", {
       method: "POST",
       headers: {
@@ -167,7 +187,7 @@ const handler = async (req: Request): Promise<Response> => {
       },
       body: JSON.stringify({
         from: "ECASL <onboarding@resend.dev>", // Update to verified domain when available
-        to: [finalTo],
+        to: finalToList,
         subject: subject,
         html: htmlBody,
         attachments: [
@@ -189,7 +209,7 @@ const handler = async (req: Request): Promise<Response> => {
 
       // Log failed email attempt
       await supabase.from("email_logs").insert({
-        recipient_email: finalTo,
+        recipient_email: finalToList.join(', '),
         subject: subject,
         template_name: 'invoice_send',
         status: "failed",
@@ -204,7 +224,7 @@ const handler = async (req: Request): Promise<Response> => {
 
     // Log successful email
     await supabase.from("email_logs").insert({
-      recipient_email: finalTo,
+      recipient_email: finalToList.join(', '),
       subject: subject,
       template_name: 'invoice_send',
       status: "sent",

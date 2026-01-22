@@ -566,10 +566,22 @@ export default function InvoiceDetail() {
                           <span>{formatCurrency(travelTimeTotal)}</span>
                         </div>
                       )}
-                      {feesTotal > 0 && (
+                      {(job?.parking ?? 0) > 0 && (
                         <div className="flex justify-between">
-                          <span className="text-muted-foreground">Fees (Parking + Tolls + Misc)</span>
-                          <span>{formatCurrency(feesTotal)}</span>
+                          <span className="text-muted-foreground">Parking</span>
+                          <span>{formatCurrency(job?.parking)}</span>
+                        </div>
+                      )}
+                      {(job?.tolls ?? 0) > 0 && (
+                        <div className="flex justify-between">
+                          <span className="text-muted-foreground">Tolls</span>
+                          <span>{formatCurrency(job?.tolls)}</span>
+                        </div>
+                      )}
+                      {(job?.misc_fee ?? 0) > 0 && (
+                        <div className="flex justify-between">
+                          <span className="text-muted-foreground">Misc Fee</span>
+                          <span>{formatCurrency(job?.misc_fee)}</span>
                         </div>
                       )}
                       {emergencyFeeAmount > 0 && (

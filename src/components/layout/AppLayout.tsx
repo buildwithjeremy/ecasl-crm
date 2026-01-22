@@ -36,7 +36,7 @@ export function AppLayout({ children }: AppLayoutProps) {
             If we only hide horizontal overflow without vertical scrolling here, `position: sticky`
             can break because this element becomes the sticky containing block but doesn't scroll.
           */}
-          <div className="flex-1 min-h-0 p-4 sm:p-6 bg-background overflow-y-auto overflow-x-hidden">
+          <div className="flex-1 min-h-0 px-4 sm:px-6 pb-4 sm:pb-6 pt-0 bg-background overflow-y-auto overflow-x-hidden">
             {children}
           </div>
         </main>

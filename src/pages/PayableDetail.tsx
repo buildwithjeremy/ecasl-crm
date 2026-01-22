@@ -82,6 +82,7 @@ type Payable = {
     interpreter_rate_business: number | null;
     interpreter_rate_after_hours: number | null;
     interpreter_rate_holiday: number | null;
+    interpreter_rate_adjustment: number | null;
     interpreter_rate_mileage: number | null;
     travel_time_hours: number | null;
     travel_time_rate: number | null;
@@ -147,7 +148,7 @@ export default function PayableDetail() {
             job_number, interpreter_hourly_total, interpreter_billable_total,
             business_hours_worked, after_hours_worked,
             mileage, interpreter_rate_mileage, travel_time_hours, travel_time_rate,
-            interpreter_rate_business, interpreter_rate_after_hours, interpreter_rate_holiday,
+            interpreter_rate_business, interpreter_rate_after_hours, interpreter_rate_holiday, interpreter_rate_adjustment,
             parking, tolls, misc_fee, trilingual_rate_uplift, billable_hours,
             emergency_fee_applied, holiday_fee_applied,
             facility:facilities(emergency_fee, holiday_fee)
@@ -255,12 +256,13 @@ export default function PayableDetail() {
   const businessHours = job?.business_hours_worked ?? job?.billable_hours ?? 0;
   const afterHours = job?.after_hours_worked ?? 0;
   const useHolidayRate = !!job?.holiday_fee_applied && (job?.interpreter_rate_holiday ?? 0) > 0;
+  const interpreterRateAdjustment = job?.interpreter_rate_adjustment ?? 0;
   const businessRate = useHolidayRate
-    ? (job?.interpreter_rate_holiday ?? 0)
-    : (job?.interpreter_rate_business ?? 0);
+    ? (job?.interpreter_rate_holiday ?? 0) + interpreterRateAdjustment
+    : (job?.interpreter_rate_business ?? 0) + interpreterRateAdjustment;
   const afterRate = useHolidayRate
-    ? (job?.interpreter_rate_holiday ?? 0)
-    : (job?.interpreter_rate_after_hours ?? 0);
+    ? (job?.interpreter_rate_holiday ?? 0) + interpreterRateAdjustment
+    : (job?.interpreter_rate_after_hours ?? 0) + interpreterRateAdjustment;
   const businessTotal = businessHours * businessRate;
   const afterTotal = afterHours * afterRate;
   const mileageTotal = (job?.mileage ?? 0) * (job?.interpreter_rate_mileage ?? 0);

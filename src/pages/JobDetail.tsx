@@ -32,6 +32,25 @@ import type { Tables } from '@/integrations/supabase/types';
 
 type Job = Tables<'jobs'>;
 
+type BillingContact = {
+  name?: string | null;
+  phone?: string | null;
+  email?: string | null;
+};
+
+function resolvePrimaryBillingContact(billingContacts: unknown): BillingContact | null {
+  const contacts = Array.isArray(billingContacts) ? (billingContacts as BillingContact[]) : [];
+  if (contacts.length === 0) return null;
+
+  // Prefer a contact that has both name + phone, otherwise fallback to the first contact.
+  return (
+    contacts.find((c) => !!c?.name && !!c?.phone) ||
+    contacts.find((c) => !!c?.name) ||
+    contacts[0] ||
+    null
+  );
+}
+
 // ==========================================
 // Form Schema
 // ==========================================
@@ -611,10 +630,10 @@ export default function JobDetail() {
         ? (data.video_call_link || 'Remote - Link TBD')
         : (locationParts.join(', ') || 'TBD');
       
-      // Get contact info from billing_contacts
-      const primaryContact = facility?.billing_contacts?.[0];
-      const contactName = data.client_contact_name || primaryContact?.name || 'N/A';
-      const contactPhone = data.client_contact_phone || primaryContact?.phone || 'N/A';
+      // Confirmation email: prefer facility billing contact over job-level client fields
+      const primaryContact = resolvePrimaryBillingContact(facility?.billing_contacts);
+      const contactName = primaryContact?.name || data.client_contact_name || 'N/A';
+      const contactPhone = primaryContact?.phone || data.client_contact_phone || 'N/A';
       
       // Get the interpreter info
       const { data: interpreterInfo, error: interpError } = await supabase
@@ -982,10 +1001,10 @@ export default function JobDetail() {
         ? (data.video_call_link || 'Remote - Link TBD')
         : (locationParts.join(', ') || 'TBD');
       
-      // Get contact info from billing_contacts
-      const primaryContact = facility?.billing_contacts?.[0];
-      const contactName = data.client_contact_name || primaryContact?.name || 'N/A';
-      const contactPhone = data.client_contact_phone || primaryContact?.phone || 'N/A';
+      // Confirmation email: prefer facility billing contact over job-level client fields
+      const primaryContact = resolvePrimaryBillingContact(facility?.billing_contacts);
+      const contactName = primaryContact?.name || data.client_contact_name || 'N/A';
+      const contactPhone = primaryContact?.phone || data.client_contact_phone || 'N/A';
       
       // Get the interpreter info
       const { data: interpreterInfo, error: interpError } = await supabase

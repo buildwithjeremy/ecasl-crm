@@ -11,7 +11,6 @@ import {
   isSameDay,
   addMonths,
   subMonths,
-  parseISO,
   addWeeks,
   subWeeks,
 } from 'date-fns';
@@ -20,6 +19,14 @@ import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { ChevronLeft, ChevronRight, Calendar as CalendarIcon } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import { timezoneOptions } from '@/lib/timezone-utils';
 import {
   Tooltip,
   TooltipContent,
@@ -33,6 +40,7 @@ type Job = {
   job_date: string;
   start_time: string;
   end_time: string;
+  timezone?: string | null;
   deaf_client_name: string | null;
   status: string | null;
   facility?: { name: string } | null;
@@ -53,17 +61,100 @@ const statusColors: Record<string, string> = {
   cancelled: 'bg-destructive/20 text-destructive border-destructive/30',
 };
 
-const formatTime = (time: string) => {
-  const [hours, minutes] = time.split(':');
-  const hour = parseInt(hours, 10);
-  const ampm = hour >= 12 ? 'PM' : 'AM';
-  const hour12 = hour % 12 || 12;
-  return `${hour12}:${minutes} ${ampm}`;
-};
+function getTimeZoneOffsetMs(date: Date, timeZone: string): number {
+  const dtf = new Intl.DateTimeFormat('en-US', {
+    timeZone,
+    hour12: false,
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+  });
+
+  const parts = dtf.formatToParts(date);
+  const map: Record<string, string> = {};
+  for (const p of parts) {
+    if (p.type !== 'literal') map[p.type] = p.value;
+  }
+
+  const asUtc = Date.UTC(
+    Number(map.year),
+    Number(map.month) - 1,
+    Number(map.day),
+    Number(map.hour),
+    Number(map.minute),
+    Number(map.second)
+  );
+  return asUtc - date.getTime();
+}
+
+function zonedLocalDateTimeToUtc(dateStr: string, timeStr: string, timeZone: string): Date {
+  const [y, m, d] = dateStr.split('-').map(Number);
+  const [hh = '0', mm = '0', ss = '0'] = timeStr.split(':');
+  const naiveUtc = new Date(Date.UTC(y, m - 1, d, Number(hh), Number(mm), Number(ss)));
+
+  const offset1 = getTimeZoneOffsetMs(naiveUtc, timeZone);
+  const adjusted1 = new Date(naiveUtc.getTime() - offset1);
+  const offset2 = getTimeZoneOffsetMs(adjusted1, timeZone);
+  return new Date(naiveUtc.getTime() - offset2);
+}
+
+function formatTimeInZone(date: Date, timeZone: string): string {
+  return new Intl.DateTimeFormat('en-US', {
+    timeZone,
+    hour: 'numeric',
+    minute: '2-digit',
+    hour12: true,
+  }).format(date);
+}
+
+function formatDateKeyInZone(date: Date, timeZone: string): string {
+  const parts = new Intl.DateTimeFormat('en-CA', {
+    timeZone,
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  }).formatToParts(date);
+
+  const map: Record<string, string> = {};
+  for (const p of parts) {
+    if (p.type !== 'literal') map[p.type] = p.value;
+  }
+  return `${map.year}-${map.month}-${map.day}`;
+}
+
+function formatDayNumberInZone(date: Date, timeZone: string): string {
+  return new Intl.DateTimeFormat('en-US', {
+    timeZone,
+    day: 'numeric',
+  }).format(date);
+}
+
+function formatMonthYearInZone(date: Date, timeZone: string): string {
+  return new Intl.DateTimeFormat('en-US', {
+    timeZone,
+    month: 'long',
+    year: 'numeric',
+  }).format(date);
+}
+
+function formatWeekOfInZone(date: Date, timeZone: string): string {
+  // Use the week start computed in local time, but label it in the selected timezone.
+  const weekStart = startOfWeek(date);
+  return new Intl.DateTimeFormat('en-US', {
+    timeZone,
+    month: 'short',
+    day: 'numeric',
+    year: 'numeric',
+  }).format(weekStart);
+}
 
 export function JobsCalendar({ jobs, isLoading }: JobsCalendarProps) {
   const [currentDate, setCurrentDate] = useState(new Date());
   const [view, setView] = useState<'month' | 'week'>('month');
+  const [calendarTimezone, setCalendarTimezone] = useState<string>('America/New_York');
   const navigate = useNavigate();
 
   const calendarDays = useMemo(() => {
@@ -81,20 +172,41 @@ export function JobsCalendar({ jobs, isLoading }: JobsCalendarProps) {
   }, [currentDate, view]);
 
   const jobsByDate = useMemo(() => {
-    const map = new Map<string, Job[]>();
-    jobs.forEach((job) => {
-      const dateKey = job.job_date;
-      if (!map.has(dateKey)) {
-        map.set(dateKey, []);
-      }
-      map.get(dateKey)!.push(job);
-    });
-    // Sort jobs by start time within each day
+    type CalendarJob = Job & {
+      _calendarStart: Date;
+      _calendarEnd: Date;
+      _calendarDateKey: string;
+      _startLabel: string;
+      _endLabel: string;
+    };
+
+    const map = new Map<string, CalendarJob[]>();
+
+    for (const job of jobs) {
+      const sourceTz = job.timezone || calendarTimezone;
+      const startUtc = zonedLocalDateTimeToUtc(job.job_date, job.start_time, sourceTz);
+      const endUtc = zonedLocalDateTimeToUtc(job.job_date, job.end_time, sourceTz);
+
+      const dateKey = formatDateKeyInZone(startUtc, calendarTimezone);
+      const calendarJob: CalendarJob = {
+        ...job,
+        _calendarStart: startUtc,
+        _calendarEnd: endUtc,
+        _calendarDateKey: dateKey,
+        _startLabel: formatTimeInZone(startUtc, calendarTimezone),
+        _endLabel: formatTimeInZone(endUtc, calendarTimezone),
+      };
+
+      if (!map.has(dateKey)) map.set(dateKey, []);
+      map.get(dateKey)!.push(calendarJob);
+    }
+
     map.forEach((dayJobs) => {
-      dayJobs.sort((a, b) => a.start_time.localeCompare(b.start_time));
+      dayJobs.sort((a, b) => a._calendarStart.getTime() - b._calendarStart.getTime());
     });
+
     return map;
-  }, [jobs]);
+  }, [jobs, calendarTimezone]);
 
   const navigatePrev = () => {
     if (view === 'month') {
@@ -138,11 +250,23 @@ export function JobsCalendar({ jobs, isLoading }: JobsCalendarProps) {
           <CalendarIcon className="h-5 w-5 text-muted-foreground" />
           <h2 className="text-lg font-semibold">
             {view === 'month'
-              ? format(currentDate, 'MMMM yyyy')
-              : `Week of ${format(startOfWeek(currentDate), 'MMM d, yyyy')}`}
+              ? formatMonthYearInZone(currentDate, calendarTimezone)
+              : `Week of ${formatWeekOfInZone(currentDate, calendarTimezone)}`}
           </h2>
         </div>
         <div className="flex items-center gap-2">
+          <Select value={calendarTimezone} onValueChange={setCalendarTimezone}>
+            <SelectTrigger className="h-8 w-[180px]">
+              <SelectValue placeholder="Timezone" />
+            </SelectTrigger>
+            <SelectContent className="z-50 bg-popover">
+              {timezoneOptions.map((tz) => (
+                <SelectItem key={tz.value} value={tz.value}>
+                  {tz.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
           <Button variant="outline" size="sm" onClick={goToToday}>
             Today
           </Button>
@@ -192,7 +316,9 @@ export function JobsCalendar({ jobs, isLoading }: JobsCalendarProps) {
         {/* Calendar Days */}
         <div className="grid grid-cols-7 gap-1">
           {calendarDays.map((day) => {
-            const dateKey = format(day, 'yyyy-MM-dd');
+            // Use noon to avoid off-by-one when converting across timezones
+            const safeDay = new Date(day.getFullYear(), day.getMonth(), day.getDate(), 12, 0, 0);
+            const dateKey = formatDateKeyInZone(safeDay, calendarTimezone);
             const dayJobs = jobsByDate.get(dateKey) || [];
             const isToday = isSameDay(day, new Date());
             const isCurrentMonth = isSameMonth(day, currentDate);
@@ -216,7 +342,7 @@ export function JobsCalendar({ jobs, isLoading }: JobsCalendarProps) {
                     !isCurrentMonth && view === 'month' && 'text-muted-foreground/50'
                   )}
                 >
-                  {format(day, 'd')}
+                  {formatDayNumberInZone(safeDay, calendarTimezone)}
                 </div>
 
                 {/* Jobs */}
@@ -233,7 +359,7 @@ export function JobsCalendar({ jobs, isLoading }: JobsCalendarProps) {
                             )}
                           >
                             <span className="font-medium">
-                              {formatTime(job.start_time)}
+                              {(job as any)._startLabel || job.start_time}
                             </span>
                             {' - '}
                             {job.deaf_client_name || job.job_number || 'Job'}
@@ -245,7 +371,9 @@ export function JobsCalendar({ jobs, isLoading }: JobsCalendarProps) {
                               {job.job_number || 'N/A'}
                             </p>
                             <p className="text-sm">
-                              {formatTime(job.start_time)} - {formatTime(job.end_time)}
+                              {(job as any)._startLabel && (job as any)._endLabel
+                                ? `${(job as any)._startLabel} - ${(job as any)._endLabel}`
+                                : `${job.start_time} - ${job.end_time}`}
                             </p>
                             {job.deaf_client_name && (
                               <p className="text-sm">Client: {job.deaf_client_name}</p>

@@ -112,7 +112,7 @@ export function RecordPageLayout({
   return (
     <div className="space-y-4">
       {/* Sticky Header */}
-      <div className="sticky top-14 z-10 bg-background py-3 border-b -mx-4 px-4 sm:-mx-6 sm:px-6 -mt-4 sm:-mt-6 mb-4">
+      <div className="sticky top-0 z-10 bg-background py-3 border-b -mx-4 px-4 sm:-mx-6 sm:px-6 -mt-4 sm:-mt-6 mb-4">
         <div className="flex flex-wrap items-center gap-2 sm:gap-3">
           {/* Back Button + Title */}
           <div className="flex items-center gap-2">

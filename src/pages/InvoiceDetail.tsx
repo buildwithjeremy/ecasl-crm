@@ -398,7 +398,7 @@ export default function InvoiceDetail() {
   return (
     <div className="space-y-4">
       {/* Sticky Header */}
-      <div className="sticky top-14 z-10 bg-background py-3 border-b -mx-6 px-6 -mt-6 mb-4">
+      <div className="sticky top-0 z-10 bg-background py-3 border-b -mx-6 px-6 -mt-6 mb-4">
         <div className="flex items-center gap-3">
           <Button variant="ghost" size="icon" onClick={() => navigate('/invoices')}>
             <ArrowLeft className="h-4 w-4" />

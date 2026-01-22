@@ -279,6 +279,11 @@ export default function PayableDetail() {
           <h1 className="text-xl font-bold text-foreground">
             {payable ? `Bill #${payable.bill_number || 'N/A'}` : 'Payable Details'}
           </h1>
+          {payable?.status && (
+            <Badge variant={payable.status === 'paid' ? 'default' : 'outline'}>
+              {statusDisplayMap[payable.status]}
+            </Badge>
+          )}
           
           {/* Compact Payable Selector */}
           <Popover open={searchOpen} onOpenChange={setSearchOpen}>

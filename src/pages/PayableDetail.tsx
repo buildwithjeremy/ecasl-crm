@@ -279,11 +279,6 @@ export default function PayableDetail() {
           <h1 className="text-xl font-bold text-foreground">
             {payable ? `Bill #${payable.bill_number || 'N/A'}` : 'Payable Details'}
           </h1>
-          {payable?.status && (
-            <Badge variant={payable.status === 'paid' ? 'default' : 'outline'}>
-              {statusDisplayMap[payable.status]}
-            </Badge>
-          )}
           
           {/* Compact Payable Selector */}
           <Popover open={searchOpen} onOpenChange={setSearchOpen}>
@@ -330,6 +325,12 @@ export default function PayableDetail() {
               </Command>
             </PopoverContent>
           </Popover>
+
+          {payable?.status && (
+            <Badge variant={payable.status === 'paid' ? 'default' : 'outline'}>
+              {statusDisplayMap[payable.status]}
+            </Badge>
+          )}
 
           {/* Save and Delete buttons in header */}
           {payable && (

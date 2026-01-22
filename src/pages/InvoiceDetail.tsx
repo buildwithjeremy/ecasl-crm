@@ -406,19 +406,6 @@ export default function InvoiceDetail() {
           <h1 className="text-xl font-bold text-foreground">
             {invoice ? `Invoice #${invoice.invoice_number}` : 'Invoice Details'}
           </h1>
-          {invoice?.status && (
-            <Badge
-              variant={
-                invoice.status === 'paid'
-                  ? 'default'
-                  : invoice.status === 'submitted'
-                    ? 'secondary'
-                    : 'outline'
-              }
-            >
-              {statusDisplayMap[invoice.status]}
-            </Badge>
-          )}
           
           {/* Compact Invoice Selector */}
           <Popover open={searchOpen} onOpenChange={setSearchOpen}>
@@ -465,6 +452,20 @@ export default function InvoiceDetail() {
               </Command>
             </PopoverContent>
           </Popover>
+
+          {invoice?.status && (
+            <Badge
+              variant={
+                invoice.status === 'paid'
+                  ? 'default'
+                  : invoice.status === 'submitted'
+                    ? 'secondary'
+                    : 'outline'
+              }
+            >
+              {statusDisplayMap[invoice.status]}
+            </Badge>
+          )}
 
           {/* Save and Delete buttons in header */}
           {invoice && (

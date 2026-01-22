@@ -98,6 +98,7 @@ type Job = {
   facility_rate_business: number | null;
   facility_rate_after_hours: number | null;
   facility_rate_holiday: number | null;
+  facility_rate_adjustment: number | null;
   billable_hours: number | null;
   emergency_fee_applied: boolean | null;
   holiday_fee_applied: boolean | null;
@@ -185,7 +186,7 @@ export default function InvoiceDetail() {
           mileage, facility_rate_mileage,
           travel_time_hours, travel_time_rate,
           parking, tolls, misc_fee, trilingual_rate_uplift,
-          facility_rate_business, facility_rate_after_hours, facility_rate_holiday,
+          facility_rate_business, facility_rate_after_hours, facility_rate_holiday, facility_rate_adjustment,
           billable_hours, emergency_fee_applied, holiday_fee_applied,
           total_facility_charge, facility_hourly_total, facility_billable_total,
           facility:facilities(name, emergency_fee, holiday_fee)
@@ -371,12 +372,13 @@ export default function InvoiceDetail() {
   const businessHours = job?.business_hours_worked ?? job?.billable_hours ?? 0;
   const afterHours = job?.after_hours_worked ?? 0;
   const useHolidayRate = !!job?.holiday_fee_applied && (job?.facility_rate_holiday ?? 0) > 0;
+  const facilityRateAdjustment = job?.facility_rate_adjustment ?? 0;
   const businessRate = useHolidayRate
-    ? (job?.facility_rate_holiday ?? 0)
-    : (job?.facility_rate_business ?? 0);
+    ? (job?.facility_rate_holiday ?? 0) + facilityRateAdjustment
+    : (job?.facility_rate_business ?? 0) + facilityRateAdjustment;
   const afterRate = useHolidayRate
-    ? (job?.facility_rate_holiday ?? 0)
-    : (job?.facility_rate_after_hours ?? 0);
+    ? (job?.facility_rate_holiday ?? 0) + facilityRateAdjustment
+    : (job?.facility_rate_after_hours ?? 0) + facilityRateAdjustment;
   const businessTotal = businessHours * businessRate;
   const afterTotal = afterHours * afterRate;
   const mileageTotal = (job?.mileage ?? 0) * (job?.facility_rate_mileage ?? 0);

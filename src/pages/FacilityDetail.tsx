@@ -9,6 +9,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
 import { RecordPageLayout } from '@/components/layout/RecordPageLayout';
 import { FacilityContractSection } from '@/components/facilities/FacilityContractSection';
+import { useSaveBeforeAction } from '@/hooks/use-save-before-action';
 import {
   FacilityCoreFields,
   FacilityAddressFields,
@@ -186,6 +187,15 @@ export default function FacilityDetail() {
     },
   });
 
+  const saveFacility = useSaveBeforeAction({
+    isDirty: form.formState.isDirty,
+    save: async () => {
+      const ok = await form.trigger();
+      if (!ok) throw new Error('Please fix validation errors before continuing.');
+      await mutation.mutateAsync(form.getValues());
+    },
+  });
+
   const onSubmit = (data: FacilityFullFormData) => {
     // Validation is now handled by the Zod schema via React Hook Form
     mutation.mutate(data);
@@ -262,6 +272,7 @@ export default function FacilityDetail() {
               contract_pdf_url: facility.contract_pdf_url,
               signed_contract_pdf_url: facility.signed_contract_pdf_url
             }}
+            saveIfDirty={saveFacility.run}
             onContractGenerated={() => {
               queryClient.invalidateQueries({ queryKey: ['facility', selectedFacilityId] });
             }}

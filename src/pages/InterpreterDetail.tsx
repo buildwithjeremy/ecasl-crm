@@ -10,6 +10,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
 import { RecordPageLayout } from '@/components/layout/RecordPageLayout';
 import { ContractComplianceSection } from '@/components/interpreters/ContractComplianceSection';
+import { useSaveBeforeAction } from '@/hooks/use-save-before-action';
 import {
   InterpreterCoreFields,
   InterpreterAddressFields,
@@ -171,6 +172,15 @@ export default function InterpreterDetail() {
     },
   });
 
+  const saveInterpreter = useSaveBeforeAction({
+    isDirty: form.formState.isDirty,
+    save: async () => {
+      const ok = await form.trigger();
+      if (!ok) throw new Error('Please fix validation errors before continuing.');
+      await mutation.mutateAsync(form.getValues());
+    },
+  });
+
   const onSubmit = (data: InterpreterFullFormData) => {
     mutation.mutate(data);
   };
@@ -252,6 +262,7 @@ export default function InterpreterDetail() {
               contract_pdf_url: interpreter.contract_pdf_url,
               signed_contract_pdf_url: interpreter.signed_contract_pdf_url
             }}
+            saveIfDirty={saveInterpreter.run}
             onContractGenerated={() => {
               queryClient.invalidateQueries({ queryKey: ['interpreter', selectedInterpreterId] });
             }}

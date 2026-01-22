@@ -53,6 +53,7 @@ import { useToast } from '@/hooks/use-toast';
 import { Check, ChevronsUpDown, ArrowLeft, Trash2, DollarSign } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Badge } from '@/components/ui/badge';
+import { useSaveBeforeAction } from '@/hooks/use-save-before-action';
 
 const formSchema = z.object({
   paid_date: z.string().optional(),
@@ -191,6 +192,15 @@ export default function PayableDetail() {
     },
     onError: (error) => {
       toast({ title: 'Error updating payable', description: error.message, variant: 'destructive' });
+    },
+  });
+
+  const savePayable = useSaveBeforeAction({
+    isDirty: form.formState.isDirty,
+    save: async () => {
+      const ok = await form.trigger();
+      if (!ok) throw new Error('Please fix validation errors before continuing.');
+      await mutation.mutateAsync(form.getValues());
     },
   });
 
@@ -406,7 +416,18 @@ export default function PayableDetail() {
                   <Button
                     type="button"
                     variant="outline"
-                    onClick={() => statusMutation.mutate()}
+                    onClick={() =>
+                      savePayable
+                        .run(() => statusMutation.mutateAsync())
+                        .catch((e) => {
+                          toast({
+                            title: 'Could not save changes',
+                            description:
+                              e instanceof Error ? e.message : 'Please try again.',
+                            variant: 'destructive',
+                          });
+                        })
+                    }
                     disabled={statusMutation.isPending}
                     size="sm"
                   >

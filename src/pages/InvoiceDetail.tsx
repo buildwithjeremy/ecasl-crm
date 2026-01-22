@@ -793,6 +793,7 @@ export default function InvoiceDetail() {
           invoiceId={invoice.id}
           invoiceNumber={invoice.invoice_number}
           facilityName={invoice.facility?.name || 'Customer'}
+          billingContacts={invoice.facility?.billing_contacts || []}
           defaultTo={billingRecipientEmail}
           pdfStoragePath={invoice.pdf_url}
           dueDate={invoice.due_date}

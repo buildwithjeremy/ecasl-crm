@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
@@ -24,11 +24,47 @@ import {
 import { Loader2, Send, Paperclip } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
+import { InvoiceBillingContact, InvoiceRecipientsPicker } from '@/components/invoices/InvoiceRecipientsPicker';
+
+function parseEmailList(input: string): string[] {
+  if (!input) return [];
+  return input
+    .split(/[\n,;\s]+/g)
+    .map((s) => s.trim())
+    .filter(Boolean);
+}
 
 const formSchema = z.object({
-  to: z.string().email('Please enter a valid email address'),
+  selectedRecipients: z.array(z.string().email('Please enter a valid email address')).default([]),
+  manualRecipients: z.string().optional().default(''),
   subject: z.string().min(1, 'Subject is required'),
   body: z.string().min(1, 'Message body is required'),
+}).superRefine((val, ctx) => {
+  const manual = parseEmailList(val.manualRecipients || '');
+  const combined = [...(val.selectedRecipients || []), ...manual];
+  const unique = Array.from(new Set(combined.map((e) => e.trim()).filter(Boolean)));
+
+  if (unique.length === 0) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      message: 'Please select or enter at least one recipient email.',
+      path: ['manualRecipients'],
+    });
+    return;
+  }
+
+  // Validate any manual emails (selected already validated by zod)
+  for (const email of manual) {
+    const ok = z.string().email().safeParse(email).success;
+    if (!ok) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: `Invalid email: ${email}`,
+        path: ['manualRecipients'],
+      });
+      return;
+    }
+  }
 });
 
 type FormData = z.infer<typeof formSchema>;
@@ -39,6 +75,7 @@ interface SendInvoiceDialogProps {
   invoiceId: string;
   invoiceNumber: string;
   facilityName: string;
+  billingContacts?: InvoiceBillingContact[] | null;
   defaultTo?: string | null;
   pdfStoragePath: string | null;
   dueDate: string | null;
@@ -52,6 +89,7 @@ export function SendInvoiceDialog({
   invoiceId,
   invoiceNumber,
   facilityName,
+  billingContacts,
   defaultTo,
   pdfStoragePath,
   dueDate,
@@ -91,25 +129,29 @@ Thank you for your business.
 Best regards,
 ECASL`;
 
+  const initialSelectedRecipients = useMemo(() => {
+    const email = (defaultTo || '').trim();
+    return email ? [email] : [];
+  }, [defaultTo]);
+
   const form = useForm<FormData>({
     resolver: zodResolver(formSchema),
     defaultValues: {
-      to: defaultTo || '',
+      selectedRecipients: initialSelectedRecipients,
+      manualRecipients: '',
       subject: defaultSubject,
       body: defaultBody,
     },
   });
 
-  // When the dialog opens, prefill the recipient with the facility's primary billing contact
-  // (but don't clobber if the user already typed something).
   useEffect(() => {
     if (!open) return;
-    if (!defaultTo) return;
-    const currentTo = form.getValues('to');
-    if (!currentTo) {
-      form.setValue('to', defaultTo, { shouldDirty: false });
+    // On open, seed selected recipients only if user hasn't changed them.
+    const currentSelected = form.getValues('selectedRecipients');
+    if ((!currentSelected || currentSelected.length === 0) && initialSelectedRecipients.length > 0) {
+      form.setValue('selectedRecipients', initialSelectedRecipients, { shouldDirty: false });
     }
-  }, [open, defaultTo, form]);
+  }, [open, form, initialSelectedRecipients]);
 
   const handleSend = async (data: FormData) => {
     if (!pdfStoragePath) {
@@ -124,10 +166,15 @@ ECASL`;
     setIsSending(true);
 
     try {
+      const manual = parseEmailList(data.manualRecipients || '');
+      const recipients = Array.from(
+        new Set([...(data.selectedRecipients || []), ...manual].map((e) => e.trim()).filter(Boolean))
+      );
+
       const { data: result, error } = await supabase.functions.invoke('send-invoice-email', {
         body: {
           invoiceId,
-          to: data.to,
+          to: recipients,
           subject: data.subject,
           body: data.body,
           pdfStoragePath,
@@ -142,7 +189,7 @@ ECASL`;
 
       toast({
         title: 'Invoice sent successfully',
-        description: `Invoice has been sent to ${data.to}`,
+        description: `Invoice has been sent to ${recipients.join(', ')}`,
       });
 
       onSuccess();
@@ -173,12 +220,35 @@ ECASL`;
           <form onSubmit={form.handleSubmit(handleSend)} className="space-y-4">
             <FormField
               control={form.control}
-              name="to"
+              name="selectedRecipients"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Recipient Email</FormLabel>
                   <FormControl>
-                    <Input placeholder="recipient@example.com" {...field} />
+                    <InvoiceRecipientsPicker
+                      label="Recipient(s)"
+                      contacts={(billingContacts || []).filter((c) => !!c?.email)}
+                      value={field.value || []}
+                      onChange={(next) => field.onChange(next)}
+                      disabled={isSending}
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="manualRecipients"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Additional recipients</FormLabel>
+                  <FormControl>
+                    <Input
+                      placeholder="Add emails separated by commas"
+                      {...field}
+                      disabled={isSending}
+                    />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -249,3 +319,4 @@ ECASL`;
     </Dialog>
   );
 }
+

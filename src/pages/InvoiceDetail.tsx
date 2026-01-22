@@ -84,6 +84,8 @@ type Job = {
   id: string;
   job_number: string | null;
   facility_id: string;
+  business_hours_worked: number | null;
+  after_hours_worked: number | null;
   mileage: number | null;
   facility_rate_mileage: number | null;
   interpreter_rate_mileage: number | null;
@@ -95,6 +97,7 @@ type Job = {
   trilingual_rate_uplift: number | null;
   facility_rate_business: number | null;
   facility_rate_after_hours: number | null;
+  facility_rate_holiday: number | null;
   billable_hours: number | null;
   emergency_fee_applied: boolean | null;
   holiday_fee_applied: boolean | null;
@@ -178,10 +181,11 @@ export default function InvoiceDetail() {
         .from('jobs')
         .select(`
           id, job_number, facility_id,
+          business_hours_worked, after_hours_worked,
           mileage, facility_rate_mileage,
           travel_time_hours, travel_time_rate,
           parking, tolls, misc_fee, trilingual_rate_uplift,
-          facility_rate_business, facility_rate_after_hours,
+          facility_rate_business, facility_rate_after_hours, facility_rate_holiday,
           billable_hours, emergency_fee_applied, holiday_fee_applied,
           total_facility_charge, facility_hourly_total, facility_billable_total,
           facility:facilities(name, emergency_fee, holiday_fee)
@@ -363,6 +367,22 @@ export default function InvoiceDetail() {
   
   const overallTotal = hourlyTotal + travelFeeTotal;
 
+  // Mirror the facility calculation breakdown from Job Detail (facility side)
+  const businessHours = job?.business_hours_worked ?? job?.billable_hours ?? 0;
+  const afterHours = job?.after_hours_worked ?? 0;
+  const useHolidayRate = !!job?.holiday_fee_applied && (job?.facility_rate_holiday ?? 0) > 0;
+  const businessRate = useHolidayRate
+    ? (job?.facility_rate_holiday ?? 0)
+    : (job?.facility_rate_business ?? 0);
+  const afterRate = useHolidayRate
+    ? (job?.facility_rate_holiday ?? 0)
+    : (job?.facility_rate_after_hours ?? 0);
+  const businessTotal = businessHours * businessRate;
+  const afterTotal = afterHours * afterRate;
+  const mileageTotal = (job?.mileage ?? 0) * (job?.facility_rate_mileage ?? 0);
+  const travelTimeTotal = (job?.travel_time_hours ?? 0) * (job?.travel_time_rate ?? 0);
+  const feesTotal = (job?.parking ?? 0) + (job?.tolls ?? 0) + (job?.misc_fee ?? 0);
+
   const formatCurrency = (value: number | null | undefined) => {
     if (value === null || value === undefined) return '-';
     return `$${value.toFixed(2)}`;
@@ -511,37 +531,45 @@ export default function InvoiceDetail() {
                   </div>
                   
                   {/* Fee Breakdown */}
-                  {(emergencyFeeAmount > 0 || holidayFeeAmount > 0 || (job?.mileage ?? 0) > 0 || (job?.travel_time_hours ?? 0) > 0 || (job?.parking ?? 0) > 0 || (job?.tolls ?? 0) > 0 || (job?.misc_fee ?? 0) > 0) && (
-                    <div className="text-sm space-y-1 pt-2 border-t">
-                      <p className="text-xs font-medium text-muted-foreground mb-2">Travel/Fee Breakdown</p>
+                  <div className="pt-3 border-t">
+                    <p className="text-xs font-medium text-muted-foreground mb-2">Invoice Line Items</p>
+                    <div className="text-sm space-y-0.5">
+                      {businessHours > 0 && businessRate > 0 && (
+                        <div className="flex justify-between">
+                          <span className="text-muted-foreground">
+                            {useHolidayRate ? 'Holiday Hours' : 'Business Hours'} ({businessHours.toFixed(2)} × ${businessRate.toFixed(2)})
+                          </span>
+                          <span>{formatCurrency(businessTotal)}</span>
+                        </div>
+                      )}
+                      {!useHolidayRate && afterHours > 0 && afterRate > 0 && (
+                        <div className="flex justify-between">
+                          <span className="text-muted-foreground">
+                            After Hours ({afterHours.toFixed(2)} × ${afterRate.toFixed(2)})
+                          </span>
+                          <span>{formatCurrency(afterTotal)}</span>
+                        </div>
+                      )}
                       {(job?.mileage ?? 0) > 0 && (job?.facility_rate_mileage ?? 0) > 0 && (
                         <div className="flex justify-between">
-                          <span className="text-muted-foreground">Mileage ({job?.mileage} mi × ${job?.facility_rate_mileage?.toFixed(2)})</span>
-                          <span>{formatCurrency((job?.mileage ?? 0) * (job?.facility_rate_mileage ?? 0))}</span>
+                          <span className="text-muted-foreground">
+                            Mileage ({job?.mileage} × ${job?.facility_rate_mileage?.toFixed(2)})
+                          </span>
+                          <span>{formatCurrency(mileageTotal)}</span>
                         </div>
                       )}
                       {(job?.travel_time_hours ?? 0) > 0 && (job?.travel_time_rate ?? 0) > 0 && (
                         <div className="flex justify-between">
-                          <span className="text-muted-foreground">Travel Time ({job?.travel_time_hours?.toFixed(2)} hrs × ${job?.travel_time_rate?.toFixed(2)})</span>
-                          <span>{formatCurrency((job?.travel_time_hours ?? 0) * (job?.travel_time_rate ?? 0))}</span>
+                          <span className="text-muted-foreground">
+                            Travel Time ({(job?.travel_time_hours ?? 0).toFixed(2)} × ${job?.travel_time_rate?.toFixed(2)})
+                          </span>
+                          <span>{formatCurrency(travelTimeTotal)}</span>
                         </div>
                       )}
-                      {(job?.parking ?? 0) > 0 && (
+                      {feesTotal > 0 && (
                         <div className="flex justify-between">
-                          <span className="text-muted-foreground">Parking</span>
-                          <span>{formatCurrency(job?.parking)}</span>
-                        </div>
-                      )}
-                      {(job?.tolls ?? 0) > 0 && (
-                        <div className="flex justify-between">
-                          <span className="text-muted-foreground">Tolls</span>
-                          <span>{formatCurrency(job?.tolls)}</span>
-                        </div>
-                      )}
-                      {(job?.misc_fee ?? 0) > 0 && (
-                        <div className="flex justify-between">
-                          <span className="text-muted-foreground">Misc Fee</span>
-                          <span>{formatCurrency(job?.misc_fee)}</span>
+                          <span className="text-muted-foreground">Fees (Parking + Tolls + Misc)</span>
+                          <span>{formatCurrency(feesTotal)}</span>
                         </div>
                       )}
                       {emergencyFeeAmount > 0 && (
@@ -557,7 +585,11 @@ export default function InvoiceDetail() {
                         </div>
                       )}
                     </div>
-                  )}
+                    <div className="flex justify-between border-t pt-1 font-semibold mt-2">
+                      <span>Total</span>
+                      <span>{formatCurrency(overallTotal)}</span>
+                    </div>
+                  </div>
                 </div>
               </CardContent>
             </Card>
@@ -713,34 +745,6 @@ export default function InvoiceDetail() {
             </CardContent>
           </Card>
 
-          {/* Line Items */}
-          {job && (
-            <Card>
-              <CardHeader className="pb-4">
-                <CardTitle className="text-lg">Line Items (Job #{job.job_number})</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-2">
-                  {hourlyTotal > 0 && (
-                    <div className="flex justify-between py-2 border-b">
-                      <span>Interpreter Services {(job.trilingual_rate_uplift ?? 0) > 0 ? '(incl. Trilingual)' : ''}</span>
-                      <span className="font-medium">{formatCurrency(hourlyTotal)}</span>
-                    </div>
-                  )}
-                  {travelFeeTotal > 0 && (
-                    <div className="flex justify-between py-2 border-b">
-                      <span>Travel, Mileage & Fees</span>
-                      <span className="font-medium">{formatCurrency(travelFeeTotal)}</span>
-                    </div>
-                  )}
-                  <div className="flex justify-between py-3 font-semibold text-lg">
-                    <span>Total</span>
-                    <span className="text-primary">{formatCurrency(overallTotal)}</span>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          )}
         </>
       )}
 

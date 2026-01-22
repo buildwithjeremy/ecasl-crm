@@ -54,6 +54,7 @@ import { Check, ChevronsUpDown, ArrowLeft, FileText, Loader2, Trash2, Send, Doll
 import { cn } from '@/lib/utils';
 import { Badge } from '@/components/ui/badge';
 import { SendInvoiceDialog } from '@/components/invoices/SendInvoiceDialog';
+import { useSaveBeforeAction } from '@/hooks/use-save-before-action';
 
 const formSchema = z.object({
   issued_date: z.string().optional(),
@@ -269,6 +270,15 @@ export default function InvoiceDetail() {
     },
   });
 
+  const saveInvoice = useSaveBeforeAction({
+    isDirty: form.formState.isDirty,
+    save: async () => {
+      const ok = await form.trigger();
+      if (!ok) throw new Error('Please fix validation errors before continuing.');
+      await mutation.mutateAsync(form.getValues());
+    },
+  });
+
   const statusMutation = useMutation({
     mutationFn: async (newStatus: 'submitted' | 'paid') => {
       if (!selectedInvoiceId) return;
@@ -308,20 +318,22 @@ export default function InvoiceDetail() {
 
     setIsGeneratingPdf(true);
     try {
-      const { data, error } = await supabase.functions.invoke('generate-invoice-pdf', {
-        body: { invoiceId: selectedInvoiceId }
-      });
-
-      if (error) throw error;
-
-      if (data?.pdfUrl) {
-        setPdfUrl(data.pdfUrl);
-        queryClient.invalidateQueries({ queryKey: ['invoice', selectedInvoiceId] });
-        toast({
-          title: 'PDF Generated',
-          description: data.note || 'Invoice PDF has been generated and saved.'
+      await saveInvoice.run(async () => {
+        const { data, error } = await supabase.functions.invoke('generate-invoice-pdf', {
+          body: { invoiceId: selectedInvoiceId },
         });
-      }
+
+        if (error) throw error;
+
+        if (data?.pdfUrl) {
+          setPdfUrl(data.pdfUrl);
+          queryClient.invalidateQueries({ queryKey: ['invoice', selectedInvoiceId] });
+          toast({
+            title: 'PDF Generated',
+            description: data.note || 'Invoice PDF has been generated and saved.',
+          });
+        }
+      });
     } catch (error) {
       console.error('Error generating PDF:', error);
       toast({
@@ -598,7 +610,18 @@ export default function InvoiceDetail() {
                     <Button
                       type="button"
                       variant="outline"
-                      onClick={() => statusMutation.mutate('paid')}
+                      onClick={() =>
+                        saveInvoice
+                          .run(() => statusMutation.mutateAsync('paid'))
+                          .catch((e) => {
+                            toast({
+                              title: 'Could not save changes',
+                              description:
+                                e instanceof Error ? e.message : 'Please try again.',
+                              variant: 'destructive',
+                            });
+                          })
+                      }
                       disabled={statusMutation.isPending}
                       size="sm"
                     >

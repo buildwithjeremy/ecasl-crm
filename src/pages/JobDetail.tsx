@@ -28,6 +28,7 @@ import { HoursSplit, calculateBillableTotal } from '@/lib/utils/job-calculations
 import { normalizeTimeToHHMM } from '@/lib/utils/time-helpers';
 import { formatTimeForDisplay } from '@/lib/utils/form-helpers';
 import { getTimezoneDisplayName } from '@/lib/timezone-utils';
+import { useSaveBeforeAction } from '@/hooks/use-save-before-action';
 import type { Tables } from '@/integrations/supabase/types';
 
 type Job = Tables<'jobs'>;
@@ -700,15 +701,8 @@ export default function JobDetail() {
     }
   }, [selectedJobId, facilities, job, form, toast]);
 
-  const handleConfirmSendEmail = useCallback(() => {
-    if (!emailPreviewData) return;
-    
-    if (emailPreviewData.type === 'outreach') {
-      sendOutreachMutation.mutate();
-    } else {
-      confirmInterpreterMutation.mutate();
-    }
-  }, [emailPreviewData]);
+  // NOTE: handleConfirmSendEmail is defined later (after mutations) so it can
+  // reliably run a save-before-action flow.
 
   // ==========================================
   // Mutations
@@ -799,6 +793,15 @@ export default function JobDetail() {
     },
     onError: (error: Error) => {
       toast({ title: 'Error updating job', description: error.message, variant: 'destructive' });
+    },
+  });
+
+  const saveJob = useSaveBeforeAction({
+    isDirty: form.formState.isDirty,
+    save: async () => {
+      const ok = await form.trigger();
+      if (!ok) throw new Error('Please fix validation errors before continuing.');
+      await mutation.mutateAsync(form.getValues());
     },
   });
 
@@ -1162,6 +1165,26 @@ export default function JobDetail() {
       toast({ title: 'Error', description: error.message, variant: 'destructive' });
     },
   });
+
+  const handleConfirmSendEmail = useCallback(() => {
+    if (!emailPreviewData) return;
+
+    saveJob
+      .run(async () => {
+        if (emailPreviewData.type === 'outreach') {
+          await sendOutreachMutation.mutateAsync();
+        } else {
+          await confirmInterpreterMutation.mutateAsync();
+        }
+      })
+      .catch((e) => {
+        toast({
+          title: 'Could not save changes',
+          description: e instanceof Error ? e.message : 'Please try again.',
+          variant: 'destructive',
+        });
+      });
+  }, [emailPreviewData, saveJob, sendOutreachMutation, confirmInterpreterMutation, toast]);
 
   const generateBillingMutation = useMutation({
     mutationFn: async () => {

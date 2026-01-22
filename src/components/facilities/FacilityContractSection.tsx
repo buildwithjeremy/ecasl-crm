@@ -29,6 +29,12 @@ interface FacilityContractSectionProps {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   form: UseFormReturn<any>;
   facility: Facility;
+  /**
+   * Optional wrapper used by parents to ensure pending form changes are saved
+   * before any contract-related side effect runs.
+   */
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  saveIfDirty?: <T>(action: () => Promise<T> | T) => Promise<T | undefined>;
   onContractGenerated: () => void;
 }
 
@@ -40,6 +46,7 @@ function isStoragePath(url: string): boolean {
 export function FacilityContractSection({ 
   form, 
   facility,
+  saveIfDirty,
   onContractGenerated 
 }: FacilityContractSectionProps) {
   const { toast } = useToast();
@@ -308,7 +315,18 @@ export function FacilityContractSection({
               <Button
                 type="button"
                 variant="outline"
-                onClick={() => generateContractMutation.mutate()}
+                onClick={() =>
+                  (saveIfDirty
+                    ? saveIfDirty(() => generateContractMutation.mutateAsync())
+                    : generateContractMutation.mutateAsync()
+                  ).catch((e) => {
+                    toast({
+                      title: 'Could not save changes',
+                      description: e instanceof Error ? e.message : 'Please try again.',
+                      variant: 'destructive',
+                    });
+                  })
+                }
                 disabled={isGenerating}
               >
                 {isGenerating ? (
@@ -330,7 +348,16 @@ export function FacilityContractSection({
               <Button
                 type="button"
                 variant="outline"
-                onClick={handleSendContract}
+                onClick={() =>
+                  (saveIfDirty ? saveIfDirty(() => handleSendContract()) : Promise.resolve(handleSendContract()))
+                    .catch((e) => {
+                      toast({
+                        title: 'Could not save changes',
+                        description: e instanceof Error ? e.message : 'Please try again.',
+                        variant: 'destructive',
+                      });
+                    })
+                }
               >
                 <Send className="h-4 w-4 mr-2" />
                 Send Contract
@@ -342,7 +369,18 @@ export function FacilityContractSection({
               <Button
                 type="button"
                 variant="outline"
-                onClick={handleMarkAsSignedClick}
+                onClick={() =>
+                  (saveIfDirty
+                    ? saveIfDirty(() => handleMarkAsSignedClick())
+                    : Promise.resolve(handleMarkAsSignedClick())
+                  ).catch((e) => {
+                    toast({
+                      title: 'Could not save changes',
+                      description: e instanceof Error ? e.message : 'Please try again.',
+                      variant: 'destructive',
+                    });
+                  })
+                }
               >
                 <CheckCircle className="h-4 w-4 mr-2" />
                 Mark as Signed
@@ -354,7 +392,18 @@ export function FacilityContractSection({
               <Button
                 type="button"
                 variant="outline"
-                onClick={handleMarkAsSignedClick}
+                onClick={() =>
+                  (saveIfDirty
+                    ? saveIfDirty(() => handleMarkAsSignedClick())
+                    : Promise.resolve(handleMarkAsSignedClick())
+                  ).catch((e) => {
+                    toast({
+                      title: 'Could not save changes',
+                      description: e instanceof Error ? e.message : 'Please try again.',
+                      variant: 'destructive',
+                    });
+                  })
+                }
               >
                 <Upload className="h-4 w-4 mr-2" />
                 Upload Signed PDF

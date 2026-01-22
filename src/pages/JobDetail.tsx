@@ -552,6 +552,10 @@ export default function JobDetail() {
       }
       
       const template = templateData as { subject: string; body: string };
+
+      const timezoneLabel = getTimezoneDisplayName(
+        data.timezone || facility?.timezone || job?.timezone || null
+      );
       
       // Get interpreter info
       const { data: potentialInterpreters, error: interpError } = await supabase
@@ -571,9 +575,11 @@ export default function JobDetail() {
       const templateVariables = {
         interpreter_name: firstInterpreter ? `${firstInterpreter.first_name} ${firstInterpreter.last_name}` : '[Interpreter Name]',
         facility_name: facilityName,
-        job_date: format(new Date(data.job_date), 'MMMM d, yyyy'),
-        start_time: normalizedStartTime,
-        end_time: normalizedEndTime,
+        // Avoid off-by-one day from local timezone when parsing YYYY-MM-DD
+        job_date: format(new Date(`${data.job_date}T00:00:00`), 'MMMM d, yyyy'),
+        start_time: formatTimeForDisplay(normalizedStartTime),
+        // Outreach template doesn't have a timezone placeholder, so append it here.
+        end_time: `${formatTimeForDisplay(normalizedEndTime)} ${timezoneLabel}`,
         location: location,
         rate_info: rateInfo,
       };
@@ -598,7 +604,7 @@ export default function JobDetail() {
     } finally {
       setIsPreparingEmail(false);
     }
-  }, [selectedJobId, facilities, form, toast]);
+  }, [selectedJobId, facilities, job, form, toast]);
 
   const prepareConfirmationEmailPreview = useCallback(async () => {
     if (!selectedJobId) return;
@@ -672,7 +678,8 @@ export default function JobDetail() {
         interpreter_name: `${confirmedInterpreter.first_name} ${confirmedInterpreter.last_name}`,
         job_number: job?.job_number || 'N/A',
         facility_name: facilityName,
-        job_date: format(new Date(data.job_date), 'MMMM d, yyyy'),
+        // Avoid off-by-one day from local timezone when parsing YYYY-MM-DD
+        job_date: format(new Date(`${data.job_date}T00:00:00`), 'MMMM d, yyyy'),
         start_time: formatTimeForDisplay(normalizedStartTime),
         end_time: formatTimeForDisplay(normalizedEndTime),
         timezone: timezoneLabel,

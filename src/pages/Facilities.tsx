@@ -30,6 +30,13 @@ const contractStatusOptions: FilterOption[] = [
   { value: 'signed', label: 'Signed' },
 ];
 
+const dataIssueOptions: FilterOption[] = [
+  { value: 'missing_contact', label: 'No Billing Contact' },
+  { value: 'missing_rates', label: 'Missing Rates' },
+  { value: 'missing_timezone', label: 'No Timezone' },
+  { value: 'any_issue', label: 'Any Issue' },
+];
+
 export default function Facilities() {
   const navigate = useNavigate();
   const [search, setSearch] = useState('');
@@ -38,11 +45,12 @@ export default function Facilities() {
   const [statusFilter, setStatusFilter] = useState('all');
   const [gsaFilter, setGsaFilter] = useState('all');
   const [contractStatusFilter, setContractStatusFilter] = useState('all');
+  const [dataIssueFilter, setDataIssueFilter] = useState('all');
   
   const { sort, handleSort } = useTableSort('name', 'asc');
 
   const { data: facilities, isLoading } = useQuery({
-    queryKey: ['facilities', search, sort, statusFilter, gsaFilter, contractStatusFilter],
+    queryKey: ['facilities', search, sort, statusFilter, gsaFilter, contractStatusFilter, dataIssueFilter],
     queryFn: async () => {
       let query = supabase
         .from('facilities')
@@ -72,10 +80,38 @@ export default function Facilities() {
       if (contractStatusFilter !== 'all') {
         query = query.eq('contract_status', contractStatusFilter);
       }
-
+      
+      // Data issue filters - need to fetch all and filter client-side for complex JSONB conditions
       const { data, error } = await query;
       if (error) throw error;
-      return data as Facility[];
+      
+      let filteredData = data as Facility[];
+      
+      // Apply data issue filters client-side (JSONB array length checks aren't straightforward in PostgREST)
+      if (dataIssueFilter !== 'all') {
+        filteredData = filteredData.filter((facility) => {
+          const hasBillingContacts = Array.isArray(facility.billing_contacts) && facility.billing_contacts.length > 0;
+          const hasBillingContactWithEmail = hasBillingContacts && (facility.billing_contacts as any[]).some(c => c?.email);
+          const hasBusinessRate = facility.rate_business_hours != null;
+          const hasAfterHoursRate = facility.rate_after_hours != null;
+          const hasTimezone = !!facility.timezone;
+          
+          switch (dataIssueFilter) {
+            case 'missing_contact':
+              return !hasBillingContactWithEmail;
+            case 'missing_rates':
+              return !hasBusinessRate || !hasAfterHoursRate;
+            case 'missing_timezone':
+              return !hasTimezone && !facility.contractor; // Only flag non-contractors
+            case 'any_issue':
+              return !hasBillingContactWithEmail || !hasBusinessRate || (!hasTimezone && !facility.contractor);
+            default:
+              return true;
+          }
+        });
+      }
+      
+      return filteredData;
     },
   });
 
@@ -121,6 +157,12 @@ export default function Facilities() {
               options={contractStatusOptions}
               value={contractStatusFilter}
               onValueChange={setContractStatusFilter}
+            />
+            <FilterDropdown
+              label="Issues"
+              options={dataIssueOptions}
+              value={dataIssueFilter}
+              onValueChange={setDataIssueFilter}
             />
           </div>
           <RecordCount count={facilities?.length ?? 0} label="facility" isLoading={isLoading} />

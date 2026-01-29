@@ -31,6 +31,12 @@ const paymentMethodOptions: FilterOption[] = [
   { value: 'check', label: 'Check' },
 ];
 
+const dataIssueOptions: FilterOption[] = [
+  { value: 'missing_email', label: 'Missing Email' },
+  { value: 'missing_rates', label: 'Missing Rates' },
+  { value: 'any_issue', label: 'Any Issue' },
+];
+
 export default function Interpreters() {
   const navigate = useNavigate();
   const [search, setSearch] = useState('');
@@ -39,11 +45,12 @@ export default function Interpreters() {
   const [statusFilter, setStatusFilter] = useState('all');
   const [certificationFilter, setCertificationFilter] = useState('all');
   const [paymentMethodFilter, setPaymentMethodFilter] = useState('all');
+  const [dataIssueFilter, setDataIssueFilter] = useState('all');
   
   const { sort, handleSort } = useTableSort('last_name', 'asc');
 
   const { data: interpreters, isLoading } = useQuery({
-    queryKey: ['interpreters', search, sort, statusFilter, certificationFilter, paymentMethodFilter],
+    queryKey: ['interpreters', search, sort, statusFilter, certificationFilter, paymentMethodFilter, dataIssueFilter],
     queryFn: async () => {
       let query = supabase
         .from('interpreters')
@@ -75,6 +82,15 @@ export default function Interpreters() {
         query = query.eq('rid_certified', true).eq('nic_certified', true);
       } else if (certificationFilter === 'none') {
         query = query.eq('rid_certified', false).eq('nic_certified', false);
+      }
+      
+      // Data issue filters
+      if (dataIssueFilter === 'missing_email') {
+        query = query.or('email.is.null,email.eq.');
+      } else if (dataIssueFilter === 'missing_rates') {
+        query = query.or('rate_business_hours.is.null,rate_after_hours.is.null');
+      } else if (dataIssueFilter === 'any_issue') {
+        query = query.or('email.is.null,email.eq.,rate_business_hours.is.null');
       }
 
       const { data, error } = await query;
@@ -125,6 +141,12 @@ export default function Interpreters() {
               options={paymentMethodOptions}
               value={paymentMethodFilter}
               onValueChange={setPaymentMethodFilter}
+            />
+            <FilterDropdown
+              label="Issues"
+              options={dataIssueOptions}
+              value={dataIssueFilter}
+              onValueChange={setDataIssueFilter}
             />
           </div>
           <RecordCount count={interpreters?.length ?? 0} label="interpreter" isLoading={isLoading} />

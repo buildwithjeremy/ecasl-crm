@@ -15,6 +15,7 @@ import { RecordPageLayout, RecordOption } from '@/components/layout/RecordPageLa
 import { RatesEditDialog, RateField } from '@/components/jobs/RatesEditDialog';
 import { ContactEditDialog, ContactField } from '@/components/jobs/ContactEditDialog';
 import { EmailPreviewDialog, EmailPreviewData } from '@/components/jobs/EmailPreviewDialog';
+import { MissingEmailToast } from '@/components/ui/action-toast';
 import {
   JobCoreFields,
   JobScheduleFields,
@@ -568,7 +569,19 @@ export default function JobDetail() {
         return;
       }
       
-      const interpreterList = potentialInterpreters as { id: string; email: string; first_name: string; last_name: string }[] | null;
+      const interpreterList = potentialInterpreters as { id: string; email: string | null; first_name: string; last_name: string }[] | null;
+      
+      // Validate all interpreters have email addresses
+      const interpretersWithoutEmail = interpreterList?.filter(i => !i.email) || [];
+      if (interpretersWithoutEmail.length > 0) {
+        toast({
+          title: 'Missing Email Addresses',
+          description: <MissingEmailToast interpreters={interpretersWithoutEmail} />,
+          variant: 'destructive',
+          duration: 10000,
+        });
+        return;
+      }
       
       // Use first interpreter for preview template variables
       const firstInterpreter = interpreterList?.[0];
@@ -654,7 +667,18 @@ export default function JobDetail() {
         return;
       }
       
-      const confirmedInterpreter = interpreterInfo as { email: string; first_name: string; last_name: string };
+      const confirmedInterpreter = interpreterInfo as { email: string | null; first_name: string; last_name: string };
+      
+      // Validate interpreter has an email address
+      if (!confirmedInterpreter.email) {
+        toast({
+          title: 'Missing Email Address',
+          description: <MissingEmailToast interpreters={[{ id: interpreterId, first_name: confirmedInterpreter.first_name, last_name: confirmedInterpreter.last_name }]} />,
+          variant: 'destructive',
+          duration: 10000,
+        });
+        return;
+      }
       
       // Get the email template
       const { data: templateData, error: templateError } = await supabase

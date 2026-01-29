@@ -9,6 +9,7 @@ import {
 } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { SortableTableHead, SortDirection } from '@/components/ui/sortable-table-head';
+import { AlertTriangle } from 'lucide-react';
 import type { Database, Json } from '@/integrations/supabase/types';
 import { BillingContact } from '@/components/facilities/fields';
 
@@ -24,6 +25,21 @@ const getPrimaryContact = (billingContacts: Json | null): BillingContact | null 
     return first as unknown as BillingContact;
   }
   return null;
+};
+
+// Check if a facility has data issues that would block workflows
+const hasDataIssues = (facility: Facility): boolean => {
+  const hasBillingContacts = Array.isArray(facility.billing_contacts) && facility.billing_contacts.length > 0;
+  const hasBillingContactWithEmail = hasBillingContacts && (facility.billing_contacts as any[]).some(c => c?.email);
+  const hasBusinessRate = facility.rate_business_hours != null;
+  const hasTimezone = !!facility.timezone;
+  
+  // Contractors don't need timezone (they use their own systems)
+  if (facility.contractor) {
+    return !hasBillingContactWithEmail || !hasBusinessRate;
+  }
+  
+  return !hasBillingContactWithEmail || !hasBusinessRate || !hasTimezone;
 };
 
 interface FacilitiesTableProps {
@@ -76,10 +92,20 @@ export function FacilitiesTable({ facilities, isLoading, sort, onSort }: Facilit
                 className="cursor-pointer hover:bg-muted/50"
                 onClick={() => handleRowClick(facility.id)}
               >
-              <TableCell className="font-medium">{facility.name}</TableCell>
+              <TableCell className="font-medium">
+                <div className="flex items-center gap-2">
+                  {facility.name}
+                  {hasDataIssues(facility) && (
+                    <Badge variant="outline" className="text-amber-600 border-amber-400 text-xs">
+                      <AlertTriangle className="h-3 w-3 mr-1" />
+                      Incomplete
+                    </Badge>
+                  )}
+                </div>
+              </TableCell>
                 <TableCell className="hidden sm:table-cell">
                   <div className="text-sm">
-                    <div>{primaryContact?.name || '-'}</div>
+                    <div>{primaryContact?.name || <span className="text-muted-foreground italic">No contact</span>}</div>
                     <div className="text-muted-foreground">{primaryContact?.email || ''}</div>
                   </div>
                 </TableCell>
@@ -95,7 +121,7 @@ export function FacilitiesTable({ facilities, isLoading, sort, onSort }: Facilit
                   <Badge variant="outline">{facility.contract_status || 'not_sent'}</Badge>
                 </TableCell>
                 <TableCell>
-                  {facility.rate_business_hours ? `$${facility.rate_business_hours}/hr` : '-'}
+                  {facility.rate_business_hours ? `$${facility.rate_business_hours}/hr` : <span className="text-muted-foreground italic">Missing</span>}
                 </TableCell>
               </TableRow>
             );

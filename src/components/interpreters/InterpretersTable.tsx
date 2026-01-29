@@ -8,6 +8,7 @@ import {
 } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { SortableTableHead, SortDirection } from '@/components/ui/sortable-table-head';
+import { AlertTriangle } from 'lucide-react';
 import type { Database } from '@/types/database';
 
 type Interpreter = Database['public']['Tables']['interpreters']['Row'];
@@ -23,6 +24,11 @@ const statusColors: Record<string, 'default' | 'secondary' | 'destructive'> = {
   active: 'default',
   inactive: 'destructive',
   pending: 'secondary',
+};
+
+// Check if an interpreter has data issues that would block workflows
+const hasDataIssues = (interpreter: Interpreter): boolean => {
+  return !interpreter.email || !interpreter.rate_business_hours;
 };
 
 export function InterpretersTable({ interpreters, isLoading, sort, onSort }: InterpretersTableProps) {
@@ -61,9 +67,17 @@ export function InterpretersTable({ interpreters, isLoading, sort, onSort }: Int
               onClick={() => handleRowClick(interpreter.id)}
             >
               <TableCell className="font-medium">
-                {interpreter.first_name} {interpreter.last_name}
+                <div className="flex items-center gap-2">
+                  {interpreter.first_name} {interpreter.last_name}
+                  {hasDataIssues(interpreter) && (
+                    <Badge variant="outline" className="text-amber-600 border-amber-400 text-xs">
+                      <AlertTriangle className="h-3 w-3 mr-1" />
+                      Incomplete
+                    </Badge>
+                  )}
+                </div>
               </TableCell>
-              <TableCell className="hidden sm:table-cell">{interpreter.email}</TableCell>
+              <TableCell className="hidden sm:table-cell">{interpreter.email || <span className="text-muted-foreground italic">Missing</span>}</TableCell>
               <TableCell className="hidden md:table-cell">{interpreter.phone || '-'}</TableCell>
               <TableCell>
                 <Badge variant={statusColors[interpreter.status] || 'secondary'}>
@@ -77,7 +91,7 @@ export function InterpretersTable({ interpreters, isLoading, sort, onSort }: Int
                 </div>
               </TableCell>
               <TableCell>
-                {interpreter.rate_business_hours ? `$${interpreter.rate_business_hours}/hr` : '-'}
+                {interpreter.rate_business_hours ? `$${interpreter.rate_business_hours}/hr` : <span className="text-muted-foreground italic">Missing</span>}
               </TableCell>
             </TableRow>
           ))}

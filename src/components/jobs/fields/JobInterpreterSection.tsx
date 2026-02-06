@@ -18,7 +18,7 @@ import {
   CommandItem,
   CommandList,
 } from '@/components/ui/command';
-import { Check, ChevronsUpDown, Mail } from 'lucide-react';
+import { Check, CheckCircle, ChevronsUpDown, Mail } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { FormMode } from '@/lib/schemas/shared';
 import { InterpreterChip } from '@/components/jobs/fields/InterpreterChip';
@@ -43,10 +43,13 @@ interface JobInterpreterSectionProps {
   interpreters?: InterpreterOption[];
   onSendOutreach?: () => void;
   onConfirmInterpreter?: () => void;
+  onConfirmJob?: () => void;
   isSendingOutreach?: boolean;
   isConfirmingInterpreter?: boolean;
+  isConfirmingJob?: boolean;
   canSendOutreach?: boolean;
   canConfirmInterpreter?: boolean;
+  canConfirmJob?: boolean;
 }
 
 // ==========================================
@@ -60,10 +63,13 @@ export function JobInterpreterSection({
   interpreters: externalInterpreters,
   onSendOutreach,
   onConfirmInterpreter,
+  onConfirmJob,
   isSendingOutreach = false,
   isConfirmingInterpreter = false,
+  isConfirmingJob = false,
   canSendOutreach = false,
   canConfirmInterpreter = false,
+  canConfirmJob = false,
 }: JobInterpreterSectionProps) {
   const [potentialInterpretersOpen, setPotentialInterpretersOpen] = useState(false);
   const [interpreterOpen, setInterpreterOpen] = useState(false);
@@ -262,6 +268,19 @@ export function JobInterpreterSection({
               </PopoverContent>
             </Popover>
 
+            {onConfirmJob && (
+              <Button
+                type="button"
+                variant="default"
+                className="h-10 whitespace-nowrap"
+                disabled={disabled || !canConfirmJob || isConfirmingJob}
+                onClick={onConfirmJob}
+              >
+                <CheckCircle className="mr-2 h-4 w-4" />
+                {isConfirmingJob ? 'Confirming...' : 'Confirm Job'}
+              </Button>
+            )}
+
             {onConfirmInterpreter && (
               <Button
                 type="button"
@@ -271,7 +290,7 @@ export function JobInterpreterSection({
                 onClick={onConfirmInterpreter}
               >
                 <Mail className="mr-2 h-4 w-4" />
-                {isConfirmingInterpreter ? 'Loading...' : 'Confirm Interpreter'}
+                {isConfirmingInterpreter ? 'Loading...' : 'Send Confirmation'}
               </Button>
             )}
           </div>

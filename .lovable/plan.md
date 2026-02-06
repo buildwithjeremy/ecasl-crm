@@ -1,174 +1,75 @@
 
 
-## Plan: Add Data Quality Dashboard Widget
+## Plan: Improve Table Sort Indicators and Default Sort Order
 
 ### Summary
 
-Add a new dashboard section that displays counts of incomplete interpreters and facilities, with clickable cards that navigate directly to the pre-filtered list views.
+Enhance the visual clarity of sorted columns and change the default sort for Jobs to show most recent dates first.
 
 ---
 
-### Implementation Approach
+### Changes
 
-#### Part 1: Update Dashboard with Data Quality Widget
+#### Part 1: Enhanced Visual Indicators for Active Sort Column
 
-**File:** `src/pages/Index.tsx`
+**File:** `src/components/ui/sortable-table-head.tsx`
 
-Add two new queries to count incomplete records, then add a new card section below the existing stats:
+Update the styling to make the active sort column more visually distinct:
 
-**New Queries:**
-
-```typescript
-// Count interpreters with data issues (missing email OR missing business rate)
-const { data: incompleteInterpretersCount } = useQuery({
-  queryKey: ['incomplete-interpreters-count'],
-  queryFn: async () => {
-    const { data, error } = await supabase
-      .from('interpreters')
-      .select('id, email, rate_business_hours');
-    if (error) throw error;
-    // Apply same logic as hasDataIssues in InterpretersTable
-    return data.filter(i => !i.email || !i.rate_business_hours).length;
-  },
-});
-
-// Count facilities with data issues (client-side filter for complex JSONB check)
-const { data: incompleteFacilitiesCount } = useQuery({
-  queryKey: ['incomplete-facilities-count'],
-  queryFn: async () => {
-    const { data, error } = await supabase
-      .from('facilities')
-      .select('id, billing_contacts, rate_business_hours, timezone, contractor');
-    if (error) throw error;
-    return data.filter(f => {
-      const hasBillingContactWithEmail = Array.isArray(f.billing_contacts) && 
-        (f.billing_contacts as any[]).some(c => c?.email);
-      const hasBusinessRate = f.rate_business_hours != null;
-      const hasTimezone = !!f.timezone;
-      if (f.contractor) {
-        return !hasBillingContactWithEmail || !hasBusinessRate;
-      }
-      return !hasBillingContactWithEmail || !hasBusinessRate || !hasTimezone;
-    }).length;
-  },
-});
-```
-
-**New UI Section:**
-
-Add a "Data Quality" section below the main stats with two clickable cards:
+1. **Bold text** for the active column label
+2. **Primary color** for the active sort icon (instead of default gray)
+3. **Subtle background highlight** on the active column header
 
 ```tsx
-{/* Data Quality Section */}
-{(incompleteInterpretersCount > 0 || incompleteFacilitiesCount > 0) && (
-  <div className="space-y-3">
-    <h2 className="text-lg font-semibold text-foreground">Needs Attention</h2>
-    <div className="grid gap-3 sm:gap-4 grid-cols-1 sm:grid-cols-2">
-      <Card 
-        className="cursor-pointer hover:bg-muted/50 transition-colors border-amber-200"
-        onClick={() => navigate('/interpreters?issues=any_issue')}
-      >
-        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-          <CardTitle className="text-sm font-medium">Incomplete Interpreters</CardTitle>
-          <AlertTriangle className="h-4 w-4 text-amber-500" />
-        </CardHeader>
-        <CardContent>
-          <div className="text-2xl font-bold text-amber-600">
-            {incompleteInterpretersCount ?? 0}
-          </div>
-          <p className="text-xs text-muted-foreground">Missing email or rates</p>
-        </CardContent>
-      </Card>
+// Current (subtle)
+<ArrowUp className="h-4 w-4" />
 
-      <Card 
-        className="cursor-pointer hover:bg-muted/50 transition-colors border-amber-200"
-        onClick={() => navigate('/facilities?issues=any_issue')}
-      >
-        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-          <CardTitle className="text-sm font-medium">Incomplete Facilities</CardTitle>
-          <AlertTriangle className="h-4 w-4 text-amber-500" />
-        </CardHeader>
-        <CardContent>
-          <div className="text-2xl font-bold text-amber-600">
-            {incompleteFacilitiesCount ?? 0}
-          </div>
-          <p className="text-xs text-muted-foreground">Missing contact, rates, or timezone</p>
-        </CardContent>
-      </Card>
-    </div>
-  </div>
-)}
+// Updated (more prominent)
+<ArrowUp className="h-4 w-4 text-primary" />
 ```
+
+The full component will apply these styles when `isActive`:
+- Font weight: `font-semibold` on the label text
+- Icon color: `text-primary` (brand color) instead of default
+- Keep the inactive icon dimmed at `opacity-50`
 
 ---
 
-#### Part 2: Enable URL-Based Filter State
+#### Part 2: Change Default Sort for Jobs Page
 
-**File:** `src/pages/Interpreters.tsx`
+**File:** `src/pages/Jobs.tsx`
 
-Read initial filter value from URL search params:
-
-```typescript
-import { useNavigate, useSearchParams } from 'react-router-dom';
-
-export default function Interpreters() {
-  const navigate = useNavigate();
-  const [searchParams] = useSearchParams();
-  
-  // Initialize filter from URL if present
-  const [dataIssueFilter, setDataIssueFilter] = useState(
-    searchParams.get('issues') || 'all'
-  );
-  // ... rest unchanged
-}
-```
-
-**File:** `src/pages/Facilities.tsx`
-
-Same pattern - read initial `issues` param from URL:
+Change the default sort from `job_number` descending to `job_date` descending:
 
 ```typescript
-import { useNavigate, useSearchParams } from 'react-router-dom';
+// Current
+const { sort, handleSort } = useTableSort('job_number', 'desc');
 
-export default function Facilities() {
-  const navigate = useNavigate();
-  const [searchParams] = useSearchParams();
-  
-  const [dataIssueFilter, setDataIssueFilter] = useState(
-    searchParams.get('issues') || 'all'
-  );
-  // ... rest unchanged
-}
+// Updated
+const { sort, handleSort } = useTableSort('job_date', 'desc');
 ```
+
+This ensures when users first load the Jobs page, they see the most recent jobs at the top.
 
 ---
 
 ### Files to Modify
 
-| File | Action | Purpose |
-|------|--------|---------|
-| `src/pages/Index.tsx` | Modify | Add data quality queries and clickable cards |
-| `src/pages/Interpreters.tsx` | Modify | Read initial `issues` filter from URL params |
-| `src/pages/Facilities.tsx` | Modify | Read initial `issues` filter from URL params |
+| File | Change |
+|------|--------|
+| `src/components/ui/sortable-table-head.tsx` | Add stronger visual indicators (bold text, primary color icon) for active sort |
+| `src/pages/Jobs.tsx` | Change default sort to `job_date` descending |
 
 ---
 
-### User Experience Flow
+### Visual Before/After
 
-1. **Dashboard** shows "Needs Attention" section with counts (only if > 0)
-2. User clicks "Incomplete Interpreters" card
-3. Browser navigates to `/interpreters?issues=any_issue`
-4. Interpreters page reads `issues=any_issue` from URL and pre-selects the filter
-5. Table shows only interpreters with data issues
-6. User clicks on a row to edit and fix the record
-7. After saving, user can return to dashboard to see updated counts
+**Before:**
+- Active column: Regular weight text, gray icon
+- Hard to tell at a glance which column is sorted
 
----
-
-### Visual Design
-
-- Cards use amber/warning color scheme to indicate action needed
-- Cards are only shown when there are actually incomplete records (no empty state)
-- Hover effect indicates cards are clickable
-- Uses existing `AlertTriangle` icon for consistency with table badges
+**After:**
+- Active column: **Bold text**, primary-colored ↑/↓ icon
+- Clear visual distinction from inactive columns
+- Inactive columns show dimmed ↕ icon (unchanged)
 

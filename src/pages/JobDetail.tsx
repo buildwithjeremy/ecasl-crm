@@ -337,6 +337,7 @@ export default function JobDetail() {
   
   const selectedInterpreter = interpreters?.find((i) => i.id === watchedInterpreterId);
   const canSendOutreach = watchedPotentialInterpreterIds.length > 0 && watchedStatus === 'new';
+  const canConfirmJob = !!watchedInterpreterId && (watchedStatus === 'outreach_in_progress' || watchedStatus === 'new');
   const canConfirmInterpreter = !!watchedInterpreterId && (watchedStatus === 'outreach_in_progress' || watchedStatus === 'new');
   const canGenerateBilling = watchedStatus === 'complete' && !!watchedInterpreterId && !jobInvoice && !jobBill;
 
@@ -1209,6 +1210,137 @@ export default function JobDetail() {
     },
   });
 
+  // Confirm job without sending email
+  const confirmJobMutation = useMutation({
+    mutationFn: async () => {
+      if (!selectedJobId) throw new Error('No job selected');
+      
+      const data = form.getValues();
+      const interpreterId = data.interpreter_id;
+      
+      if (!interpreterId) throw new Error('No interpreter selected');
+      
+      // Normalize and validate times before saving
+      const normalizedStartTime = normalizeTimeToHHMM(data.start_time);
+      const normalizedEndTime = normalizeTimeToHHMM(data.end_time);
+      
+      if (!normalizedStartTime || !normalizedEndTime) {
+        throw new Error('Invalid start or end time. Please select valid times.');
+      }
+      
+      // Get interpreter info for success message
+      const { data: interpreterInfo } = await supabase
+        .from('interpreters')
+        .select('first_name, last_name')
+        .eq('id', interpreterId)
+        .single();
+      
+      const confirmedInterpreter = interpreterInfo as { first_name: string; last_name: string } | null;
+      const interpreterName = confirmedInterpreter 
+        ? `${confirmedInterpreter.first_name} ${confirmedInterpreter.last_name}`
+        : 'Interpreter';
+      
+      // Sanitize opportunity_source
+      const opportunitySource = (data.opportunity_source as unknown) === '__none__' || !data.opportunity_source
+        ? null 
+        : data.opportunity_source;
+      
+      const interpreter = interpreters?.find((i) => i.id === interpreterId);
+      const interpreterMinHours = interpreter?.minimum_hours ?? 2;
+      const facilityMinHours = selectedFacility?.minimum_billable_hours ?? 2;
+      const effectiveMinHours = Math.max(interpreterMinHours, facilityMinHours);
+      
+      let newBillableHours = data.billable_hours ?? 0;
+      if (hoursSplit) {
+        newBillableHours = Math.max(hoursSplit.totalHours, effectiveMinHours);
+      }
+      
+      const totals = buildTotalsPayload(data, hoursSplit, job);
+      
+      const payload: Record<string, unknown> = {
+        facility_id: data.facility_id,
+        interpreter_id: interpreterId,
+        deaf_client_name: data.deaf_client_name || null,
+        job_date: data.job_date,
+        start_time: normalizedStartTime,
+        end_time: normalizedEndTime,
+        location_type: data.location_type,
+        location_address: data.location_address || null,
+        location_city: data.location_city || null,
+        location_state: data.location_state || null,
+        location_zip: data.location_zip || null,
+        timezone: data.timezone || null,
+        video_call_link: data.video_call_link || null,
+        status: 'confirmed',
+        opportunity_source: opportunitySource,
+        billable_hours: newBillableHours,
+        mileage: data.mileage ?? null,
+        parking: data.parking ?? null,
+        tolls: data.tolls ?? null,
+        misc_fee: data.misc_fee ?? null,
+        travel_time_hours: data.travel_time_hours ?? null,
+        facility_rate_business: data.facility_rate_business ?? null,
+        facility_rate_after_hours: data.facility_rate_after_hours ?? null,
+        facility_rate_holiday: data.facility_rate_holiday ?? null,
+        facility_rate_mileage: !data.facility_rate_mileage || data.facility_rate_mileage === 0 ? null : data.facility_rate_mileage,
+        facility_rate_adjustment: data.facility_rate_adjustment ?? 0,
+        interpreter_rate_business: data.interpreter_rate_business ?? null,
+        interpreter_rate_after_hours: data.interpreter_rate_after_hours ?? null,
+        interpreter_rate_holiday: data.interpreter_rate_holiday ?? null,
+        interpreter_rate_mileage: !data.interpreter_rate_mileage || data.interpreter_rate_mileage === 0 ? null : data.interpreter_rate_mileage,
+        interpreter_rate_adjustment: data.interpreter_rate_adjustment ?? 0,
+        emergency_fee_applied: data.emergency_fee_applied || false,
+        holiday_fee_applied: data.holiday_fee_applied || false,
+        internal_notes: data.internal_notes || null,
+        client_business_name: data.client_business_name || null,
+        client_contact_name: data.client_contact_name || null,
+        client_contact_phone: data.client_contact_phone || null,
+        client_contact_email: data.client_contact_email || null,
+        potential_interpreter_ids: data.potential_interpreter_ids || [],
+        ...totals,
+      };
+      
+      const { data: savedJob, error } = await supabase
+        .from('jobs')
+        .update(payload as never)
+        .eq('id', selectedJobId)
+        .select('*')
+        .single();
+      if (error) throw error;
+      
+      return { savedJob: savedJob as Job, interpreterName };
+    },
+    onSuccess: ({ savedJob, interpreterName }) => {
+      queryClient.invalidateQueries({ queryKey: ['job', selectedJobId] });
+      queryClient.invalidateQueries({ queryKey: ['jobs'] });
+      queryClient.invalidateQueries({ queryKey: ['jobs-list'] });
+      if (savedJob) {
+        form.reset(jobToFormValues(savedJob, defaultMileageRate), { keepDefaultValues: false });
+      }
+      toast({
+        title: 'Job Confirmed',
+        description: `${interpreterName} assigned. Status updated to Confirmed.`,
+      });
+    },
+    onError: (error: Error) => {
+      toast({ title: 'Error', description: error.message, variant: 'destructive' });
+    },
+  });
+
+  const handleConfirmJob = useCallback(() => {
+    saveJob
+      .run(async () => {
+        await confirmJobMutation.mutateAsync();
+      })
+      .catch((e) => {
+        toast({
+          title: 'Could not confirm job',
+          description: e instanceof Error ? e.message : 'Please try again.',
+          variant: 'destructive',
+        });
+      });
+  }, [saveJob, confirmJobMutation, toast]);
+
   const handleConfirmSendEmail = useCallback(() => {
     if (!emailPreviewData) return;
 
@@ -1469,10 +1601,13 @@ export default function JobDetail() {
               interpreters={interpreters}
               onSendOutreach={prepareOutreachEmailPreview}
               onConfirmInterpreter={prepareConfirmationEmailPreview}
+              onConfirmJob={handleConfirmJob}
               isSendingOutreach={isPreparingEmail || sendOutreachMutation.isPending}
               isConfirmingInterpreter={isPreparingEmail || confirmInterpreterMutation.isPending}
+              isConfirmingJob={confirmJobMutation.isPending}
               canSendOutreach={canSendOutreach}
               canConfirmInterpreter={canConfirmInterpreter}
+              canConfirmJob={canConfirmJob}
             />
 
             <JobBillingFields

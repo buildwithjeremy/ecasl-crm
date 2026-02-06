@@ -13,6 +13,7 @@ import {
   subMonths,
   addWeeks,
   subWeeks,
+  parse,
 } from 'date-fns';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
@@ -61,94 +62,25 @@ const statusColors: Record<string, string> = {
   cancelled: 'bg-destructive/20 text-destructive border-destructive/30',
 };
 
-function getTimeZoneOffsetMs(date: Date, timeZone: string): number {
-  const dtf = new Intl.DateTimeFormat('en-US', {
-    timeZone,
-    hour12: false,
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
-    hour: '2-digit',
-    minute: '2-digit',
-    second: '2-digit',
-  });
-
-  const parts = dtf.formatToParts(date);
-  const map: Record<string, string> = {};
-  for (const p of parts) {
-    if (p.type !== 'literal') map[p.type] = p.value;
+// Format time string (HH:mm) to readable format (h:mm AM/PM)
+function formatTimeDisplay(timeStr: string): string {
+  if (!timeStr) return '';
+  try {
+    const [hours, minutes] = timeStr.split(':').map(Number);
+    const period = hours >= 12 ? 'PM' : 'AM';
+    const displayHours = hours % 12 || 12;
+    return `${displayHours}:${String(minutes).padStart(2, '0')} ${period}`;
+  } catch {
+    return timeStr;
   }
-
-  const asUtc = Date.UTC(
-    Number(map.year),
-    Number(map.month) - 1,
-    Number(map.day),
-    Number(map.hour),
-    Number(map.minute),
-    Number(map.second)
-  );
-  return asUtc - date.getTime();
 }
 
-function zonedLocalDateTimeToUtc(dateStr: string, timeStr: string, timeZone: string): Date {
-  const [y, m, d] = dateStr.split('-').map(Number);
-  const [hh = '0', mm = '0', ss = '0'] = timeStr.split(':');
-  const naiveUtc = new Date(Date.UTC(y, m - 1, d, Number(hh), Number(mm), Number(ss)));
-
-  const offset1 = getTimeZoneOffsetMs(naiveUtc, timeZone);
-  const adjusted1 = new Date(naiveUtc.getTime() - offset1);
-  const offset2 = getTimeZoneOffsetMs(adjusted1, timeZone);
-  return new Date(naiveUtc.getTime() - offset2);
-}
-
-function formatTimeInZone(date: Date, timeZone: string): string {
-  return new Intl.DateTimeFormat('en-US', {
-    timeZone,
-    hour: 'numeric',
-    minute: '2-digit',
-    hour12: true,
-  }).format(date);
-}
-
-function formatDateKeyInZone(date: Date, timeZone: string): string {
-  const parts = new Intl.DateTimeFormat('en-CA', {
-    timeZone,
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
-  }).formatToParts(date);
-
-  const map: Record<string, string> = {};
-  for (const p of parts) {
-    if (p.type !== 'literal') map[p.type] = p.value;
-  }
-  return `${map.year}-${map.month}-${map.day}`;
-}
-
-function formatDayNumberInZone(date: Date, timeZone: string): string {
-  return new Intl.DateTimeFormat('en-US', {
-    timeZone,
-    day: 'numeric',
-  }).format(date);
-}
-
-function formatMonthYearInZone(date: Date, timeZone: string): string {
-  return new Intl.DateTimeFormat('en-US', {
-    timeZone,
-    month: 'long',
-    year: 'numeric',
-  }).format(date);
-}
-
-function formatWeekOfInZone(date: Date, timeZone: string): string {
-  // Use the week start computed in local time, but label it in the selected timezone.
-  const weekStart = startOfWeek(date);
-  return new Intl.DateTimeFormat('en-US', {
-    timeZone,
-    month: 'short',
-    day: 'numeric',
-    year: 'numeric',
-  }).format(weekStart);
+// Format date to YYYY-MM-DD using local date components (avoids timezone issues)
+function formatDateKey(date: Date): string {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
 }
 
 export function JobsCalendar({ jobs, isLoading }: JobsCalendarProps) {
@@ -172,41 +104,23 @@ export function JobsCalendar({ jobs, isLoading }: JobsCalendarProps) {
   }, [currentDate, view]);
 
   const jobsByDate = useMemo(() => {
-    type CalendarJob = Job & {
-      _calendarStart: Date;
-      _calendarEnd: Date;
-      _calendarDateKey: string;
-      _startLabel: string;
-      _endLabel: string;
-    };
-
-    const map = new Map<string, CalendarJob[]>();
+    const map = new Map<string, Job[]>();
 
     for (const job of jobs) {
-      const sourceTz = job.timezone || calendarTimezone;
-      const startUtc = zonedLocalDateTimeToUtc(job.job_date, job.start_time, sourceTz);
-      const endUtc = zonedLocalDateTimeToUtc(job.job_date, job.end_time, sourceTz);
-
-      const dateKey = formatDateKeyInZone(startUtc, calendarTimezone);
-      const calendarJob: CalendarJob = {
-        ...job,
-        _calendarStart: startUtc,
-        _calendarEnd: endUtc,
-        _calendarDateKey: dateKey,
-        _startLabel: formatTimeInZone(startUtc, calendarTimezone),
-        _endLabel: formatTimeInZone(endUtc, calendarTimezone),
-      };
-
+      // Use job_date directly as the dateKey - no timezone conversion needed
+      const dateKey = job.job_date;
+      
       if (!map.has(dateKey)) map.set(dateKey, []);
-      map.get(dateKey)!.push(calendarJob);
+      map.get(dateKey)!.push(job);
     }
 
+    // Sort jobs by start_time within each day
     map.forEach((dayJobs) => {
-      dayJobs.sort((a, b) => a._calendarStart.getTime() - b._calendarStart.getTime());
+      dayJobs.sort((a, b) => a.start_time.localeCompare(b.start_time));
     });
 
     return map;
-  }, [jobs, calendarTimezone]);
+  }, [jobs]);
 
   const navigatePrev = () => {
     if (view === 'month') {
@@ -249,9 +163,7 @@ export function JobsCalendar({ jobs, isLoading }: JobsCalendarProps) {
         <div className="flex items-center gap-2">
           <CalendarIcon className="h-5 w-5 text-muted-foreground" />
           <h2 className="text-lg font-semibold">
-            {view === 'month'
-              ? formatMonthYearInZone(currentDate, calendarTimezone)
-              : `Week of ${formatWeekOfInZone(currentDate, calendarTimezone)}`}
+            {format(currentDate, view === 'month' ? 'MMMM yyyy' : "'Week of' MMM d, yyyy")}
           </h2>
         </div>
         <div className="flex items-center gap-2">
@@ -316,9 +228,8 @@ export function JobsCalendar({ jobs, isLoading }: JobsCalendarProps) {
         {/* Calendar Days */}
         <div className="grid grid-cols-7 gap-1">
           {calendarDays.map((day) => {
-            // Use noon to avoid off-by-one when converting across timezones
-            const safeDay = new Date(day.getFullYear(), day.getMonth(), day.getDate(), 12, 0, 0);
-            const dateKey = formatDateKeyInZone(safeDay, calendarTimezone);
+            // Use local date components directly to avoid timezone shift issues
+            const dateKey = formatDateKey(day);
             const dayJobs = jobsByDate.get(dateKey) || [];
             const isToday = isSameDay(day, new Date());
             const isCurrentMonth = isSameMonth(day, currentDate);
@@ -342,63 +253,64 @@ export function JobsCalendar({ jobs, isLoading }: JobsCalendarProps) {
                     !isCurrentMonth && view === 'month' && 'text-muted-foreground/50'
                   )}
                 >
-                  {formatDayNumberInZone(safeDay, calendarTimezone)}
+                  {day.getDate()}
                 </div>
 
                 {/* Jobs */}
                 <div className="space-y-0.5">
                   <TooltipProvider>
-                    {dayJobs.slice(0, maxJobsToShow).map((job) => (
-                      <Tooltip key={job.id}>
-                        <TooltipTrigger asChild>
-                          <button
-                            onClick={() => handleJobClick(job.id)}
-                            className={cn(
-                              'w-full text-left text-xs p-1 rounded border truncate hover:opacity-80 transition-opacity',
-                              statusColors[job.status || 'new']
-                            )}
-                          >
-                            <span className="font-medium">
-                              {(job as any)._startLabel || job.start_time}
-                            </span>
-                            {' - '}
-                            {job.deaf_client_name || job.job_number || 'Job'}
-                          </button>
-                        </TooltipTrigger>
-                        <TooltipContent side="right" className="max-w-xs">
-                          <div className="space-y-1">
-                            <p className="font-semibold">
-                              {(job as any)._startLabel && (job as any)._endLabel
-                                ? `${(job as any)._startLabel} - ${(job as any)._endLabel}`
-                                : `${job.start_time} - ${job.end_time}`}
-                            </p>
-                            {job.facility?.name && (
-                              <p className="text-sm">
-                                <span className="text-muted-foreground">Facility:</span> {job.facility.name}
-                              </p>
-                            )}
-                            {job.interpreter && (
-                              <p className="text-sm">
-                                <span className="text-muted-foreground">Interpreter:</span> {job.interpreter.first_name} {job.interpreter.last_name}
-                              </p>
-                            )}
-                            {job.deaf_client_name && (
-                              <p className="text-sm">
-                                <span className="text-muted-foreground">Client:</span> {job.deaf_client_name}
-                              </p>
-                            )}
-                            <div className="flex items-center gap-2 pt-1">
-                              <Badge variant="outline" className="text-xs">
-                                {job.status?.replace(/_/g, ' ') || 'new'}
-                              </Badge>
-                              {job.job_number && (
-                                <span className="text-xs text-muted-foreground">#{job.job_number}</span>
+                    {dayJobs.slice(0, maxJobsToShow).map((job) => {
+                      const startLabel = formatTimeDisplay(job.start_time);
+                      const endLabel = formatTimeDisplay(job.end_time);
+                      
+                      return (
+                        <Tooltip key={job.id}>
+                          <TooltipTrigger asChild>
+                            <button
+                              onClick={() => handleJobClick(job.id)}
+                              className={cn(
+                                'w-full text-left text-xs p-1 rounded border truncate hover:opacity-80 transition-opacity',
+                                statusColors[job.status || 'new']
                               )}
+                            >
+                              <span className="font-medium">{startLabel}</span>
+                              {' - '}
+                              {job.deaf_client_name || job.job_number || 'Job'}
+                            </button>
+                          </TooltipTrigger>
+                          <TooltipContent side="right" className="max-w-xs">
+                            <div className="space-y-1">
+                              <p className="font-semibold">
+                                {startLabel} - {endLabel}
+                              </p>
+                              {job.facility?.name && (
+                                <p className="text-sm">
+                                  <span className="text-muted-foreground">Facility:</span> {job.facility.name}
+                                </p>
+                              )}
+                              {job.interpreter && (
+                                <p className="text-sm">
+                                  <span className="text-muted-foreground">Interpreter:</span> {job.interpreter.first_name} {job.interpreter.last_name}
+                                </p>
+                              )}
+                              {job.deaf_client_name && (
+                                <p className="text-sm">
+                                  <span className="text-muted-foreground">Client:</span> {job.deaf_client_name}
+                                </p>
+                              )}
+                              <div className="flex items-center gap-2 pt-1">
+                                <Badge variant="outline" className="text-xs">
+                                  {job.status?.replace(/_/g, ' ') || 'new'}
+                                </Badge>
+                                {job.job_number && (
+                                  <span className="text-xs text-muted-foreground">#{job.job_number}</span>
+                                )}
+                              </div>
                             </div>
-                          </div>
-                        </TooltipContent>
-                      </Tooltip>
-                    ))}
+                          </TooltipContent>
+                        </Tooltip>
+                      );
+                    })}
                   </TooltipProvider>
 
                   {/* More jobs indicator */}

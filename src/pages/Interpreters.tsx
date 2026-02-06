@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
@@ -39,13 +39,14 @@ const dataIssueOptions: FilterOption[] = [
 
 export default function Interpreters() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const [search, setSearch] = useState('');
   
-  // Filters
+  // Filters - initialize dataIssueFilter from URL if present
   const [statusFilter, setStatusFilter] = useState('all');
   const [certificationFilter, setCertificationFilter] = useState('all');
   const [paymentMethodFilter, setPaymentMethodFilter] = useState('all');
-  const [dataIssueFilter, setDataIssueFilter] = useState('all');
+  const [dataIssueFilter, setDataIssueFilter] = useState(searchParams.get('issues') || 'all');
   
   const { sort, handleSort } = useTableSort('last_name', 'asc');
 

@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
@@ -39,13 +39,14 @@ const dataIssueOptions: FilterOption[] = [
 
 export default function Facilities() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const [search, setSearch] = useState('');
   
-  // Filters
+  // Filters - initialize dataIssueFilter from URL if present
   const [statusFilter, setStatusFilter] = useState('all');
   const [gsaFilter, setGsaFilter] = useState('all');
   const [contractStatusFilter, setContractStatusFilter] = useState('all');
-  const [dataIssueFilter, setDataIssueFilter] = useState('all');
+  const [dataIssueFilter, setDataIssueFilter] = useState(searchParams.get('issues') || 'all');
   
   const { sort, handleSort } = useTableSort('name', 'asc');
 

@@ -40,7 +40,7 @@ const sourceOptions: FilterOption[] = [
 export default function Jobs() {
   const navigate = useNavigate();
   const [search, setSearch] = useState('');
-  const [viewMode, setViewMode] = useState<'table' | 'calendar'>('table');
+  const [viewMode, setViewMode] = useState<'table' | 'calendar'>('calendar');
   
   // Filters
   const [statusFilter, setStatusFilter] = useState('all');
@@ -60,14 +60,6 @@ export default function Jobs() {
           interpreter:interpreters(first_name, last_name)
         `)
         .order(sort.column, { ascending: sort.direction === 'asc' });
-
-      if (search) {
-        // Split search into words and match each word against searchable fields
-        const searchTerms = search.trim().toLowerCase().split(/\s+/);
-        for (const term of searchTerms) {
-          query = query.or(`job_number.ilike.%${term}%,deaf_client_name.ilike.%${term}%`);
-        }
-      }
       
       if (statusFilter !== 'all') {
         query = query.eq('status', statusFilter);
@@ -83,7 +75,27 @@ export default function Jobs() {
 
       const { data, error } = await query;
       if (error) throw error;
-      return data;
+      
+      const results = data ?? [];
+      
+      // Client-side filtering for search (includes facility/interpreter names from joins)
+      if (search) {
+        const searchLower = search.toLowerCase();
+        return results.filter(job => {
+          const facilityMatch = job.facility?.name?.toLowerCase().includes(searchLower) ?? false;
+          const interpreterMatch = job.interpreter 
+            ? `${job.interpreter.first_name} ${job.interpreter.last_name}`.toLowerCase().includes(searchLower)
+            : false;
+          const jobFieldMatch = 
+            (job.job_number?.toLowerCase().includes(searchLower) ?? false) ||
+            (job.deaf_client_name?.toLowerCase().includes(searchLower) ?? false) ||
+            (job.location_city?.toLowerCase().includes(searchLower) ?? false);
+          
+          return jobFieldMatch || facilityMatch || interpreterMatch;
+        });
+      }
+      
+      return results;
     },
   });
 
@@ -104,7 +116,7 @@ export default function Jobs() {
         <div className="relative w-full sm:max-w-sm">
           <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
           <Input
-            placeholder="Search jobs..."
+            placeholder="Search by city, facility, interpreter..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             className="pl-10 text-base sm:text-sm"

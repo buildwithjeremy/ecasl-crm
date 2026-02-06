@@ -368,28 +368,33 @@ export function JobsCalendar({ jobs, isLoading }: JobsCalendarProps) {
                         <TooltipContent side="right" className="max-w-xs">
                           <div className="space-y-1">
                             <p className="font-semibold">
-                              {job.job_number || 'N/A'}
-                            </p>
-                            <p className="text-sm">
                               {(job as any)._startLabel && (job as any)._endLabel
                                 ? `${(job as any)._startLabel} - ${(job as any)._endLabel}`
                                 : `${job.start_time} - ${job.end_time}`}
                             </p>
-                            {job.deaf_client_name && (
-                              <p className="text-sm">Client: {job.deaf_client_name}</p>
-                            )}
                             {job.facility?.name && (
-                              <p className="text-sm">Facility: {job.facility.name}</p>
+                              <p className="text-sm">
+                                <span className="text-muted-foreground">Facility:</span> {job.facility.name}
+                              </p>
                             )}
                             {job.interpreter && (
                               <p className="text-sm">
-                                Interpreter: {job.interpreter.first_name}{' '}
-                                {job.interpreter.last_name}
+                                <span className="text-muted-foreground">Interpreter:</span> {job.interpreter.first_name} {job.interpreter.last_name}
                               </p>
                             )}
-                            <Badge variant="outline" className="text-xs">
-                              {job.status?.replace(/_/g, ' ') || 'new'}
-                            </Badge>
+                            {job.deaf_client_name && (
+                              <p className="text-sm">
+                                <span className="text-muted-foreground">Client:</span> {job.deaf_client_name}
+                              </p>
+                            )}
+                            <div className="flex items-center gap-2 pt-1">
+                              <Badge variant="outline" className="text-xs">
+                                {job.status?.replace(/_/g, ' ') || 'new'}
+                              </Badge>
+                              {job.job_number && (
+                                <span className="text-xs text-muted-foreground">#{job.job_number}</span>
+                              )}
+                            </div>
                           </div>
                         </TooltipContent>
                       </Tooltip>

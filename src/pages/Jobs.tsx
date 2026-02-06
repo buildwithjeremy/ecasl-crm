@@ -47,7 +47,7 @@ export default function Jobs() {
   const [locationTypeFilter, setLocationTypeFilter] = useState('all');
   const [sourceFilter, setSourceFilter] = useState('all');
   
-  const { sort, handleSort } = useTableSort('job_number', 'desc');
+  const { sort, handleSort } = useTableSort('job_date', 'desc');
 
   const { data: jobs, isLoading } = useQuery({
     queryKey: ['jobs', search, sort, statusFilter, locationTypeFilter, sourceFilter],

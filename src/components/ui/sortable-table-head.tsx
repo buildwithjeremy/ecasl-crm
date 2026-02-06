@@ -28,15 +28,19 @@ export function SortableTableHead({
 
   return (
     <TableHead
-      className={cn('cursor-pointer select-none hover:bg-muted/50', className)}
+      className={cn(
+        'cursor-pointer select-none hover:bg-muted/50',
+        isActive && 'bg-muted/30',
+        className
+      )}
       onClick={handleClick}
     >
       <div className="flex items-center gap-1">
-        <span>{label}</span>
+        <span className={cn(isActive && 'font-semibold')}>{label}</span>
         {direction === 'asc' ? (
-          <ArrowUp className="h-4 w-4" />
+          <ArrowUp className="h-4 w-4 text-primary" />
         ) : direction === 'desc' ? (
-          <ArrowDown className="h-4 w-4" />
+          <ArrowDown className="h-4 w-4 text-primary" />
         ) : (
           <ArrowUpDown className="h-4 w-4 opacity-50" />
         )}

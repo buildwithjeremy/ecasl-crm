@@ -415,17 +415,34 @@ Deno.serve(async (req) => {
     // Generate PDF
     const pdfBuffer = generatePdf(invoiceData);
     
-    // Create filename with timestamp to avoid browser/storage caching
-    const timestamp = new Date().toISOString().replace(/[:.]/g, "-");
-    const fileName = `${invoice.invoice_number}/invoice_${timestamp}.pdf`;
+    // Stable filename — regenerating overwrites the previous PDF
+    const fileName = `${invoice.invoice_number}/invoice.pdf`;
 
-    // Upload to Supabase Storage
+    // Cleanup old timestamped files (orphans from previous logic)
+    try {
+      const { data: existingFiles } = await supabase.storage
+        .from('invoices')
+        .list(invoice.invoice_number);
+      if (existingFiles && existingFiles.length > 0) {
+        const oldFiles = existingFiles
+          .filter((f: { name: string }) => f.name !== 'invoice.pdf')
+          .map((f: { name: string }) => `${invoice.invoice_number}/${f.name}`);
+        if (oldFiles.length > 0) {
+          await supabase.storage.from('invoices').remove(oldFiles);
+          console.log('Cleaned up', oldFiles.length, 'old PDF files');
+        }
+      }
+    } catch (cleanupErr) {
+      console.warn('Cleanup of old files failed (non-fatal):', cleanupErr);
+    }
+
+    // Upload to Supabase Storage (upsert to overwrite existing)
     const { error: uploadError } = await supabase.storage
       .from('invoices')
       .upload(fileName, pdfBuffer, {
         contentType: 'application/pdf',
         cacheControl: 'no-cache',
-        upsert: false
+        upsert: true
       });
 
     if (uploadError) {

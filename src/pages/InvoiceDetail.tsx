@@ -634,18 +634,23 @@ export default function InvoiceDetail() {
                   </Badge>
                 </div>
                 <div className="flex items-center gap-2">
-                  {invoice.status === 'draft' && (
+                  {invoice.status === 'draft' && job && (
                     <Button
                       type="button"
                       variant="outline"
                       onClick={handleGeneratePdf}
-                      disabled={isGeneratingPdf || !job}
+                      disabled={isGeneratingPdf}
                       size="sm"
                     >
                       {isGeneratingPdf ? (
                         <>
                           <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                           Generating...
+                        </>
+                      ) : invoice.pdf_url ? (
+                        <>
+                          <RefreshCw className="mr-2 h-4 w-4" />
+                          Regenerate PDF
                         </>
                       ) : (
                         <>
@@ -751,40 +756,25 @@ export default function InvoiceDetail() {
                             </p>
                             <p className="text-xs text-muted-foreground">Ready to view or send</p>
                           </div>
-                          <div className="flex items-center gap-2">
-                            <Button
-                              type="button"
-                              variant="outline"
-                              size="sm"
-                              onClick={async () => {
-                                if (!invoice.pdf_url) return;
-                                if (!isStoragePath(invoice.pdf_url)) {
-                                  window.open(invoice.pdf_url, '_blank');
-                                  return;
-                                }
-                                const { data } = await supabase.storage
-                                  .from('invoices')
-                                  .createSignedUrl(invoice.pdf_url, 60);
-                                if (data?.signedUrl) window.open(data.signedUrl, '_blank');
-                              }}
-                            >
-                              <ExternalLink className="mr-2 h-4 w-4" />
-                              View PDF
-                            </Button>
-                            <Button
-                              type="button"
-                              variant="ghost"
-                              size="sm"
-                              onClick={handleGeneratePdf}
-                              disabled={isGeneratingPdf || !job}
-                            >
-                              {isGeneratingPdf ? (
-                                <Loader2 className="h-4 w-4 animate-spin" />
-                              ) : (
-                                <RefreshCw className="h-4 w-4" />
-                              )}
-                            </Button>
-                          </div>
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            onClick={async () => {
+                              if (!invoice.pdf_url) return;
+                              if (!isStoragePath(invoice.pdf_url)) {
+                                window.open(invoice.pdf_url, '_blank');
+                                return;
+                              }
+                              const { data } = await supabase.storage
+                                .from('invoices')
+                                .createSignedUrl(invoice.pdf_url, 60);
+                              if (data?.signedUrl) window.open(data.signedUrl, '_blank');
+                            }}
+                          >
+                            <ExternalLink className="mr-2 h-4 w-4" />
+                            View PDF
+                          </Button>
                         </div>
                       ) : (
                         <div className="mt-2 flex items-center gap-4 rounded-lg border border-dashed bg-muted/20 p-4">
@@ -793,26 +783,8 @@ export default function InvoiceDetail() {
                           </div>
                           <div className="flex-1">
                             <p className="text-sm text-muted-foreground">No PDF generated yet</p>
+                            <p className="text-xs text-muted-foreground">Use the Generate PDF button above to create one.</p>
                           </div>
-                          <Button
-                            type="button"
-                            variant="outline"
-                            size="sm"
-                            onClick={handleGeneratePdf}
-                            disabled={isGeneratingPdf || !job}
-                          >
-                            {isGeneratingPdf ? (
-                              <>
-                                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                                Generating...
-                              </>
-                            ) : (
-                              <>
-                                <FileText className="mr-2 h-4 w-4" />
-                                Generate PDF
-                              </>
-                            )}
-                          </Button>
                         </div>
                       )}
                     </div>

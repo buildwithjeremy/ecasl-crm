@@ -466,10 +466,10 @@ Deno.serve(async (req) => {
       );
     }
 
-    // Update invoice with storage path (not public URL since bucket is now private)
+    // Update invoice with storage path and calculated total
     await supabase
       .from('invoices')
-      .update({ pdf_url: fileName })
+      .update({ pdf_url: fileName, total: total, subtotal: total })
       .eq('id', invoiceId);
 
     console.log('PDF generated successfully');

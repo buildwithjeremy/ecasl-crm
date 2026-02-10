@@ -1626,6 +1626,7 @@ export default function JobDetail() {
               isGeneratingBilling={generateBillingMutation.isPending}
               canGenerateBilling={canGenerateBilling}
               selectedInterpreterName={selectedInterpreter ? `${selectedInterpreter.first_name} ${selectedInterpreter.last_name}` : undefined}
+              facilityName={selectedFacility?.name}
               hasInterpreter={!!watchedInterpreterId}
               facilityEmergencyFee={selectedFacility?.emergency_fee}
             />

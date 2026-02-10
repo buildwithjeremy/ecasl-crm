@@ -116,6 +116,7 @@ interface JobBillingFieldsProps {
   isGeneratingBilling?: boolean;
   canGenerateBilling?: boolean;
   selectedInterpreterName?: string;
+  facilityName?: string;
   hasInterpreter?: boolean;
   facilityEmergencyFee?: number | null;
 }
@@ -138,6 +139,7 @@ export function JobBillingFields({
   isGeneratingBilling = false,
   canGenerateBilling = false,
   selectedInterpreterName,
+  facilityName,
   hasInterpreter = false,
   facilityEmergencyFee,
 }: JobBillingFieldsProps) {
@@ -273,8 +275,16 @@ export function JobBillingFields({
                 <AlertDialogContent>
                   <AlertDialogHeader>
                     <AlertDialogTitle>Generate Invoice & Interpreter Bill?</AlertDialogTitle>
-                    <AlertDialogDescription>
-                      This will create a new invoice for the facility and a new bill for {selectedInterpreterName || 'the interpreter'}. The job status will be changed to "Ready to Bill".
+                    <AlertDialogDescription asChild>
+                      <div className="text-sm text-muted-foreground">
+                        <p>This will create the following records:</p>
+                        <ul className="list-disc list-inside mt-2 space-y-1">
+                          <li>A new <strong>invoice</strong> for <span className="font-semibold text-primary">{facilityName || 'the facility'}</span></li>
+                          <li>A new <strong>bill</strong> for <span className="font-semibold text-primary">{selectedInterpreterName || 'the interpreter'}</span></li>
+                        </ul>
+                        <p className="mt-3">The job status will be changed to "Ready to Bill".</p>
+                        <p className="mt-2 text-xs text-muted-foreground italic">No emails will be sent — this only creates records in Invoices and Payables.</p>
+                      </div>
                     </AlertDialogDescription>
                   </AlertDialogHeader>
                   <AlertDialogFooter>

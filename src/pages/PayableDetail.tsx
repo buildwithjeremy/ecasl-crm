@@ -183,12 +183,17 @@ export default function PayableDetail() {
   const mutation = useMutation({
     mutationFn: async (data: FormData) => {
       if (!selectedPayableId) return;
+      // If paid_date is cleared on a paid bill, revert status to queued
+      const updateData: Record<string, unknown> = {
+        paid_date: data.paid_date || null,
+        notes: data.notes || null,
+      };
+      if (!data.paid_date && payable?.status === 'paid') {
+        updateData.status = 'queued';
+      }
       const { error } = await supabase
         .from('interpreter_bills')
-        .update({
-          paid_date: data.paid_date || null,
-          notes: data.notes || null,
-        } as never)
+        .update(updateData as never)
         .eq('id', selectedPayableId);
       if (error) throw error;
     },
@@ -532,19 +537,24 @@ export default function PayableDetail() {
               <Form {...form}>
                 <form id="payable-detail-form" onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <FormField
-                      control={form.control}
-                      name="paid_date"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Paid Date</FormLabel>
-                          <FormControl>
-                            <Input type="date" {...field} />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
+                    {payable.status === 'paid' && (
+                      <div className="md:col-span-2 bg-muted/50 rounded-lg p-4">
+                        <FormField
+                          control={form.control}
+                          name="paid_date"
+                          render={({ field }) => (
+                            <FormItem className="max-w-xs">
+                              <FormLabel>Paid Date</FormLabel>
+                              <FormControl>
+                                <Input type="date" {...field} />
+                              </FormControl>
+                              <FormMessage />
+                              <p className="text-xs text-muted-foreground">Clear to revert to Payment Pending.</p>
+                            </FormItem>
+                          )}
+                        />
+                      </div>
+                    )}
 
                     <FormField
                       control={form.control}

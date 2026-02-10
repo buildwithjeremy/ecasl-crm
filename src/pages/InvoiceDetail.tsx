@@ -236,7 +236,7 @@ export default function InvoiceDetail() {
       // Generate signed URL for storage path
       const { data, error } = await supabase.storage
         .from('invoices')
-        .createSignedUrl(invoice.pdf_url, 3600); // 1 hour expiry
+        .createSignedUrl(invoice.pdf_url, 31536000); // 1 year expiry
 
       if (error) {
         console.error('Error generating signed URL for invoice PDF:', error);
@@ -768,7 +768,7 @@ export default function InvoiceDetail() {
                               }
                               const { data } = await supabase.storage
                                 .from('invoices')
-                                .createSignedUrl(invoice.pdf_url, 60);
+                                .createSignedUrl(invoice.pdf_url, 31536000);
                               if (data?.signedUrl) window.open(data.signedUrl, '_blank');
                             }}
                           >

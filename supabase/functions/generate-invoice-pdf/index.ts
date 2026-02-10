@@ -453,10 +453,10 @@ Deno.serve(async (req) => {
       );
     }
 
-    // Generate signed URL for private bucket (1 hour expiry)
+    // Generate signed URL for private bucket (1 year expiry)
     const { data: signedUrlData, error: signedUrlError } = await supabase.storage
       .from('invoices')
-      .createSignedUrl(fileName, 3600);
+      .createSignedUrl(fileName, 31536000);
 
     if (signedUrlError || !signedUrlData) {
       console.error('Error creating signed URL:', signedUrlError);

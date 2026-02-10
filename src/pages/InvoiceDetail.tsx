@@ -50,7 +50,7 @@ import {
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
 import { useToast } from '@/hooks/use-toast';
-import { Check, ChevronsUpDown, ArrowLeft, FileText, Loader2, Trash2, Send, DollarSign } from 'lucide-react';
+import { Check, ChevronsUpDown, ArrowLeft, FileText, Loader2, Trash2, Send, DollarSign, ExternalLink, RefreshCw } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Badge } from '@/components/ui/badge';
 import { SendInvoiceDialog } from '@/components/invoices/SendInvoiceDialog';
@@ -738,19 +738,82 @@ export default function InvoiceDetail() {
                       )}
                     />
 
-                    <div className="md:col-span-2 space-y-2">
-                      <FormLabel>Invoice PDF URL</FormLabel>
-                      {pdfUrl ? (
-                        <a
-                          href={pdfUrl}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="block text-sm text-primary underline hover:text-primary/80 truncate"
-                        >
-                          {pdfUrl}
-                        </a>
+                    <div className="md:col-span-3">
+                      <FormLabel>Invoice PDF</FormLabel>
+                      {invoice.pdf_url ? (
+                        <div className="mt-2 flex items-center gap-4 rounded-lg border bg-muted/30 p-4">
+                          <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-lg bg-destructive/10">
+                            <FileText className="h-6 w-6 text-destructive" />
+                          </div>
+                          <div className="min-w-0 flex-1">
+                            <p className="text-sm font-medium truncate">
+                              Invoice_{invoice.invoice_number}.pdf
+                            </p>
+                            <p className="text-xs text-muted-foreground">Ready to view or send</p>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <Button
+                              type="button"
+                              variant="outline"
+                              size="sm"
+                              onClick={async () => {
+                                if (!invoice.pdf_url) return;
+                                if (!isStoragePath(invoice.pdf_url)) {
+                                  window.open(invoice.pdf_url, '_blank');
+                                  return;
+                                }
+                                const { data } = await supabase.storage
+                                  .from('invoices')
+                                  .createSignedUrl(invoice.pdf_url, 60);
+                                if (data?.signedUrl) window.open(data.signedUrl, '_blank');
+                              }}
+                            >
+                              <ExternalLink className="mr-2 h-4 w-4" />
+                              View PDF
+                            </Button>
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="sm"
+                              onClick={handleGeneratePdf}
+                              disabled={isGeneratingPdf || !job}
+                            >
+                              {isGeneratingPdf ? (
+                                <Loader2 className="h-4 w-4 animate-spin" />
+                              ) : (
+                                <RefreshCw className="h-4 w-4" />
+                              )}
+                            </Button>
+                          </div>
+                        </div>
                       ) : (
-                        <p className="text-sm text-muted-foreground">No PDF generated yet</p>
+                        <div className="mt-2 flex items-center gap-4 rounded-lg border border-dashed bg-muted/20 p-4">
+                          <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-lg bg-muted">
+                            <FileText className="h-6 w-6 text-muted-foreground" />
+                          </div>
+                          <div className="flex-1">
+                            <p className="text-sm text-muted-foreground">No PDF generated yet</p>
+                          </div>
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            onClick={handleGeneratePdf}
+                            disabled={isGeneratingPdf || !job}
+                          >
+                            {isGeneratingPdf ? (
+                              <>
+                                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                Generating...
+                              </>
+                            ) : (
+                              <>
+                                <FileText className="mr-2 h-4 w-4" />
+                                Generate PDF
+                              </>
+                            )}
+                          </Button>
+                        </div>
                       )}
                     </div>
 

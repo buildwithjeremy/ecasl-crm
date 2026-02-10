@@ -165,17 +165,32 @@ export function FacilityContractSection({
     }
 
     const facilityName = facility.name || 'Facility';
+    const firstName = primaryContact.name.split(' ')[0];
     
-    // Build email content
+    // Build email content with logo, personal tone, and signature
     const subject = `Contract from Effective Communication - ${facilityName}`;
     const body = `
-      <p>Dear ${primaryContact.name},</p>
-      <p>Please find attached the contract for <strong>${facilityName}</strong> from Effective Communication ASL Services.</p>
-      ${contractPdfUrl ? `<p><a href="${contractPdfUrl}">Click here to view and download the contract PDF</a></p>` : ''}
-      <p>Please review the contract at your earliest convenience. If you have any questions or need any modifications, please don't hesitate to reach out.</p>
-      <p>Once reviewed, please sign and return the contract to complete the onboarding process.</p>
-      <p>Thank you for choosing Effective Communication ASL Services.</p>
-      <p>Best regards,<br>Effective Communication ASL Services</p>
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+        <div style="text-align: center; padding: 20px 0 10px;">
+          <img src="https://ecasl-crm.lovable.app/images/ecasl-logo.png" alt="Effective Communication ASL Services" style="max-width: 220px; height: auto;" />
+        </div>
+        <div style="padding: 20px;">
+          <p>Hi ${firstName},</p>
+          <p>I hope this message finds you well! I'm sending over the contract for <strong>${facilityName}</strong> for your review.</p>
+          ${contractPdfUrl ? `<p><a href="${contractPdfUrl}" style="color: #2563eb;">Click here to view and download the contract PDF</a></p>` : ''}
+          <p>Please take a look when you get a chance, and feel free to reach out if you have any questions or need any changes — I'm happy to work through anything with you.</p>
+          <p>Once everything looks good, just sign and return it and we'll be all set!</p>
+          <p>Looking forward to working together.</p>
+          <br/>
+          <p style="margin-bottom: 2px;">Warm regards,</p>
+          <p style="margin: 0; font-weight: bold;">Denise Corino</p>
+          <p style="margin: 0; color: #555;">Effective Communication</p>
+          <p style="margin: 0;"><a href="https://www.ecasl.com" style="color: #2563eb;">www.ecasl.com</a></p>
+          <p style="margin: 0; color: #555;">917-330-0517</p>
+          <p style="margin: 0; color: #555;">admin@ecasl.com</p>
+          <p style="margin: 4px 0 0; font-size: 12px; color: #888;">GSA Schedule Contract 47QRAA25D00AR</p>
+        </div>
+      </div>
     `;
 
     setEmailData({

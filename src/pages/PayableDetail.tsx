@@ -188,7 +188,8 @@ export default function PayableDetail() {
         paid_date: data.paid_date || null,
         notes: data.notes || null,
       };
-      if (!data.paid_date && payable?.status === 'paid') {
+      const revertingFromPaid = !data.paid_date && payable?.status === 'paid';
+      if (revertingFromPaid) {
         updateData.status = 'queued';
       }
       const { error } = await supabase
@@ -196,6 +197,15 @@ export default function PayableDetail() {
         .update(updateData as never)
         .eq('id', selectedPayableId);
       if (error) throw error;
+
+      // If reverting from paid, also revert job status from paid back to billed
+      if (revertingFromPaid && payable?.job_id) {
+        await supabase
+          .from('jobs')
+          .update({ status: 'billed', updated_at: new Date().toISOString() } as never)
+          .eq('id', payable.job_id)
+          .eq('status', 'paid');
+      }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['payable', selectedPayableId] });

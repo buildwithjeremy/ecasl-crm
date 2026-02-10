@@ -1,198 +1,97 @@
 
 
-## Plan: Allow Job Confirmation Without Sending Email
+## Plan: Job Status Progression Indicator
 
 ### Summary
 
-Remove the hard requirement that confirming a job must send an email. Add a separate "Confirm Job" button that sets the status to "confirmed" without sending an email. Keep the email-sending option available for when it's needed.
+Add a horizontal step indicator below the header on the Job Detail page that shows where the job is in its lifecycle. Each step is a labeled dot connected by lines. The current step is highlighted, completed steps are filled, and future steps are dimmed. This gives Denise an at-a-glance view of what's done and what's next.
 
----
+### Visual Design
 
-### Changes
+The progression bar will look like this:
 
-#### Part 1: Add "Confirm Job" Button (No Email)
+```text
+ (*)-----(*)-----(*)-----( )-----( )-----( )-----( )
+ New   Outreach  Confirmed  Complete  Ready to  Billed   Paid
+                                       Bill
+```
 
-**File:** `src/components/jobs/fields/JobInterpreterSection.tsx`
+- Completed steps: filled circle with check, connected by a colored line
+- Current step: filled circle, slightly larger or highlighted with a ring
+- Future steps: empty/dimmed circle, gray connecting line
+- Cancelled: if status is "cancelled", show all steps as dimmed with a "Cancelled" badge overlaid
 
-Add a new button next to "Confirm Interpreter" that confirms the job without sending an email:
+### Status Order
 
-- **"Confirm Job"** - Sets status to confirmed, no email sent
-- **"Send Confirmation"** (renamed from "Confirm Interpreter") - Sends email AND confirms
+The main flow (excluding "cancelled" which is a branch):
+
+1. New
+2. Outreach
+3. Confirmed
+4. Complete
+5. Ready to Bill
+6. Billed
+7. Paid
+
+### Implementation
+
+#### New Component: `src/components/jobs/JobStatusStepper.tsx`
+
+A self-contained component that takes the current status and renders the stepper:
 
 ```tsx
-{/* Confirm Job button (no email) */}
-{onConfirmJob && (
-  <Button
-    type="button"
-    variant="default"
-    className="h-10 whitespace-nowrap"
-    disabled={disabled || !canConfirmJob || isConfirmingJob}
-    onClick={onConfirmJob}
-  >
-    <Check className="mr-2 h-4 w-4" />
-    {isConfirmingJob ? 'Confirming...' : 'Confirm Job'}
-  </Button>
-)}
-
-{/* Send Confirmation button (with email) */}
-{onConfirmInterpreter && (
-  <Button
-    type="button"
-    variant="outline"
-    className="h-10 whitespace-nowrap"
-    disabled={disabled || !canConfirmInterpreter || isConfirmingInterpreter}
-    onClick={onConfirmInterpreter}
-  >
-    <Mail className="mr-2 h-4 w-4" />
-    {isConfirmingInterpreter ? 'Loading...' : 'Send Confirmation'}
-  </Button>
-)}
+interface JobStatusStepperProps {
+  currentStatus: string;
+}
 ```
 
-Add new props to the component:
-- `onConfirmJob` - Callback for confirming without email
-- `isConfirmingJob` - Loading state
-- `canConfirmJob` - Whether button should be enabled (interpreter assigned, status is new or outreach_in_progress)
+The component will:
+- Define the ordered steps array
+- Calculate the current step index
+- Render circles and connecting lines with appropriate styles
+- Handle "cancelled" as a special case (show a cancelled badge, all steps dimmed)
+- Use Tailwind classes for styling (primary color for completed, muted for future)
+- Be responsive: on small screens, show abbreviated labels
 
----
+#### Integration: `src/pages/JobDetail.tsx`
 
-#### Part 2: Add Confirm Job Mutation (No Email)
-
-**File:** `src/pages/JobDetail.tsx`
-
-Add a new mutation that confirms the job without sending an email:
-
-```typescript
-const confirmJobMutation = useMutation({
-  mutationFn: async () => {
-    if (!selectedJobId) throw new Error('No job selected');
-    
-    const data = form.getValues();
-    const interpreterId = data.interpreter_id;
-    
-    if (!interpreterId) throw new Error('No interpreter selected');
-    
-    // Get interpreter info for success message
-    const { data: interpreterInfo } = await supabase
-      .from('interpreters')
-      .select('first_name, last_name')
-      .eq('id', interpreterId)
-      .single();
-    
-    const interpreterName = interpreterInfo 
-      ? `${interpreterInfo.first_name} ${interpreterInfo.last_name}`
-      : 'Interpreter';
-    
-    // Build payload (similar to confirmInterpreterMutation but without email)
-    const payload = {
-      // ... all form fields
-      status: 'confirmed',
-      interpreter_id: interpreterId,
-      // Note: No confirmation_sent_at since no email was sent
-    };
-    
-    const { data: savedJob, error } = await supabase
-      .from('jobs')
-      .update(payload)
-      .eq('id', selectedJobId)
-      .select('*')
-      .single();
-      
-    if (error) throw error;
-    
-    return { savedJob, interpreterName };
-  },
-  onSuccess: ({ savedJob, interpreterName }) => {
-    queryClient.invalidateQueries({ queryKey: ['job', selectedJobId] });
-    queryClient.invalidateQueries({ queryKey: ['jobs'] });
-    queryClient.invalidateQueries({ queryKey: ['jobs-list'] });
-    if (savedJob) {
-      form.reset(jobToFormValues(savedJob), { keepDefaultValues: false });
-    }
-    toast({
-      title: 'Job Confirmed',
-      description: `${interpreterName} assigned. Status updated to Confirmed.`,
-    });
-  },
-  onError: (error: Error) => {
-    toast({ title: 'Error', description: error.message, variant: 'destructive' });
-  },
-});
-```
-
----
-
-#### Part 3: Wire Up the New Button
-
-**File:** `src/pages/JobDetail.tsx`
-
-Pass the new handlers to `JobInterpreterSection`:
+Place the stepper just inside the form, before the first card section:
 
 ```tsx
-// Same condition as canConfirmInterpreter - interpreter assigned, valid status
-const canConfirmJob = !!watchedInterpreterId && 
-  (watchedStatus === 'outreach_in_progress' || watchedStatus === 'new');
+{job && (
+  <Form {...form}>
+    <form id="job-detail-form" onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+      {/* Status progression indicator */}
+      <JobStatusStepper currentStatus={watchedStatus} />
 
-// In component props:
-<JobInterpreterSection
-  // ... existing props
-  onConfirmJob={handleConfirmJob}
-  isConfirmingJob={confirmJobMutation.isPending}
-  canConfirmJob={canConfirmJob}
-  // Rename existing prop for clarity in the code
-  onConfirmInterpreter={prepareConfirmationEmailPreview}
-  canConfirmInterpreter={canConfirmInterpreter}
-/>
+      <JobCoreFields ... />
+      ...
+    </form>
+  </Form>
+)}
 ```
 
-Add a handler that uses save-before-action pattern:
-
-```typescript
-const handleConfirmJob = useCallback(() => {
-  saveJob
-    .run(async () => {
-      await confirmJobMutation.mutateAsync();
-    })
-    .catch((e) => {
-      toast({
-        title: 'Could not confirm job',
-        description: e instanceof Error ? e.message : 'Please try again.',
-        variant: 'destructive',
-      });
-    });
-}, [saveJob, confirmJobMutation, toast]);
-```
+Uses `watchedStatus` (from `form.watch('status')`) so it updates live if the status changes.
 
 ---
 
-### Files to Modify
+### Files to Create/Modify
 
 | File | Change |
 |------|--------|
-| `src/components/jobs/fields/JobInterpreterSection.tsx` | Add "Confirm Job" button, rename email button to "Send Confirmation" |
-| `src/pages/JobDetail.tsx` | Add `confirmJobMutation`, wire up `handleConfirmJob` handler |
+| `src/components/jobs/JobStatusStepper.tsx` | New component - horizontal step indicator |
+| `src/pages/JobDetail.tsx` | Import and render `JobStatusStepper` above the form fields |
 
 ---
 
-### User Experience
+### Technical Details
 
-| Action | What Happens |
-|--------|--------------|
-| **Confirm Job** (new) | Sets status to "confirmed", saves interpreter assignment, no email sent |
-| **Send Confirmation** (renamed) | Opens email preview, sends confirmation email, sets status to "confirmed" |
-
-Both buttons require an interpreter to be selected. The "Confirm Job" button is the primary action (filled style), while "Send Confirmation" is secondary (outline style).
-
----
-
-### Button Layout
-
-The Selected Interpreter section will have two buttons:
-
-```
-[ Selected Interpreter dropdown ] [ Confirm Job ] [ Send Confirmation 📧 ]
-```
-
-- **Confirm Job** - Primary button, confirms without email
-- **Send Confirmation** - Secondary button with mail icon, sends email
+- Steps array: `['new', 'outreach_in_progress', 'confirmed', 'complete', 'ready_to_bill', 'billed', 'paid']`
+- Current index determined by `steps.indexOf(currentStatus)`
+- Steps with index less than current: completed styling (filled circle, colored connector)
+- Step at current index: active styling (ring highlight)
+- Steps with index greater than current: future styling (gray/dimmed)
+- "cancelled" status: render all steps as dimmed, overlay a "Cancelled" badge
+- Uses existing Tailwind color tokens (`bg-primary`, `text-muted-foreground`, etc.) to match the app's theme
+- Responsive: labels stack below dots on all screen sizes; font size reduces on mobile
 

@@ -260,7 +260,8 @@ export default function InvoiceDetail() {
         notes: data.notes || null,
       };
       // If paid_date is cleared on a paid invoice, revert status
-      if (!data.paid_date && invoice?.status === 'paid') {
+      const revertingFromPaid = !data.paid_date && invoice?.status === 'paid';
+      if (revertingFromPaid) {
         updateData.status = invoice?.pdf_url ? 'submitted' : 'draft';
       }
       const { error } = await supabase
@@ -268,6 +269,15 @@ export default function InvoiceDetail() {
         .update(updateData as never)
         .eq('id', selectedInvoiceId);
       if (error) throw error;
+
+      // If reverting from paid, also revert job status from paid back to billed
+      if (revertingFromPaid && invoice?.job_id) {
+        await supabase
+          .from('jobs')
+          .update({ status: 'billed', updated_at: new Date().toISOString() } as never)
+          .eq('id', invoice.job_id)
+          .eq('status', 'paid');
+      }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['invoice', selectedInvoiceId] });

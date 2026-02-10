@@ -120,7 +120,7 @@ const handler = async (req: Request): Promise<Response> => {
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        from: "ECASL <onboarding@resend.dev>", // Update to verified domain when available
+        from: "ECASL <noreply@denise.ecasl.com>",
         to: recipients,
         subject: processedSubject,
         html: processedBody,

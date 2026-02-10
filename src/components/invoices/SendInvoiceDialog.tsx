@@ -146,12 +146,14 @@ ECASL`;
 
   useEffect(() => {
     if (!open) return;
-    // On open, seed selected recipients only if user hasn't changed them.
-    const currentSelected = form.getValues('selectedRecipients');
-    if ((!currentSelected || currentSelected.length === 0) && initialSelectedRecipients.length > 0) {
-      form.setValue('selectedRecipients', initialSelectedRecipients, { shouldDirty: false });
-    }
-  }, [open, form, initialSelectedRecipients]);
+    // On open, reset subject/body to pick up latest total/dueDate and seed recipients.
+    form.reset({
+      selectedRecipients: initialSelectedRecipients,
+      manualRecipients: '',
+      subject: defaultSubject,
+      body: defaultBody,
+    });
+  }, [open]);
 
   const handleSend = async (data: FormData) => {
     if (!pdfStoragePath) {

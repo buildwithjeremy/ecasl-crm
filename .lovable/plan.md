@@ -1,42 +1,52 @@
 
 
-## Fix PDF URL & Improve Invoice PDF Display
+## Fix PDF URL & Simplify Generate/Regenerate UX
 
 ### Problem
-1. The PDF signed URL works but expires after 1 hour -- the URL the user shared was expired. The underlying storage path logic is actually correct, but the UI shows the raw signed URL which looks ugly and is confusing.
-2. The PDF section is just a raw truncated URL link -- not user-friendly.
+1. **Broken URL**: The edge function creates a NEW file on every generation (timestamp in filename + `upsert: false`), leaving orphaned old files. The `pdf_url` in the DB gets updated but the signed URL shown in the UI may reference the old file path via the `pdfUrl` state variable set from the edge function response.
+2. **Redundant buttons**: There's both a "Generate PDF" button in the card header AND a refresh/regenerate icon in the PDF card -- confusing.
+3. **No permanent links**: Every PDF gets a unique timestamped filename. Old files pile up in storage.
 
 ### Solution
-Replace the raw URL link (lines 741-755) with a polished PDF preview card:
 
-**New PDF Section Design:**
-- A styled card with a PDF icon and the invoice number as filename
-- "View PDF" button that opens the signed URL in a new tab (generates fresh signed URL on click to avoid expiry)
-- "Regenerate" button to re-generate the PDF
-- When no PDF exists yet, show a clean empty state with the Generate PDF button
+**Edge function (`generate-invoice-pdf/index.ts`)**:
+- Use a stable filename: `{invoice_number}/invoice.pdf` (no timestamp)
+- Change `upsert: false` to `upsert: true` so regenerating overwrites the previous file
+- Delete old timestamped files before uploading (cleanup existing orphans)
+- Keep returning the signed URL for immediate viewing
 
-### File Changes
+**UI (`src/pages/InvoiceDetail.tsx`)**:
+- Remove the separate "Generate PDF" button from the card header
+- Replace it with a single "Regenerate PDF" button (with `RefreshCw` icon) that always appears in the header when status is draft and a job is linked
+- The PDF card keeps its "View PDF" button but removes the small refresh icon button
+- When no PDF exists, the empty state card has a "Generate PDF" button (first-time generation)
+- After first generation, only the header "Regenerate PDF" button is available
 
-**`src/pages/InvoiceDetail.tsx`** (lines 741-755):
+### Files Changed
 
-Replace the current "Invoice PDF URL" section with:
+| File | Change |
+|------|--------|
+| `supabase/functions/generate-invoice-pdf/index.ts` | Stable filename, `upsert: true`, cleanup old files |
+| `src/pages/InvoiceDetail.tsx` | Consolidate Generate/Regenerate into one header button, remove refresh icon from PDF card |
 
-```text
-+-----------------------------------------------+
-|  [PDF Icon]  Invoice_26-00059.pdf              |
-|              Generated 02/10/2026              |
-|                                                |
-|  [View PDF]  [Regenerate]                      |
-+-----------------------------------------------+
+### Technical Details
+
+**Edge function changes (lines ~418-429)**:
+```typescript
+// Before: timestamped filename, upsert: false
+const timestamp = new Date().toISOString().replace(/[:.]/g, "-");
+const fileName = `${invoice.invoice_number}/invoice_${timestamp}.pdf`;
+// upsert: false
+
+// After: stable filename, upsert: true
+const fileName = `${invoice.invoice_number}/invoice.pdf`;
+// upsert: true
 ```
 
-Technical details:
-- Replace lines 741-755 (the raw URL display) with a styled card component
-- Add an `ExternalLink` icon import from lucide-react
-- The "View PDF" button calls a helper that generates a fresh signed URL on click (avoiding expiry issues), then opens it via `window.open()`
-- The "Regenerate" button reuses the existing `handleGeneratePdf` function
-- When no PDF exists, show "No PDF generated yet" with a subtle file icon
-- Move the Generate PDF / Send Invoice buttons from the card header into contextual positions (Generate shows in empty state, Send shows after PDF exists)
+Also add cleanup logic to delete any old timestamped files in the invoice folder before uploading.
 
-### Why This Fixes the Broken URL
-The signed URL itself isn't broken -- it just expired. The current code already regenerates signed URLs when the page loads (lines 222-251). The real fix is to never show the raw URL to the user. Instead, clicking "View PDF" will generate a fresh signed URL at that moment and open it, so it's always valid.
+**UI changes**:
+- Header button: Show "Generate PDF" (with `FileText` icon) when no PDF exists, show "Regenerate PDF" (with `RefreshCw` icon) when PDF already exists -- single button, label changes based on state
+- PDF card (lines 741-817): Remove the `RefreshCw` ghost button from the card; keep only the "View PDF" button
+- The empty state card removes its own Generate button since the header handles it
+

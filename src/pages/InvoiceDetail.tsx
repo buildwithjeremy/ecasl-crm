@@ -253,14 +253,19 @@ export default function InvoiceDetail() {
   const mutation = useMutation({
     mutationFn: async (data: FormData) => {
       if (!selectedInvoiceId) return;
+      const updateData: Record<string, unknown> = {
+        issued_date: data.issued_date || null,
+        due_date: data.due_date || null,
+        paid_date: data.paid_date || null,
+        notes: data.notes || null,
+      };
+      // If paid_date is cleared on a paid invoice, revert status
+      if (!data.paid_date && invoice?.status === 'paid') {
+        updateData.status = invoice?.pdf_url ? 'submitted' : 'draft';
+      }
       const { error } = await supabase
         .from('invoices')
-        .update({
-          issued_date: data.issued_date || null,
-          due_date: data.due_date || null,
-          paid_date: data.paid_date || null,
-          notes: data.notes || null,
-        } as never)
+        .update(updateData as never)
         .eq('id', selectedInvoiceId);
       if (error) throw error;
     },
@@ -671,7 +676,7 @@ export default function InvoiceDetail() {
                       Send Invoice
                     </Button>
                   )}
-                  {invoice.status === 'submitted' && (
+                  {invoice.status !== 'paid' && (
                     <Button
                       type="button"
                       variant="outline"
@@ -700,7 +705,7 @@ export default function InvoiceDetail() {
             <CardContent>
               <Form {...form}>
                 <form id="invoice-detail-form" onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <FormField
                       control={form.control}
                       name="issued_date"
@@ -729,19 +734,24 @@ export default function InvoiceDetail() {
                       )}
                     />
 
-                    <FormField
-                      control={form.control}
-                      name="paid_date"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Paid Date</FormLabel>
-                          <FormControl>
-                            <Input type="date" {...field} />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
+                    {invoice.status === 'paid' && (
+                      <div className="md:col-span-2 bg-muted/50 rounded-lg p-4">
+                        <FormField
+                          control={form.control}
+                          name="paid_date"
+                          render={({ field }) => (
+                            <FormItem className="max-w-xs">
+                              <FormLabel>Paid Date</FormLabel>
+                              <FormControl>
+                                <Input type="date" {...field} />
+                              </FormControl>
+                              <FormMessage />
+                              <p className="text-xs text-muted-foreground">Clear to revert to previous status.</p>
+                            </FormItem>
+                          )}
+                        />
+                      </div>
+                    )}
 
                     <div className="md:col-span-3">
                       <FormLabel>Invoice PDF</FormLabel>

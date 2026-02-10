@@ -1,97 +1,56 @@
 
 
-## Plan: Job Status Progression Indicator
+## Plan: Create Test Data for Email Testing
 
 ### Summary
 
-Add a horizontal step indicator below the header on the Job Detail page that shows where the job is in its lifecycle. Each step is a labeled dot connected by lines. The current step is highlighted, completed steps are filled, and future steps are dimmed. This gives Denise an at-a-glance view of what's done and what's next.
+Insert 1 test interpreter and 3 test facilities directly into the database using the `+` email strategy so all emails route to your inbox. Then you can create a test job and try the confirmation email flow.
 
-### Visual Design
+### Test Data
 
-The progression bar will look like this:
+**Test Interpreter:**
 
-```text
- (*)-----(*)-----(*)-----( )-----( )-----( )-----( )
- New   Outreach  Confirmed  Complete  Ready to  Billed   Paid
-                                       Bill
-```
+| Field | Value |
+|-------|-------|
+| Name | Test Interpreter (Tina Test) |
+| Email | jeremy+interpreter1@buildwithjeremy.com |
+| Rates | $75/hr business, $95/hr after-hours |
+| Status | active |
 
-- Completed steps: filled circle with check, connected by a colored line
-- Current step: filled circle, slightly larger or highlighted with a ring
-- Future steps: empty/dimmed circle, gray connecting line
-- Cancelled: if status is "cancelled", show all steps as dimmed with a "Cancelled" badge overlaid
+**Test Facilities:**
 
-### Status Order
+| Facility | Type | Email | Key Settings |
+|----------|------|-------|-------------|
+| Test Hospital Normal | hospital | jeremy+facility1@buildwithjeremy.com | Normal facility with physical address and timezone |
+| GSA-Test Federal Office | government, is_gsa=true | jeremy+gsafacility@buildwithjeremy.com | GSA badge, no physical address (per job) |
+| Test Contractor Services | business, contractor=true | jeremy+contractor@buildwithjeremy.com | Contractor badge, no physical address (per job) |
 
-The main flow (excluding "cancelled" which is a branch):
-
-1. New
-2. Outreach
-3. Confirmed
-4. Complete
-5. Ready to Bill
-6. Billed
-7. Paid
+All billing contacts will use the `+` email pattern so every email lands in your inbox.
 
 ### Implementation
 
-#### New Component: `src/components/jobs/JobStatusStepper.tsx`
+**Step 1: Insert test interpreter via SQL**
 
-A self-contained component that takes the current status and renders the stepper:
+Insert one interpreter record with `jeremy+interpreter1@buildwithjeremy.com`, active status, and standard rates.
 
-```tsx
-interface JobStatusStepperProps {
-  currentStatus: string;
-}
-```
+**Step 2: Insert 3 test facilities via SQL**
 
-The component will:
-- Define the ordered steps array
-- Calculate the current step index
-- Render circles and connecting lines with appropriate styles
-- Handle "cancelled" as a special case (show a cancelled badge, all steps dimmed)
-- Use Tailwind classes for styling (primary color for completed, muted for future)
-- Be responsive: on small screens, show abbreviated labels
+Each facility gets:
+- A `billing_contacts` JSONB array with a primary contact using the appropriate `+` email
+- Appropriate rates and settings
+- The normal facility gets a physical address and timezone; the GSA and Contractor ones do not (per existing pattern)
 
-#### Integration: `src/pages/JobDetail.tsx`
+### Testing Flow
 
-Place the stepper just inside the form, before the first card section:
+After the data is created:
 
-```tsx
-{job && (
-  <Form {...form}>
-    <form id="job-detail-form" onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-      {/* Status progression indicator */}
-      <JobStatusStepper currentStatus={watchedStatus} />
+1. Go to Jobs and create a new test job linked to one of the test facilities
+2. Assign the test interpreter
+3. Click "Send Confirmation" to test the email flow
+4. Check your inbox at jeremy@buildwithjeremy.com for the confirmation email
+5. Repeat with the other facility types to verify all combos work
 
-      <JobCoreFields ... />
-      ...
-    </form>
-  </Form>
-)}
-```
+### Files to Modify
 
-Uses `watchedStatus` (from `form.watch('status')`) so it updates live if the status changes.
-
----
-
-### Files to Create/Modify
-
-| File | Change |
-|------|--------|
-| `src/components/jobs/JobStatusStepper.tsx` | New component - horizontal step indicator |
-| `src/pages/JobDetail.tsx` | Import and render `JobStatusStepper` above the form fields |
-
----
-
-### Technical Details
-
-- Steps array: `['new', 'outreach_in_progress', 'confirmed', 'complete', 'ready_to_bill', 'billed', 'paid']`
-- Current index determined by `steps.indexOf(currentStatus)`
-- Steps with index less than current: completed styling (filled circle, colored connector)
-- Step at current index: active styling (ring highlight)
-- Steps with index greater than current: future styling (gray/dimmed)
-- "cancelled" status: render all steps as dimmed, overlay a "Cancelled" badge
-- Uses existing Tailwind color tokens (`bg-primary`, `text-muted-foreground`, etc.) to match the app's theme
-- Responsive: labels stack below dots on all screen sizes; font size reduces on mobile
+No code changes needed -- this is a data-only operation using direct database inserts.
 

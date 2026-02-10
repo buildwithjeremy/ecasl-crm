@@ -340,7 +340,7 @@ export default function JobDetail() {
   const canSendOutreach = watchedPotentialInterpreterIds.length > 0 && watchedStatus === 'new';
   const canConfirmJob = !!watchedInterpreterId && (watchedStatus === 'outreach_in_progress' || watchedStatus === 'new');
   const canConfirmInterpreter = !!watchedInterpreterId && (watchedStatus === 'outreach_in_progress' || watchedStatus === 'new');
-  const canGenerateBilling = watchedStatus === 'complete' && !!watchedInterpreterId && !jobInvoice && !jobBill;
+  const canGenerateBilling = (watchedStatus === 'complete' || watchedStatus === 'ready_to_bill') && !!watchedInterpreterId && (!jobInvoice || !jobBill);
 
   // Build job options for selector
   const jobOptions: RecordOption[] = useMemo(() => {
@@ -1432,23 +1432,27 @@ export default function JobDetail() {
         .eq('id', selectedJobId);
       if (saveError) throw saveError;
       
-      const { error: invoiceError } = await supabase
-        .from('invoices')
-        .insert({
-          facility_id: data.facility_id,
-          job_id: selectedJobId,
-          status: 'draft',
-        } as never);
-      if (invoiceError) throw invoiceError;
+      if (!jobInvoice) {
+        const { error: invoiceError } = await supabase
+          .from('invoices')
+          .insert({
+            facility_id: data.facility_id,
+            job_id: selectedJobId,
+            status: 'draft',
+          } as never);
+        if (invoiceError) throw invoiceError;
+      }
 
-      const { error: billError } = await supabase
-        .from('interpreter_bills')
-        .insert({
-          interpreter_id: interpreterId,
-          job_id: selectedJobId,
-          status: 'queued',
-        } as never);
-      if (billError) throw billError;
+      if (!jobBill) {
+        const { error: billError } = await supabase
+          .from('interpreter_bills')
+          .insert({
+            interpreter_id: interpreterId,
+            job_id: selectedJobId,
+            status: 'queued',
+          } as never);
+        if (billError) throw billError;
+      }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['job', selectedJobId] });
@@ -1459,9 +1463,13 @@ export default function JobDetail() {
       queryClient.invalidateQueries({ queryKey: ['job-bill', selectedJobId] });
       const currentValues = form.getValues();
       form.reset({ ...currentValues, status: 'ready_to_bill' as const });
+      const createdParts = [
+        !jobInvoice && 'Invoice',
+        !jobBill && 'interpreter bill',
+      ].filter(Boolean);
       toast({
         title: 'Billing Generated',
-        description: 'Invoice and interpreter bill have been created.',
+        description: `${createdParts.join(' and ')} ${createdParts.length === 1 ? 'has' : 'have'} been created.`,
       });
     },
     onError: (error: Error) => {

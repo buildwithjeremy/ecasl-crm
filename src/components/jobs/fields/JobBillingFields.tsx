@@ -269,20 +269,34 @@ export function JobBillingFields({
                     size="sm"
                     disabled={disabled || !canGenerateBilling || isGeneratingBilling}
                   >
-                    {isGeneratingBilling ? 'Generating...' : 'Generate Invoice & Bill'}
+                    {isGeneratingBilling ? 'Generating...' : (
+                      !linkedInvoice && !linkedBill ? 'Generate Invoice & Bill' :
+                      !linkedInvoice ? 'Generate Invoice' :
+                      'Generate Bill'
+                    )}
                   </Button>
                 </AlertDialogTrigger>
                 <AlertDialogContent>
                   <AlertDialogHeader>
-                    <AlertDialogTitle>Generate Invoice & Interpreter Bill?</AlertDialogTitle>
+                    <AlertDialogTitle>
+                      {!linkedInvoice && !linkedBill ? 'Generate Invoice & Interpreter Bill?' :
+                       !linkedInvoice ? 'Generate Invoice?' :
+                       'Generate Interpreter Bill?'}
+                    </AlertDialogTitle>
                     <AlertDialogDescription asChild>
                       <div className="text-sm text-muted-foreground">
-                        <p>This will create the following records:</p>
+                        <p>This will create the following {!linkedInvoice && !linkedBill ? 'records' : 'record'}:</p>
                         <ul className="list-disc list-inside mt-2 space-y-1">
-                          <li>A new <strong>invoice</strong> for <span className="font-semibold text-primary">{facilityName || 'the facility'}</span></li>
-                          <li>A new <strong>bill</strong> for <span className="font-semibold text-primary">{selectedInterpreterName || 'the interpreter'}</span></li>
+                          {!linkedInvoice && (
+                            <li>A new <strong>invoice</strong> for <span className="font-semibold text-primary">{facilityName || 'the facility'}</span></li>
+                          )}
+                          {!linkedBill && (
+                            <li>A new <strong>bill</strong> for <span className="font-semibold text-primary">{selectedInterpreterName || 'the interpreter'}</span></li>
+                          )}
                         </ul>
-                        <p className="mt-3">The job status will be changed to "Ready to Bill".</p>
+                        {!linkedInvoice && !linkedBill && (
+                          <p className="mt-3">The job status will be changed to "Ready to Bill".</p>
+                        )}
                         <p className="mt-2 text-xs text-muted-foreground italic">No emails will be sent — this only creates records in Invoices and Payables.</p>
                       </div>
                     </AlertDialogDescription>

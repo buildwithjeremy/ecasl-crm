@@ -1,88 +1,42 @@
 
 
-## Email Branding Overhaul
+## Fix PDF URL & Improve Invoice PDF Display
 
-### Summary
+### Problem
+1. The PDF signed URL works but expires after 1 hour -- the URL the user shared was expired. The underlying storage path logic is actually correct, but the UI shows the raw signed URL which looks ugly and is confusing.
+2. The PDF section is just a raw truncated URL link -- not user-friendly.
 
-Download and self-host the logo, update both edge functions with proper sender/reply-to, and rewrite all 4 email templates with a warm, personal tone as if Denise is writing them herself.
+### Solution
+Replace the raw URL link (lines 741-755) with a polished PDF preview card:
 
----
+**New PDF Section Design:**
+- A styled card with a PDF icon and the invoice number as filename
+- "View PDF" button that opens the signed URL in a new tab (generates fresh signed URL on click to avoid expiry)
+- "Regenerate" button to re-generate the PDF
+- When no PDF exists yet, show a clean empty state with the Generate PDF button
 
-### 1. Self-Host the Logo
+### File Changes
 
-- Download the logo from `https://ecasl.com/wp-content/uploads/2025/08/logo_from_current_website.png`
-- Add it to the project at `public/images/ecasl-logo.png`
-- Reference it via the published URL: `https://ecasl-crm.lovable.app/images/ecasl-logo.png` in email templates (email clients need an absolute URL)
+**`src/pages/InvoiceDetail.tsx`** (lines 741-755):
 
----
-
-### 2. Edge Function Updates
-
-**`supabase/functions/send-email/index.ts`** (line ~120-125):
-- Change `from` to `"Denise Corino, Effective Communication <noreply@denise.ecasl.com>"`
-- Add `reply_to: "dsign1118@aol.com"`
-
-**`supabase/functions/send-invoice-email/index.ts`** (line ~188-192):
-- Change `from` from `"ECASL <onboarding@resend.dev>"` to `"Denise Corino, Effective Communication <noreply@denise.ecasl.com>"`
-- Add `reply_to: "dsign1118@aol.com"`
-
----
-
-### 3. Email Template Rewrites (SQL migration)
-
-All 4 templates get a shared structure:
+Replace the current "Invoice PDF URL" section with:
 
 ```text
-+------------------------------------------+
-|  [ECASL Logo - centered at top]          |
-+------------------------------------------+
-|                                          |
-|  Warm, personal email body               |
-|  (written as Denise, not "ECASL Team")   |
-|                                          |
-+------------------------------------------+
-|  Warm regards,                           |
-|  Denise Corino                           |
-|  Effective Communication                 |
-|  www.ecasl.com                           |
-|  917-330-0517                            |
-|  admin@ecasl.com                         |
-|  GSA Schedule Contract 47QRAA25D00AR     |
-+------------------------------------------+
++-----------------------------------------------+
+|  [PDF Icon]  Invoice_26-00059.pdf              |
+|              Generated 02/10/2026              |
+|                                                |
+|  [View PDF]  [Regenerate]                      |
++-----------------------------------------------+
 ```
 
-#### Template tone changes:
+Technical details:
+- Replace lines 741-755 (the raw URL display) with a styled card component
+- Add an `ExternalLink` icon import from lucide-react
+- The "View PDF" button calls a helper that generates a fresh signed URL on click (avoiding expiry issues), then opens it via `window.open()`
+- The "Regenerate" button reuses the existing `handleGeneratePdf` function
+- When no PDF exists, show "No PDF generated yet" with a subtle file icon
+- Move the Generate PDF / Send Invoice buttons from the card header into contextual positions (Generate shows in empty state, Send shows after PDF exists)
 
-**interpreter_outreach** -- currently formal/corporate. Will become:
-- "Hi {{interpreter_name}}," stays
-- Body rewritten to sound like Denise reaching out personally: "I have a job coming up that I think would be a great fit for you..."
-- Sign-off: "Warm regards, Denise Corino" + signature block
-
-**interpreter_confirmation** -- currently stiff. Will become:
-- Warmer opening: "Great news! You're confirmed for the following assignment..."
-- Same job details card (kept clean for scannability)
-- Personal touch: "Please arrive 10-15 minutes early. Let me know if anything comes up."
-- Sign-off: Denise's signature block
-
-**invoice_reminder** -- currently reads like a collection notice. Will become:
-- Softer: "Hi {{facility_contact}}, I wanted to follow up on the invoice below..."
-- Same invoice details card
-- Friendly close: "If you've already sent payment, please disregard this note. Feel free to reach out with any questions."
-- Sign-off: Denise's signature block
-
-**job_completion_thanks** -- currently generic. Will become:
-- Genuine and warm: "Thank you so much for your work at {{facility_name}}! I really appreciate your professionalism..."
-- Personal note about looking forward to future work
-- Sign-off: Denise's signature block
-
----
-
-### 4. Files Modified
-
-| File | Change |
-|------|--------|
-| `public/images/ecasl-logo.png` | New -- downloaded and self-hosted logo |
-| `supabase/functions/send-email/index.ts` | Update `from` name, add `reply_to` |
-| `supabase/functions/send-invoice-email/index.ts` | Update `from` to verified domain, add `reply_to` |
-| New SQL migration | Update all 4 email template bodies in `email_templates` table |
-
+### Why This Fixes the Broken URL
+The signed URL itself isn't broken -- it just expired. The current code already regenerates signed URLs when the page loads (lines 222-251). The real fix is to never show the raw URL to the user. Instead, clicking "View PDF" will generate a fresh signed URL at that moment and open it, so it's always valid.

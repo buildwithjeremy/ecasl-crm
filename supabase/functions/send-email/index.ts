@@ -120,7 +120,8 @@ const handler = async (req: Request): Promise<Response> => {
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        from: "ECASL <noreply@denise.ecasl.com>",
+        from: "Denise Corino, Effective Communication <noreply@denise.ecasl.com>",
+        reply_to: "dsign1118@aol.com",
         to: recipients,
         subject: processedSubject,
         html: processedBody,

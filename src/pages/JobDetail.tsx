@@ -25,6 +25,7 @@ import {
   JobNotesFields,
   type FacilityOption,
 } from '@/components/jobs/fields';
+import { JobStatusStepper } from '@/components/jobs/JobStatusStepper';
 import { HoursSplit, calculateBillableTotal } from '@/lib/utils/job-calculations';
 import { normalizeTimeToHHMM } from '@/lib/utils/time-helpers';
 import { formatTimeForDisplay } from '@/lib/utils/form-helpers';
@@ -1569,6 +1570,7 @@ export default function JobDetail() {
       {job && (
         <Form {...form}>
           <form id="job-detail-form" onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+            <JobStatusStepper currentStatus={watchedStatus} />
             <JobCoreFields
               form={form}
               mode="edit"

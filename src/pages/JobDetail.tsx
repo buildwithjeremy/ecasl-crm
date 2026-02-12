@@ -348,7 +348,7 @@ export default function JobDetail() {
   const jobOptions: RecordOption[] = useMemo(() => {
     return (jobs || []).map((j) => ({
       id: j.id,
-      label: `${j.job_number} - ${j.deaf_client_name || 'N/A'} (${format(new Date(j.job_date), 'MMM d, yyyy')})`,
+      label: `${j.job_number} - ${j.deaf_client_name || 'N/A'} (${format(new Date(`${j.job_date}T00:00:00`), 'MMM d, yyyy')})`,
       searchValue: `${j.job_number} ${j.deaf_client_name || ''}`,
     }));
   }, [jobs]);

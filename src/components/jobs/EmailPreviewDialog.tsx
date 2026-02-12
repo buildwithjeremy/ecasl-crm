@@ -172,7 +172,7 @@ export function EmailPreviewDialog({
           )}
 
           {/* Rich text editor */}
-          <div className="flex-1 min-h-0">
+          <div className="min-h-0">
             <RichTextEditor
               key={editorKey}
               ref={editorRef}

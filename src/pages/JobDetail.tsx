@@ -210,6 +210,7 @@ export default function JobDetail() {
   const [emailPreviewOpen, setEmailPreviewOpen] = useState(false);
   const [emailPreviewData, setEmailPreviewData] = useState<EmailPreviewData | null>(null);
   const [isPreparingEmail, setIsPreparingEmail] = useState(false);
+  const pendingEmailContentRef = useRef<{ subject: string; body: string } | null>(null);
 
   // Form
   const form = useForm<FormData>({
@@ -868,38 +869,6 @@ export default function JobDetail() {
         throw new Error('Invalid start or end time. Please select valid times.');
       }
       
-      // Get facility name for email
-      const facility = facilities?.find(f => f.id === data.facility_id);
-      const facilityName = (facility?.contractor || facility?.is_gsa) && data.client_business_name
-        ? data.client_business_name : (facility?.name || 'Unknown Facility');
-      
-      // Build location string
-      const locationParts = [data.location_address, data.location_city, data.location_state, data.location_zip].filter(Boolean);
-      const location = data.location_type === 'remote' 
-        ? (data.video_call_link || 'Remote - Link TBD')
-        : (locationParts.join(', ') || 'TBD');
-      
-      // Get rate info
-      const businessRate = data.facility_rate_business || facility?.rate_business_hours || 0;
-      const rateInfo = `$${businessRate.toFixed(2)}/hr`;
-      
-      // Get the email template
-      const { data: templateData, error: templateError } = await supabase
-        .from('email_templates')
-        .select('subject, body')
-        .eq('name', 'interpreter_outreach')
-        .single();
-      
-      if (templateError || !templateData) {
-        throw new Error('Could not find outreach email template');
-      }
-      
-      const template = templateData as { subject: string; body: string };
-
-      const timezoneLabel = getTimezoneDisplayName(
-        data.timezone || facility?.timezone || job?.timezone || null
-      );
-      
       // Get interpreter emails
       const interpRes = await supabase
         .from('interpreters')
@@ -910,26 +879,22 @@ export default function JobDetail() {
 
       const interpreterListSafe = (interpRes.data ?? []) as any[];
       
-      // Send emails to all potential interpreters
+      // Send emails to all potential interpreters using edited content
       const { data: session } = await supabase.auth.getSession();
       if (!session?.session?.access_token) {
         throw new Error('Not authenticated');
       }
+
+      const editedContent = pendingEmailContentRef.current;
+      if (!editedContent) throw new Error('No email content available');
       
       const emailPromises: Promise<Response>[] = [];
       for (const interpreter of interpreterListSafe as any[]) {
         emailPromises.push((async () => {
-          const templateVariables = {
-            interpreter_name: `${interpreter.first_name} ${interpreter.last_name}`,
-            facility_name: facilityName,
-            // Avoid off-by-one day from local timezone when parsing YYYY-MM-DD
-            job_date: format(new Date(`${data.job_date}T00:00:00`), 'MMMM d, yyyy'),
-            start_time: formatTimeForDisplay(normalizedStartTime),
-            // Outreach template doesn't have a timezone placeholder, so append it here.
-            end_time: `${formatTimeForDisplay(normalizedEndTime)} ${timezoneLabel}`,
-            location: location,
-            rate_info: rateInfo,
-          };
+          // Replace per-recipient interpreter_name in the already-edited body
+          const personalizedBody = editedContent.body
+            .replace(/\{\{interpreter_name\}\}/g, `${interpreter.first_name} ${interpreter.last_name}`)
+            .replace(/\{interpreter_name\}/g, `${interpreter.first_name} ${interpreter.last_name}`);
 
           const response = await fetch('https://umyjqvmpvjfikljhoofy.supabase.co/functions/v1/send-email', {
             method: 'POST',
@@ -939,12 +904,12 @@ export default function JobDetail() {
             },
             body: JSON.stringify({
               to: interpreter.email,
-              subject: template.subject,
-              body: template.body,
+              subject: editedContent.subject,
+              body: personalizedBody,
               template_name: 'interpreter_outreach',
-              template_variables: templateVariables,
               job_id: selectedJobId,
               interpreter_id: interpreter.id,
+              skip_template_processing: true,
             }),
           });
 
@@ -1050,28 +1015,6 @@ export default function JobDetail() {
         throw new Error('Invalid start or end time. Please select valid times.');
       }
       
-      // Get facility name and details for email
-      const facility = facilities?.find(f => f.id === data.facility_id);
-      const facilityName = (facility?.contractor || facility?.is_gsa) && data.client_business_name
-        ? data.client_business_name : (facility?.name || 'Unknown Facility');
-      
-      // Build location string
-      const locationParts = [data.location_address, data.location_city, data.location_state, data.location_zip].filter(Boolean);
-      const location = data.location_type === 'remote' 
-        ? (data.video_call_link || 'Remote - Link TBD')
-        : (locationParts.join(', ') || 'TBD');
-      
-      // For contractor/GSA jobs, use the job-level client contact (on-site business)
-      // For regular facilities, prefer facility billing contact
-      const isContractorOrGsa = facility?.contractor || facility?.is_gsa;
-      const primaryContact = resolvePrimaryBillingContact(facility?.billing_contacts);
-      const contactName = isContractorOrGsa
-        ? (data.client_contact_name || primaryContact?.name || 'N/A')
-        : (primaryContact?.name || data.client_contact_name || 'N/A');
-      const contactPhone = isContractorOrGsa
-        ? (data.client_contact_phone || primaryContact?.phone || 'N/A')
-        : (primaryContact?.phone || data.client_contact_phone || 'N/A');
-      
       // Get the interpreter info
       const { data: interpreterInfo, error: interpError } = await supabase
         .from('interpreters')
@@ -1085,42 +1028,14 @@ export default function JobDetail() {
       
       const confirmedInterpreter = interpreterInfo as { email: string; first_name: string; last_name: string };
       
-      // Get the email template
-      const { data: templateData, error: templateError } = await supabase
-        .from('email_templates')
-        .select('subject, body')
-        .eq('name', 'interpreter_confirmation')
-        .single();
-      
-      if (templateError || !templateData) {
-        throw new Error('Could not find confirmation email template');
-      }
-      
-      const template = templateData as { subject: string; body: string };
-
-      const timezoneLabel = getTimezoneDisplayName(
-        data.timezone || facility?.timezone || job?.timezone || null
-      );
-      
-      // Send confirmation email
+      // Send confirmation email using edited content
       const { data: session } = await supabase.auth.getSession();
       if (!session?.session?.access_token) {
         throw new Error('Not authenticated');
       }
-      
-      const templateVariables = {
-        interpreter_name: `${confirmedInterpreter.first_name} ${confirmedInterpreter.last_name}`,
-        job_number: job?.job_number || 'N/A',
-        facility_name: facilityName,
-        // Avoid off-by-one day from local timezone when parsing YYYY-MM-DD
-        job_date: format(new Date(`${data.job_date}T00:00:00`), 'MMMM d, yyyy'),
-        start_time: formatTimeForDisplay(normalizedStartTime),
-        end_time: formatTimeForDisplay(normalizedEndTime),
-        timezone: timezoneLabel,
-        location: location,
-        contact_name: contactName,
-        contact_phone: contactPhone,
-      };
+
+      const editedContent = pendingEmailContentRef.current;
+      if (!editedContent) throw new Error('No email content available');
       
       const emailResponse = await fetch('https://umyjqvmpvjfikljhoofy.supabase.co/functions/v1/send-email', {
         method: 'POST',
@@ -1130,12 +1045,12 @@ export default function JobDetail() {
         },
         body: JSON.stringify({
           to: confirmedInterpreter.email,
-          subject: template.subject,
-          body: template.body,
+          subject: editedContent.subject,
+          body: editedContent.body,
           template_name: 'interpreter_confirmation',
-          template_variables: templateVariables,
           job_id: selectedJobId,
           interpreter_id: interpreterId,
+          skip_template_processing: true,
         }),
       });
       
@@ -1361,8 +1276,11 @@ export default function JobDetail() {
       });
   }, [saveJob, confirmJobMutation, toast]);
 
-  const handleConfirmSendEmail = useCallback(() => {
+  const handleConfirmSendEmail = useCallback((editedSubject: string, editedBody: string) => {
     if (!emailPreviewData) return;
+
+    // Store edited content so mutations can access it
+    pendingEmailContentRef.current = { subject: editedSubject, body: editedBody };
 
     saveJob
       .run(async () => {

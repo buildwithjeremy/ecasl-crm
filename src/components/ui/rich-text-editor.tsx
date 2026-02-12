@@ -319,7 +319,7 @@ export const RichTextEditor = forwardRef<RichTextEditorHandle, RichTextEditorPro
       <Toolbar editor={editor} disabled={disabled} />
       <EditorContent
         editor={editor}
-        className="prose prose-sm max-w-none dark:prose-invert px-3 py-2 min-h-[250px] max-h-[400px] overflow-y-auto focus-within:outline-none [&_.tiptap]:outline-none [&_.tiptap]:min-h-[230px]"
+        className="prose prose-sm max-w-none dark:prose-invert px-3 py-2 min-h-[200px] flex-1 overflow-y-auto focus-within:outline-none [&_.tiptap]:outline-none [&_.tiptap]:min-h-[180px]"
       />
     </div>
   );

@@ -795,13 +795,13 @@ export default function JobDetail() {
         facility_rate_business: data.facility_rate_business ?? null,
         facility_rate_after_hours: data.facility_rate_after_hours ?? null,
         facility_rate_holiday: data.facility_rate_holiday ?? null,
-        // Treat 0 as "use default" and store null
-        facility_rate_mileage: !data.facility_rate_mileage || data.facility_rate_mileage === 0 ? null : data.facility_rate_mileage,
+        // Always store the resolved mileage rate so downstream pages (invoices, payables) use consistent values
+        facility_rate_mileage: (!data.facility_rate_mileage || data.facility_rate_mileage === 0) ? defaultMileageRate : data.facility_rate_mileage,
         facility_rate_adjustment: data.facility_rate_adjustment ?? 0,
         interpreter_rate_business: data.interpreter_rate_business ?? null,
         interpreter_rate_after_hours: data.interpreter_rate_after_hours ?? null,
         interpreter_rate_holiday: data.interpreter_rate_holiday ?? null,
-        interpreter_rate_mileage: !data.interpreter_rate_mileage || data.interpreter_rate_mileage === 0 ? null : data.interpreter_rate_mileage,
+        interpreter_rate_mileage: (!data.interpreter_rate_mileage || data.interpreter_rate_mileage === 0) ? defaultMileageRate : data.interpreter_rate_mileage,
         interpreter_rate_adjustment: data.interpreter_rate_adjustment ?? 0,
         emergency_fee_applied: data.emergency_fee_applied || false,
         holiday_fee_applied: data.holiday_fee_applied || false,

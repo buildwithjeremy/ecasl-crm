@@ -806,6 +806,7 @@ export default function JobDetail() {
         emergency_fee_applied: data.emergency_fee_applied || false,
         holiday_fee_applied: data.holiday_fee_applied || false,
         internal_notes: data.internal_notes || null,
+        po_number: data.po_number || null,
         client_business_name: data.client_business_name || null,
         client_contact_name: data.client_contact_name || null,
         client_contact_phone: data.client_contact_phone || null,

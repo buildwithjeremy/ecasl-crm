@@ -652,10 +652,16 @@ export default function JobDetail() {
         ? (data.video_call_link || 'Remote - Link TBD')
         : (locationParts.join(', ') || 'TBD');
       
-      // Confirmation email: prefer facility billing contact over job-level client fields
+      // For contractor/GSA jobs, use the job-level client contact (on-site business)
+      // For regular facilities, prefer facility billing contact
+      const isContractorOrGsa = facility?.contractor || facility?.is_gsa;
       const primaryContact = resolvePrimaryBillingContact(facility?.billing_contacts);
-      const contactName = primaryContact?.name || data.client_contact_name || 'N/A';
-      const contactPhone = primaryContact?.phone || data.client_contact_phone || 'N/A';
+      const contactName = isContractorOrGsa
+        ? (data.client_contact_name || primaryContact?.name || 'N/A')
+        : (primaryContact?.name || data.client_contact_name || 'N/A');
+      const contactPhone = isContractorOrGsa
+        ? (data.client_contact_phone || primaryContact?.phone || 'N/A')
+        : (primaryContact?.phone || data.client_contact_phone || 'N/A');
       
       // Get the interpreter info
       const { data: interpreterInfo, error: interpError } = await supabase
@@ -1048,10 +1054,16 @@ export default function JobDetail() {
         ? (data.video_call_link || 'Remote - Link TBD')
         : (locationParts.join(', ') || 'TBD');
       
-      // Confirmation email: prefer facility billing contact over job-level client fields
+      // For contractor/GSA jobs, use the job-level client contact (on-site business)
+      // For regular facilities, prefer facility billing contact
+      const isContractorOrGsa = facility?.contractor || facility?.is_gsa;
       const primaryContact = resolvePrimaryBillingContact(facility?.billing_contacts);
-      const contactName = primaryContact?.name || data.client_contact_name || 'N/A';
-      const contactPhone = primaryContact?.phone || data.client_contact_phone || 'N/A';
+      const contactName = isContractorOrGsa
+        ? (data.client_contact_name || primaryContact?.name || 'N/A')
+        : (primaryContact?.name || data.client_contact_name || 'N/A');
+      const contactPhone = isContractorOrGsa
+        ? (data.client_contact_phone || primaryContact?.phone || 'N/A')
+        : (primaryContact?.phone || data.client_contact_phone || 'N/A');
       
       // Get the interpreter info
       const { data: interpreterInfo, error: interpError } = await supabase

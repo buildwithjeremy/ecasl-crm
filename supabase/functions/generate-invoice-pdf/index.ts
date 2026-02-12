@@ -22,6 +22,7 @@ interface InvoiceData {
   facilityCity: string;
   facilityState: string;
   facilityZip: string;
+  poNumber?: string;
   lineItems: LineItem[];
   total: number;
 }
@@ -73,6 +74,10 @@ function generatePdf(data: InvoiceData): Uint8Array {
   doc.setFontSize(10);
   doc.setFont("helvetica", "normal");
   doc.text(`DUE DATE: ${formatDate(data.dueDate)}`, rightX, 52, { align: "right" });
+  
+  if (data.poNumber) {
+    doc.text(`PO #: ${data.poNumber}`, rightX, 60, { align: "right" });
+  }
   
   // Bill To Section
   y = 70;
@@ -406,6 +411,7 @@ Deno.serve(async (req) => {
       facilityCity: facility?.billing_city || '',
       facilityState: facility?.billing_state || '',
       facilityZip: facility?.billing_zip || '',
+      poNumber: job?.po_number || undefined,
       lineItems,
       total
     };

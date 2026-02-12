@@ -5,7 +5,7 @@ import Underline from '@tiptap/extension-underline';
 import TextAlign from '@tiptap/extension-text-align';
 import Image from '@tiptap/extension-image';
 import { Node, mergeAttributes } from '@tiptap/core';
-import { useEffect, useCallback, useRef } from 'react';
+import { useEffect, useCallback, useRef, useImperativeHandle, forwardRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
 import {
@@ -133,6 +133,10 @@ const StyledHorizontalRule = Node.create({
 // Types
 // ==========================================
 
+export interface RichTextEditorHandle {
+  insertContent: (html: string) => void;
+}
+
 interface RichTextEditorProps {
   content: string;
   onChange: (html: string) => void;
@@ -254,7 +258,7 @@ function Toolbar({ editor, disabled }: { editor: Editor | null; disabled?: boole
 // Editor Component
 // ==========================================
 
-export function RichTextEditor({ content, onChange, disabled, className }: RichTextEditorProps) {
+export const RichTextEditor = forwardRef<RichTextEditorHandle, RichTextEditorProps>(function RichTextEditor({ content, onChange, disabled, className }, ref) {
   const lastExternalContentRef = useRef(content);
   const isInternalUpdateRef = useRef(false);
 
@@ -302,6 +306,14 @@ export function RichTextEditor({ content, onChange, disabled, className }: RichT
     }
   }, [disabled, editor]);
 
+  useImperativeHandle(ref, () => ({
+    insertContent: (html: string) => {
+      if (editor) {
+        editor.chain().focus().insertContent(html).run();
+      }
+    },
+  }), [editor]);
+
   return (
     <div className={cn('rounded-md border bg-background', className)}>
       <Toolbar editor={editor} disabled={disabled} />
@@ -311,7 +323,7 @@ export function RichTextEditor({ content, onChange, disabled, className }: RichT
       />
     </div>
   );
-}
+});
 
 export function useRichTextEditor() {
   return { RichTextEditor };

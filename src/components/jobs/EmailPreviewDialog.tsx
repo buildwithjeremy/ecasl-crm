@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import {
   Dialog,
@@ -14,7 +14,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Loader2, Mail, Send, Plus } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
-import { RichTextEditor } from '@/components/ui/rich-text-editor';
+import { RichTextEditor, RichTextEditorHandle } from '@/components/ui/rich-text-editor';
 
 // ==========================================
 // Types
@@ -71,6 +71,7 @@ export function EmailPreviewDialog({
 }: EmailPreviewDialogProps) {
   const [editedSubject, setEditedSubject] = useState('');
   const [editedBody, setEditedBody] = useState('');
+  const editorRef = useRef<RichTextEditorHandle>(null);
 
   // Fetch template snippets
   const { data: snippets } = useQuery({
@@ -94,7 +95,11 @@ export function EmailPreviewDialog({
   }, [emailData]);
 
   const handleInsertSnippet = useCallback((snippetContent: string) => {
-    setEditedBody(prev => prev + snippetContent);
+    if (editorRef.current) {
+      editorRef.current.insertContent(snippetContent);
+    } else {
+      setEditedBody(prev => prev + snippetContent);
+    }
   }, []);
 
   if (!emailData) return null;
@@ -164,6 +169,7 @@ export function EmailPreviewDialog({
           {/* Rich text editor */}
           <div className="flex-1 min-h-0">
             <RichTextEditor
+              ref={editorRef}
               content={editedBody}
               onChange={setEditedBody}
               disabled={isSending}

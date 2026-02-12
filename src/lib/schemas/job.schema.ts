@@ -23,7 +23,7 @@ export const jobBaseSchema = z.object({
   video_call_link: z.string().optional(),
   opportunity_source: z.enum(['direct', 'agency', 'gsa', 'referral', 'repeat', 'other']).nullable().optional(),
   internal_notes: z.string().optional(),
-  
+  po_number: z.string().optional(),
   // Client contact info
   client_business_name: z.string().optional(),
   client_contact_name: z.string().optional(),
@@ -105,7 +105,7 @@ const jobBaseWithoutRefinement = z.object({
   video_call_link: z.string().optional(),
   opportunity_source: z.enum(['direct', 'agency', 'gsa', 'referral', 'repeat', 'other']).nullable().optional(),
   internal_notes: z.string().optional(),
-  client_business_name: z.string().optional(),
+  po_number: z.string().optional(),
   client_contact_name: z.string().optional(),
   client_contact_phone: phoneField,
   client_contact_email: emailField,

@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { Input } from '@/components/ui/input';
 import { UseFormReturn } from 'react-hook-form';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
@@ -197,6 +198,17 @@ export function JobCoreFields({
             disabled={disabled}
             nullable={true}
           />
+
+          {/* PO Number */}
+          <div className="space-y-2">
+            <Label htmlFor="po_number">PO Number</Label>
+            <Input
+              id="po_number"
+              {...form.register('po_number')}
+              disabled={disabled}
+              placeholder="e.g. PO-12345"
+            />
+          </div>
         </div>
       </CardContent>
     </Card>

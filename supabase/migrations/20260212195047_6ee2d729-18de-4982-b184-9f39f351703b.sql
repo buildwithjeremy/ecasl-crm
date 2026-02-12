@@ -1,0 +1,1 @@
+ALTER TABLE public.jobs ADD COLUMN po_number text DEFAULT NULL;

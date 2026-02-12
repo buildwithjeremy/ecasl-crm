@@ -3,7 +3,9 @@ import StarterKit from '@tiptap/starter-kit';
 import Link from '@tiptap/extension-link';
 import Underline from '@tiptap/extension-underline';
 import TextAlign from '@tiptap/extension-text-align';
-import { useEffect, useCallback } from 'react';
+import Image from '@tiptap/extension-image';
+import { Node, mergeAttributes } from '@tiptap/core';
+import { useEffect, useCallback, useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
 import {
@@ -24,12 +26,123 @@ import {
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
+// ==========================================
+// Custom Div extension to preserve styled divs from email templates
+// ==========================================
+
+const StyledDiv = Node.create({
+  name: 'styledDiv',
+  group: 'block',
+  content: 'block*',
+  defining: true,
+
+  addAttributes() {
+    return {
+      style: {
+        default: null,
+        parseHTML: (element) => element.getAttribute('style'),
+        renderHTML: (attributes) => {
+          if (!attributes.style) return {};
+          return { style: attributes.style };
+        },
+      },
+      class: {
+        default: null,
+        parseHTML: (element) => element.getAttribute('class'),
+        renderHTML: (attributes) => {
+          if (!attributes.class) return {};
+          return { class: attributes.class };
+        },
+      },
+    };
+  },
+
+  parseHTML() {
+    return [{ tag: 'div' }];
+  },
+
+  renderHTML({ HTMLAttributes }) {
+    return ['div', mergeAttributes(HTMLAttributes), 0];
+  },
+});
+
+// ==========================================
+// Custom Paragraph extension that preserves inline styles
+// ==========================================
+
+const StyledParagraph = Node.create({
+  name: 'paragraph',
+  group: 'block',
+  content: 'inline*',
+  priority: 1000,
+
+  addAttributes() {
+    return {
+      style: {
+        default: null,
+        parseHTML: (element) => element.getAttribute('style'),
+        renderHTML: (attributes) => {
+          if (!attributes.style) return {};
+          return { style: attributes.style };
+        },
+      },
+    };
+  },
+
+  parseHTML() {
+    return [{ tag: 'p' }];
+  },
+
+  renderHTML({ HTMLAttributes }) {
+    return ['p', mergeAttributes(HTMLAttributes), 0];
+  },
+});
+
+// ==========================================
+// Custom HR extension that preserves styles
+// ==========================================
+
+const StyledHorizontalRule = Node.create({
+  name: 'horizontalRule',
+  group: 'block',
+  atom: true,
+
+  addAttributes() {
+    return {
+      style: {
+        default: null,
+        parseHTML: (element) => element.getAttribute('style'),
+        renderHTML: (attributes) => {
+          if (!attributes.style) return {};
+          return { style: attributes.style };
+        },
+      },
+    };
+  },
+
+  parseHTML() {
+    return [{ tag: 'hr' }];
+  },
+
+  renderHTML({ HTMLAttributes }) {
+    return ['hr', mergeAttributes(HTMLAttributes)];
+  },
+});
+
+// ==========================================
+// Types
+// ==========================================
+
 interface RichTextEditorProps {
   content: string;
   onChange: (html: string) => void;
   disabled?: boolean;
   className?: string;
 }
+
+// ==========================================
+// Toolbar
+// ==========================================
 
 function ToolbarButton({
   onClick,
@@ -137,13 +250,27 @@ function Toolbar({ editor, disabled }: { editor: Editor | null; disabled?: boole
   );
 }
 
+// ==========================================
+// Editor Component
+// ==========================================
+
 export function RichTextEditor({ content, onChange, disabled, className }: RichTextEditorProps) {
+  const contentRef = useRef(content);
+  contentRef.current = content;
+
   const editor = useEditor({
     extensions: [
-      StarterKit,
+      StarterKit.configure({
+        paragraph: false,
+        horizontalRule: false,
+      }),
+      StyledParagraph,
+      StyledHorizontalRule,
+      StyledDiv,
       Underline,
       Link.configure({ openOnClick: false }),
       TextAlign.configure({ types: ['heading', 'paragraph'] }),
+      Image.configure({ inline: false, allowBase64: true }),
     ],
     content,
     editable: !disabled,
@@ -177,7 +304,6 @@ export function RichTextEditor({ content, onChange, disabled, className }: RichT
 }
 
 export function useRichTextEditor() {
-  // Utility hook if needed for imperative access
   return { RichTextEditor };
 }
 

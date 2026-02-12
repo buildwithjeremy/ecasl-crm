@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import {
   Dialog,
@@ -12,10 +12,9 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
-import { ScrollArea } from '@/components/ui/scroll-area';
-import { Loader2, Mail, Send, Plus, Code, Eye } from 'lucide-react';
+import { Loader2, Mail, Send, Plus } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
+import { RichTextEditor } from '@/components/ui/rich-text-editor';
 
 // ==========================================
 // Types
@@ -72,8 +71,6 @@ export function EmailPreviewDialog({
 }: EmailPreviewDialogProps) {
   const [editedSubject, setEditedSubject] = useState('');
   const [editedBody, setEditedBody] = useState('');
-  const [showSource, setShowSource] = useState(false);
-  const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   // Fetch template snippets
   const { data: snippets } = useQuery({
@@ -93,29 +90,12 @@ export function EmailPreviewDialog({
     if (emailData) {
       setEditedSubject(replaceTemplateVariables(emailData.subject, emailData.templateVariables));
       setEditedBody(replaceTemplateVariables(emailData.body, emailData.templateVariables));
-      setShowSource(false);
     }
   }, [emailData]);
 
   const handleInsertSnippet = useCallback((snippetContent: string) => {
-    if (showSource && textareaRef.current) {
-      const ta = textareaRef.current;
-      const start = ta.selectionStart;
-      const end = ta.selectionEnd;
-      const before = editedBody.slice(0, start);
-      const after = editedBody.slice(end);
-      const newBody = before + snippetContent + after;
-      setEditedBody(newBody);
-      // Restore cursor position after insert
-      requestAnimationFrame(() => {
-        ta.selectionStart = ta.selectionEnd = start + snippetContent.length;
-        ta.focus();
-      });
-    } else {
-      // In preview mode, append before the closing signature/div
-      setEditedBody(prev => prev + snippetContent);
-    }
-  }, [showSource, editedBody]);
+    setEditedBody(prev => prev + snippetContent);
+  }, []);
 
   if (!emailData) return null;
 
@@ -131,7 +111,7 @@ export function EmailPreviewDialog({
             Email Composer - {typeLabel}
           </DialogTitle>
           <DialogDescription>
-            Review and edit the email before sending to {recipientCount} recipient
+            Edit the email before sending to {recipientCount} recipient
             {recipientCount !== 1 ? 's' : ''}.
           </DialogDescription>
         </DialogHeader>
@@ -160,68 +140,34 @@ export function EmailPreviewDialog({
             />
           </div>
 
-          {/* Snippet toolbar + view toggle */}
-          <div className="flex items-center gap-2 flex-wrap">
-            {snippets && snippets.length > 0 && (
-              <>
-                <span className="text-xs font-medium text-muted-foreground">Insert:</span>
-                {snippets.map((snippet) => (
-                  <Button
-                    key={snippet.id}
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    onClick={() => handleInsertSnippet(snippet.content)}
-                    disabled={isSending}
-                    className="h-7 text-xs"
-                  >
-                    <Plus className="h-3 w-3 mr-1" />
-                    {snippet.label}
-                  </Button>
-                ))}
-              </>
-            )}
-            <div className="ml-auto">
-              <Button
-                type="button"
-                variant="ghost"
-                size="sm"
-                onClick={() => setShowSource(!showSource)}
-                className="h-7 text-xs gap-1"
-              >
-                {showSource ? (
-                  <>
-                    <Eye className="h-3 w-3" />
-                    Preview
-                  </>
-                ) : (
-                  <>
-                    <Code className="h-3 w-3" />
-                    Edit HTML
-                  </>
-                )}
-              </Button>
+          {/* Snippet toolbar */}
+          {snippets && snippets.length > 0 && (
+            <div className="flex items-center gap-2 flex-wrap">
+              <span className="text-xs font-medium text-muted-foreground">Insert:</span>
+              {snippets.map((snippet) => (
+                <Button
+                  key={snippet.id}
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => handleInsertSnippet(snippet.content)}
+                  disabled={isSending}
+                  className="h-7 text-xs"
+                >
+                  <Plus className="h-3 w-3 mr-1" />
+                  {snippet.label}
+                </Button>
+              ))}
             </div>
-          </div>
+          )}
 
-          {/* Body: rendered preview or source editor */}
+          {/* Rich text editor */}
           <div className="flex-1 min-h-0">
-            {showSource ? (
-              <Textarea
-                ref={textareaRef}
-                value={editedBody}
-                onChange={(e) => setEditedBody(e.target.value)}
-                disabled={isSending}
-                className="font-mono text-xs min-h-[300px] max-h-[400px]"
-              />
-            ) : (
-              <ScrollArea className="h-[350px] rounded-md border bg-background p-4">
-                <div
-                  className="prose prose-sm max-w-none dark:prose-invert"
-                  dangerouslySetInnerHTML={{ __html: editedBody }}
-                />
-              </ScrollArea>
-            )}
+            <RichTextEditor
+              content={editedBody}
+              onChange={setEditedBody}
+              disabled={isSending}
+            />
           </div>
         </div>
 

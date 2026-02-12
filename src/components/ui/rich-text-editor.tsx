@@ -315,11 +315,11 @@ export const RichTextEditor = forwardRef<RichTextEditorHandle, RichTextEditorPro
   }), [editor]);
 
   return (
-    <div className={cn('rounded-md border bg-background', className)}>
+    <div className={cn('rounded-md border bg-background flex flex-col', className)}>
       <Toolbar editor={editor} disabled={disabled} />
       <EditorContent
         editor={editor}
-        className="prose prose-sm max-w-none dark:prose-invert px-3 py-2 min-h-[200px] flex-1 overflow-y-auto focus-within:outline-none [&_.tiptap]:outline-none [&_.tiptap]:min-h-[180px]"
+        className="prose prose-sm max-w-none dark:prose-invert px-3 py-2 min-h-[200px] flex-1 min-h-0 overflow-y-auto focus-within:outline-none [&_.tiptap]:outline-none [&_.tiptap]:min-h-[180px]"
       />
     </div>
   );

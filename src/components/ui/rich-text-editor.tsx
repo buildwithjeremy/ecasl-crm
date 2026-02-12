@@ -255,8 +255,8 @@ function Toolbar({ editor, disabled }: { editor: Editor | null; disabled?: boole
 // ==========================================
 
 export function RichTextEditor({ content, onChange, disabled, className }: RichTextEditorProps) {
-  const contentRef = useRef(content);
-  contentRef.current = content;
+  const lastExternalContentRef = useRef(content);
+  const isInternalUpdateRef = useRef(false);
 
   const editor = useEditor({
     extensions: [
@@ -275,14 +275,24 @@ export function RichTextEditor({ content, onChange, disabled, className }: RichT
     content,
     editable: !disabled,
     onUpdate: ({ editor }) => {
+      isInternalUpdateRef.current = true;
       onChange(editor.getHTML());
     },
   });
 
   // Sync content from parent when it changes externally
   useEffect(() => {
-    if (editor && content !== editor.getHTML()) {
-      editor.commands.setContent(content);
+    if (!editor) return;
+    // Skip if this update was triggered by the editor's own onUpdate
+    if (isInternalUpdateRef.current) {
+      isInternalUpdateRef.current = false;
+      lastExternalContentRef.current = content;
+      return;
+    }
+    // Only set content if it actually changed from external source
+    if (content !== lastExternalContentRef.current) {
+      lastExternalContentRef.current = content;
+      editor.commands.setContent(content, { emitUpdate: false });
     }
   }, [content, editor]);
 

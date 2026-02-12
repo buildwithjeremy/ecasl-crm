@@ -2,14 +2,14 @@ import { z } from 'zod';
 import { phoneField, requiredEmailField, zipCodeField, requiredCurrencyField, currencyField } from './shared';
 
 // ==========================================
-// Interpreter Schema - Base (for creation)
+// Interpreter Schema - Base (relaxed, shared fields)
 // ==========================================
 
 export const interpreterBaseSchema = z.object({
   // Required fields
   first_name: z.string().min(1, 'First name is required'),
   last_name: z.string().min(1, 'Last name is required'),
-  email: requiredEmailField,
+  email: z.string().email('Invalid email').optional().or(z.literal('')),
   
   // Optional personal info
   phone: phoneField,
@@ -24,9 +24,9 @@ export const interpreterBaseSchema = z.object({
   nic_certified: z.boolean(),
   other_certifications: z.string().optional(),
   
-  // Rates (required on creation)
-  rate_business_hours: requiredCurrencyField,
-  rate_after_hours: requiredCurrencyField,
+  // Rates (optional at schema level; enforced contextually)
+  rate_business_hours: currencyField,
+  rate_after_hours: currencyField,
   rate_holiday_hours: currencyField,
   
   // Payment
@@ -39,6 +39,16 @@ export const interpreterBaseSchema = z.object({
   
   // Notes
   notes: z.string().optional(),
+});
+
+// ==========================================
+// Interpreter Schema - Creation (strict: email + rates required)
+// ==========================================
+
+export const interpreterCreateSchema = interpreterBaseSchema.extend({
+  email: requiredEmailField,
+  rate_business_hours: requiredCurrencyField,
+  rate_after_hours: requiredCurrencyField,
 });
 
 // ==========================================
@@ -68,17 +78,34 @@ export const interpreterExtendedSchema = z.object({
 
 // ==========================================
 // Interpreter Schema - Full (combined)
+// When status is "inactive", relax required fields so records
+// can be deactivated without completing every field.
 // ==========================================
 
-export const interpreterFullSchema = interpreterBaseSchema.merge(interpreterExtendedSchema);
+const interpreterMergedSchema = interpreterBaseSchema.merge(interpreterExtendedSchema);
+
+export const interpreterFullSchema = interpreterMergedSchema.superRefine((data, ctx) => {
+  if (data.status === 'inactive') return; // skip strict validation for inactive
+
+  if (!data.email || data.email.trim() === '') {
+    ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'Email is required', path: ['email'] });
+  }
+  if (data.rate_business_hours === undefined || data.rate_business_hours === null) {
+    ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'Business rate is required', path: ['rate_business_hours'] });
+  }
+  if (data.rate_after_hours === undefined || data.rate_after_hours === null) {
+    ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'After-hours rate is required', path: ['rate_after_hours'] });
+  }
+});
 
 // ==========================================
 // Types
 // ==========================================
 
 export type InterpreterBaseFormData = z.infer<typeof interpreterBaseSchema>;
+export type InterpreterCreateFormData = z.infer<typeof interpreterCreateSchema>;
 export type InterpreterExtendedFormData = z.infer<typeof interpreterExtendedSchema>;
-export type InterpreterFullFormData = z.infer<typeof interpreterFullSchema>;
+export type InterpreterFullFormData = z.infer<typeof interpreterMergedSchema>;
 
 // ==========================================
 // Default Values

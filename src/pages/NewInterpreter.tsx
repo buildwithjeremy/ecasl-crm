@@ -7,7 +7,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
 import { ArrowLeft } from 'lucide-react';
-import { interpreterBaseSchema, InterpreterBaseFormData } from '@/lib/schemas/interpreter.schema';
+import { interpreterCreateSchema, type InterpreterBaseFormData } from '@/lib/schemas/interpreter.schema';
 import {
   InterpreterCoreFields,
   InterpreterAddressFields,
@@ -23,7 +23,7 @@ export default function NewInterpreter() {
   const queryClient = useQueryClient();
 
   const form = useForm<InterpreterBaseFormData>({
-    resolver: zodResolver(interpreterBaseSchema),
+    resolver: zodResolver(interpreterCreateSchema),
     defaultValues: {
       first_name: '',
       last_name: '',

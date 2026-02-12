@@ -530,7 +530,8 @@ export default function JobDetail() {
       
       // Get facility info
       const facility = facilities?.find(f => f.id === data.facility_id);
-      const facilityName = facility?.name || 'Unknown Facility';
+      const isContractorOrGsa = facility?.contractor || facility?.is_gsa;
+      const facilityName = (isContractorOrGsa && data.client_business_name) || facility?.name || 'Unknown Facility';
       
       // Build location string
       const locationParts = [data.location_address, data.location_city, data.location_state, data.location_zip].filter(Boolean);
@@ -644,7 +645,8 @@ export default function JobDetail() {
       
       // Get facility info
       const facility = facilities?.find(f => f.id === data.facility_id);
-      const facilityName = facility?.name || 'Unknown Facility';
+      const facilityName = (facility?.contractor || facility?.is_gsa) && data.client_business_name
+        ? data.client_business_name : (facility?.name || 'Unknown Facility');
       
       // Build location string
       const locationParts = [data.location_address, data.location_city, data.location_state, data.location_zip].filter(Boolean);
@@ -865,7 +867,8 @@ export default function JobDetail() {
       
       // Get facility name for email
       const facility = facilities?.find(f => f.id === data.facility_id);
-      const facilityName = facility?.name || 'Unknown Facility';
+      const facilityName = (facility?.contractor || facility?.is_gsa) && data.client_business_name
+        ? data.client_business_name : (facility?.name || 'Unknown Facility');
       
       // Build location string
       const locationParts = [data.location_address, data.location_city, data.location_state, data.location_zip].filter(Boolean);
@@ -1046,7 +1049,8 @@ export default function JobDetail() {
       
       // Get facility name and details for email
       const facility = facilities?.find(f => f.id === data.facility_id);
-      const facilityName = facility?.name || 'Unknown Facility';
+      const facilityName = (facility?.contractor || facility?.is_gsa) && data.client_business_name
+        ? data.client_business_name : (facility?.name || 'Unknown Facility');
       
       // Build location string
       const locationParts = [data.location_address, data.location_city, data.location_state, data.location_zip].filter(Boolean);

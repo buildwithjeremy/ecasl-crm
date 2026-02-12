@@ -1,4 +1,5 @@
 import { format } from 'date-fns';
+import { formatTimeForDisplay } from '@/lib/utils/form-helpers';
 import { useNavigate } from 'react-router-dom';
 import {
   Table,
@@ -82,7 +83,7 @@ export function JobsTable({ jobs, isLoading, sort, onSort }: JobsTableProps) {
               <TableCell className="font-medium">{job.job_number}</TableCell>
               <TableCell>{format(new Date(`${job.job_date}T00:00:00`), 'MMM d')}</TableCell>
               <TableCell className="hidden sm:table-cell">
-                {job.start_time.slice(0, 5)} - {job.end_time.slice(0, 5)}
+                {formatTimeForDisplay(job.start_time)} - {formatTimeForDisplay(job.end_time)}
               </TableCell>
               <TableCell className="max-w-[120px] truncate">{job.facility?.name || '-'}</TableCell>
               <TableCell className="hidden md:table-cell">

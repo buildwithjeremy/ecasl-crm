@@ -114,7 +114,7 @@ export function EmailPreviewDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-3xl max-h-[90vh] flex flex-col overflow-hidden">
+      <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Mail className="h-5 w-5" />
@@ -126,7 +126,7 @@ export function EmailPreviewDialog({
           </DialogDescription>
         </DialogHeader>
 
-        <div className="space-y-4 flex-1 min-h-0 overflow-hidden flex flex-col">
+        <div className="space-y-4">
           {/* Recipients */}
           <div className="space-y-1">
             <Label className="text-muted-foreground">To:</Label>
@@ -172,14 +172,13 @@ export function EmailPreviewDialog({
           )}
 
           {/* Rich text editor */}
-          <div className="flex-1 min-h-0 overflow-hidden">
+          <div>
             <RichTextEditor
               key={editorKey}
               ref={editorRef}
               content={editedBody}
               onChange={setEditedBody}
               disabled={isSending}
-              className="h-full flex flex-col"
             />
           </div>
         </div>

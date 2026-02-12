@@ -96,6 +96,7 @@ const formSchema = z.object({
   emergency_fee_applied: z.boolean().optional(),
   holiday_fee_applied: z.boolean().optional(),
   internal_notes: z.string().optional(),
+  po_number: z.string().optional(),
   client_business_name: z.string().optional(),
   client_contact_name: z.string().optional(),
   client_contact_phone: z.string().optional().refine(
@@ -158,6 +159,7 @@ const jobToFormValues = (job: Job, defaultMileageRate: number = 0.7): FormData =
   emergency_fee_applied: job.emergency_fee_applied ?? false,
   holiday_fee_applied: job.holiday_fee_applied ?? false,
   internal_notes: job.internal_notes ?? '',
+  po_number: job.po_number ?? '',
   client_business_name: job.client_business_name ?? '',
   client_contact_name: job.client_contact_name ?? '',
   client_contact_phone: job.client_contact_phone ?? '',

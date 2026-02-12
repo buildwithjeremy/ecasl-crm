@@ -7,7 +7,7 @@ import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
-import { Textarea } from '@/components/ui/textarea';
+import { RichTextEditor } from '@/components/ui/rich-text-editor';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { useToast } from '@/hooks/use-toast';
 import { useState, useEffect } from 'react';
@@ -98,13 +98,8 @@ function EmailTemplateEditor({ template, onSaved }: { template: EmailTemplate; o
           />
         </div>
         <div className="space-y-1">
-          <Label htmlFor={`body-${template.id}`}>Body (HTML)</Label>
-          <Textarea
-            id={`body-${template.id}`}
-            value={body}
-            onChange={(e) => setBody(e.target.value)}
-            className="font-mono text-xs min-h-[200px]"
-          />
+          <Label>Body</Label>
+          <RichTextEditor content={body} onChange={setBody} />
         </div>
         <Button
           onClick={() => saveMutation.mutate()}
@@ -194,12 +189,8 @@ function SnippetEditor({
         </Button>
       </div>
       <div className="space-y-1">
-        <Label>Content (HTML)</Label>
-        <Textarea
-          value={content}
-          onChange={(e) => setContent(e.target.value)}
-          className="font-mono text-xs min-h-[100px]"
-        />
+        <Label>Content</Label>
+        <RichTextEditor content={content} onChange={setContent} />
       </div>
       <Button
         onClick={() => saveMutation.mutate()}

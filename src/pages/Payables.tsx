@@ -64,7 +64,7 @@ export default function Payables() {
   const [statusFilter, setStatusFilter] = useState('all');
   const [paymentMethodFilter, setPaymentMethodFilter] = useState('all');
   
-  const { sort, handleSort } = useTableSort('created_at', 'desc');
+  const { sort, handleSort } = useTableSort('created_at', 'desc', 'payables');
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const navigate = useNavigate();

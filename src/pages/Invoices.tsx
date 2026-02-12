@@ -77,7 +77,7 @@ export default function Invoices() {
   const [hasPdfFilter, setHasPdfFilter] = useState('all');
   const [dueDateFilter, setDueDateFilter] = useState('all');
   
-  const { sort, handleSort } = useTableSort('created_at', 'desc');
+  const { sort, handleSort } = useTableSort('created_at', 'desc', 'invoices');
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const navigate = useNavigate();

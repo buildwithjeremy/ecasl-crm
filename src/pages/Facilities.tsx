@@ -48,7 +48,7 @@ export default function Facilities() {
   const [contractStatusFilter, setContractStatusFilter] = useState('all');
   const [dataIssueFilter, setDataIssueFilter] = useState(searchParams.get('issues') || 'all');
   
-  const { sort, handleSort } = useTableSort('name', 'asc');
+  const { sort, handleSort } = useTableSort('name', 'asc', 'facilities');
 
   const { data: facilities, isLoading } = useQuery({
     queryKey: ['facilities', search, sort, statusFilter, gsaFilter, contractStatusFilter, dataIssueFilter],

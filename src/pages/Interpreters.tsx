@@ -48,7 +48,7 @@ export default function Interpreters() {
   const [paymentMethodFilter, setPaymentMethodFilter] = useState('all');
   const [dataIssueFilter, setDataIssueFilter] = useState(searchParams.get('issues') || 'all');
   
-  const { sort, handleSort } = useTableSort('last_name', 'asc');
+  const { sort, handleSort } = useTableSort('last_name', 'asc', 'interpreters');
 
   const { data: interpreters, isLoading } = useQuery({
     queryKey: ['interpreters', search, sort, statusFilter, certificationFilter, paymentMethodFilter, dataIssueFilter],

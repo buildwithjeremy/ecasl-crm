@@ -6,25 +6,28 @@ export interface TableSort {
   direction: SortDirection;
 }
 
-export function useTableSort(defaultColumn: string, defaultDirection: SortDirection = 'asc') {
-  const [sort, setSort] = useState<TableSort>({
-    column: defaultColumn,
-    direction: defaultDirection,
+export function useTableSort(defaultColumn: string, defaultDirection: SortDirection = 'asc', persistKey?: string) {
+  const [sort, setSort] = useState<TableSort>(() => {
+    if (persistKey) {
+      try {
+        const stored = localStorage.getItem(`table-sort-${persistKey}`);
+        if (stored) return JSON.parse(stored);
+      } catch {}
+    }
+    return { column: defaultColumn, direction: defaultDirection };
   });
 
   const handleSort = useCallback((column: string) => {
     setSort((prev) => {
-      if (prev.column === column) {
-        // Cycle through: asc -> desc -> asc
-        return {
-          column,
-          direction: prev.direction === 'asc' ? 'desc' : 'asc',
-        };
+      const next = prev.column === column
+        ? { column, direction: (prev.direction === 'asc' ? 'desc' : 'asc') as SortDirection }
+        : { column, direction: 'asc' as SortDirection };
+      if (persistKey) {
+        try { localStorage.setItem(`table-sort-${persistKey}`, JSON.stringify(next)); } catch {}
       }
-      // New column, start with asc
-      return { column, direction: 'asc' };
+      return next;
     });
-  }, []);
+  }, [persistKey]);
 
   return { sort, handleSort };
 }

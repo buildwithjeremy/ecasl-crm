@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import {
   Dialog,
@@ -9,13 +9,12 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
-import { ScrollArea } from '@/components/ui/scroll-area';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
-import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
-import { Loader2, Mail, Send, Plus, Eye, Code } from 'lucide-react';
+import { Loader2, Mail, Send, Plus } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
+import { RichTextEditor } from '@/components/ui/rich-text-editor';
 
 // ==========================================
 // Types
@@ -72,8 +71,6 @@ export function EmailPreviewDialog({
 }: EmailPreviewDialogProps) {
   const [editedSubject, setEditedSubject] = useState('');
   const [editedBody, setEditedBody] = useState('');
-  const [viewMode, setViewMode] = useState<'edit' | 'preview'>('edit');
-  const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   // Fetch template snippets
   const { data: snippets } = useQuery({
@@ -93,26 +90,12 @@ export function EmailPreviewDialog({
     if (emailData) {
       setEditedSubject(replaceTemplateVariables(emailData.subject, emailData.templateVariables));
       setEditedBody(replaceTemplateVariables(emailData.body, emailData.templateVariables));
-      setViewMode('edit');
     }
   }, [emailData]);
 
   const handleInsertSnippet = useCallback((snippetContent: string) => {
-    const textarea = textareaRef.current;
-    if (textarea) {
-      const start = textarea.selectionStart;
-      const end = textarea.selectionEnd;
-      const newBody = editedBody.substring(0, start) + snippetContent + editedBody.substring(end);
-      setEditedBody(newBody);
-      // Restore cursor position after insert
-      requestAnimationFrame(() => {
-        textarea.selectionStart = textarea.selectionEnd = start + snippetContent.length;
-        textarea.focus();
-      });
-    } else {
-      setEditedBody(prev => prev + snippetContent);
-    }
-  }, [editedBody]);
+    setEditedBody(prev => prev + snippetContent);
+  }, []);
 
   if (!emailData) return null;
 
@@ -178,48 +161,13 @@ export function EmailPreviewDialog({
             </div>
           )}
 
-          {/* Toggle edit/preview */}
-          <div className="flex items-center gap-1 border-b pb-1">
-            <Button
-              type="button"
-              variant={viewMode === 'edit' ? 'default' : 'ghost'}
-              size="sm"
-              onClick={() => setViewMode('edit')}
-              className="h-7 text-xs"
-            >
-              <Code className="h-3 w-3 mr-1" />
-              Edit
-            </Button>
-            <Button
-              type="button"
-              variant={viewMode === 'preview' ? 'default' : 'ghost'}
-              size="sm"
-              onClick={() => setViewMode('preview')}
-              className="h-7 text-xs"
-            >
-              <Eye className="h-3 w-3 mr-1" />
-              Preview
-            </Button>
-          </div>
-
-          {/* Body editor / preview */}
+          {/* Rich text editor */}
           <div className="flex-1 min-h-0">
-            {viewMode === 'edit' ? (
-              <Textarea
-                ref={textareaRef}
-                value={editedBody}
-                onChange={(e) => setEditedBody(e.target.value)}
-                disabled={isSending}
-                className="h-[300px] font-mono text-xs"
-              />
-            ) : (
-              <ScrollArea className="h-[300px] rounded-md border bg-muted/50 p-4">
-                <div
-                  className="prose prose-sm max-w-none dark:prose-invert"
-                  dangerouslySetInnerHTML={{ __html: editedBody }}
-                />
-              </ScrollArea>
-            )}
+            <RichTextEditor
+              content={editedBody}
+              onChange={setEditedBody}
+              disabled={isSending}
+            />
           </div>
         </div>
 

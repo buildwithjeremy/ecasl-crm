@@ -84,9 +84,30 @@ function formatDateKey(date: Date): string {
 }
 
 export function JobsCalendar({ jobs, isLoading }: JobsCalendarProps) {
-  const [currentDate, setCurrentDate] = useState(new Date());
-  const [view, setView] = useState<'month' | 'week'>('month');
-  const [calendarTimezone, setCalendarTimezone] = useState<string>('America/New_York');
+  const [currentDate, setCurrentDate] = useState(() => {
+    const saved = sessionStorage.getItem('jobs-calendar-date');
+    return saved ? new Date(saved) : new Date();
+  });
+  const [view, setView] = useState<'month' | 'week'>(() => {
+    return (sessionStorage.getItem('jobs-calendar-view') as 'month' | 'week') || 'month';
+  });
+  const [calendarTimezone, setCalendarTimezone] = useState<string>(() => {
+    return sessionStorage.getItem('jobs-calendar-tz') || 'America/New_York';
+  });
+
+  // Persist calendar state to sessionStorage
+  const updateCurrentDate = (date: Date) => {
+    setCurrentDate(date);
+    sessionStorage.setItem('jobs-calendar-date', date.toISOString());
+  };
+  const updateView = (v: 'month' | 'week') => {
+    setView(v);
+    sessionStorage.setItem('jobs-calendar-view', v);
+  };
+  const updateTimezone = (tz: string) => {
+    setCalendarTimezone(tz);
+    sessionStorage.setItem('jobs-calendar-tz', tz);
+  };
   const navigate = useNavigate();
 
   const calendarDays = useMemo(() => {
@@ -124,22 +145,22 @@ export function JobsCalendar({ jobs, isLoading }: JobsCalendarProps) {
 
   const navigatePrev = () => {
     if (view === 'month') {
-      setCurrentDate(subMonths(currentDate, 1));
+      updateCurrentDate(subMonths(currentDate, 1));
     } else {
-      setCurrentDate(subWeeks(currentDate, 1));
+      updateCurrentDate(subWeeks(currentDate, 1));
     }
   };
 
   const navigateNext = () => {
     if (view === 'month') {
-      setCurrentDate(addMonths(currentDate, 1));
+      updateCurrentDate(addMonths(currentDate, 1));
     } else {
-      setCurrentDate(addWeeks(currentDate, 1));
+      updateCurrentDate(addWeeks(currentDate, 1));
     }
   };
 
   const goToToday = () => {
-    setCurrentDate(new Date());
+    updateCurrentDate(new Date());
   };
 
   const handleJobClick = (jobId: string) => {
@@ -167,7 +188,7 @@ export function JobsCalendar({ jobs, isLoading }: JobsCalendarProps) {
           </h2>
         </div>
         <div className="flex items-center gap-2">
-          <Select value={calendarTimezone} onValueChange={setCalendarTimezone}>
+          <Select value={calendarTimezone} onValueChange={updateTimezone}>
             <SelectTrigger className="h-8 w-[180px]">
               <SelectValue placeholder="Timezone" />
             </SelectTrigger>
@@ -187,7 +208,7 @@ export function JobsCalendar({ jobs, isLoading }: JobsCalendarProps) {
               variant={view === 'month' ? 'secondary' : 'ghost'}
               size="sm"
               className="rounded-r-none"
-              onClick={() => setView('month')}
+              onClick={() => updateView('month')}
             >
               Month
             </Button>
@@ -195,7 +216,7 @@ export function JobsCalendar({ jobs, isLoading }: JobsCalendarProps) {
               variant={view === 'week' ? 'secondary' : 'ghost'}
               size="sm"
               className="rounded-l-none"
-              onClick={() => setView('week')}
+              onClick={() => updateView('week')}
             >
               Week
             </Button>
@@ -317,8 +338,8 @@ export function JobsCalendar({ jobs, isLoading }: JobsCalendarProps) {
                   {dayJobs.length > maxJobsToShow && (
                     <button
                       onClick={() => {
-                        setCurrentDate(day);
-                        setView('week');
+                        updateCurrentDate(day);
+                        updateView('week');
                       }}
                       className="w-full text-xs text-primary hover:underline text-left px-1"
                     >

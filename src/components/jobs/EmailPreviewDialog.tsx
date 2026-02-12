@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import {
   Dialog,
@@ -71,8 +71,16 @@ export function EmailPreviewDialog({
 }: EmailPreviewDialogProps) {
   const [editedSubject, setEditedSubject] = useState('');
   const [editedBody, setEditedBody] = useState('');
-  const [editorKey, setEditorKey] = useState(0);
   const editorRef = useRef<RichTextEditorHandle>(null);
+
+  // Compute resolved body directly from emailData — avoids stale state on editor remount
+  const resolvedBody = useMemo(() => {
+    if (!emailData) return '';
+    return replaceTemplateVariables(emailData.body, emailData.templateVariables);
+  }, [emailData]);
+
+  // Use a counter to force editor remount when emailData changes
+  const [editorKey, setEditorKey] = useState(0);
 
   // Fetch template snippets
   const { data: snippets } = useQuery({
@@ -87,17 +95,14 @@ export function EmailPreviewDialog({
     },
   });
 
-  // Initialize edited content when emailData changes — also bump editor key to force remount
+  // Initialize subject & bump editor key when emailData changes
   useEffect(() => {
     if (emailData) {
-      const resolvedSubject = replaceTemplateVariables(emailData.subject, emailData.templateVariables);
-      const resolvedBody = replaceTemplateVariables(emailData.body, emailData.templateVariables);
-      setEditedSubject(resolvedSubject);
+      setEditedSubject(replaceTemplateVariables(emailData.subject, emailData.templateVariables));
       setEditedBody(resolvedBody);
-      // Force TipTap to remount with the new content so it never misses the initial value
       setEditorKey(prev => prev + 1);
     }
-  }, [emailData]);
+  }, [emailData, resolvedBody]);
 
   const handleInsertSnippet = useCallback((snippetContent: string) => {
     if (editorRef.current) {
@@ -176,7 +181,7 @@ export function EmailPreviewDialog({
             <RichTextEditor
               key={editorKey}
               ref={editorRef}
-              content={editedBody}
+              content={resolvedBody}
               onChange={setEditedBody}
               disabled={isSending}
             />

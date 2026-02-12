@@ -43,6 +43,8 @@ type TemplateSnippet = {
 const templateDisplayNames: Record<string, string> = {
   interpreter_outreach: 'Interpreter Outreach',
   interpreter_confirmation: 'Interpreter Confirmation',
+  invoice_reminder: 'Invoice Reminder',
+  job_completion_thanks: 'Job Completion Thanks',
 };
 
 // ==========================================

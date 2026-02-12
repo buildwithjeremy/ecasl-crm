@@ -80,7 +80,7 @@ export function JobsTable({ jobs, isLoading, sort, onSort }: JobsTableProps) {
               onClick={() => navigate(`/jobs/${job.id}`)}
             >
               <TableCell className="font-medium">{job.job_number}</TableCell>
-              <TableCell>{format(new Date(job.job_date), 'MMM d')}</TableCell>
+              <TableCell>{format(new Date(`${job.job_date}T00:00:00`), 'MMM d')}</TableCell>
               <TableCell className="hidden sm:table-cell">
                 {job.start_time.slice(0, 5)} - {job.end_time.slice(0, 5)}
               </TableCell>

@@ -71,6 +71,7 @@ export function EmailPreviewDialog({
 }: EmailPreviewDialogProps) {
   const [editedSubject, setEditedSubject] = useState('');
   const [editedBody, setEditedBody] = useState('');
+  const [editorKey, setEditorKey] = useState(0);
   const editorRef = useRef<RichTextEditorHandle>(null);
 
   // Fetch template snippets
@@ -86,11 +87,15 @@ export function EmailPreviewDialog({
     },
   });
 
-  // Initialize edited content when emailData changes
+  // Initialize edited content when emailData changes — also bump editor key to force remount
   useEffect(() => {
     if (emailData) {
-      setEditedSubject(replaceTemplateVariables(emailData.subject, emailData.templateVariables));
-      setEditedBody(replaceTemplateVariables(emailData.body, emailData.templateVariables));
+      const resolvedSubject = replaceTemplateVariables(emailData.subject, emailData.templateVariables);
+      const resolvedBody = replaceTemplateVariables(emailData.body, emailData.templateVariables);
+      setEditedSubject(resolvedSubject);
+      setEditedBody(resolvedBody);
+      // Force TipTap to remount with the new content so it never misses the initial value
+      setEditorKey(prev => prev + 1);
     }
   }, [emailData]);
 
@@ -169,6 +174,7 @@ export function EmailPreviewDialog({
           {/* Rich text editor */}
           <div className="flex-1 min-h-0">
             <RichTextEditor
+              key={editorKey}
               ref={editorRef}
               content={editedBody}
               onChange={setEditedBody}
